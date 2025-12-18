@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>D' La Vida Bar | Neon Noir</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&family=Yellowtail&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <link rel="manifest" href="manifest.json">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+</head>
+<body>
+    <div id="modal-welcome" class="modal-overlay">
+        <div class="modal-card" style="text-align: center; padding: 40px 30px; border: 1px solid var(--neon-cyan);">
+            <img src="img/logo.png" alt="Logo" style="width: 80px; margin-bottom: 10px;">
+            <h2 class="modal-title-elegant" style="font-size: 2.5rem;">D' La Vida Bar</h2>
+            <p style="color:#ddd; margin-bottom: 25px; font-size: 0.9rem; font-family: 'Montserrat', sans-serif;">
+                La noche cobra vida. Identifícate.
+            </p>
+            <input type="text" id="welcome-nombre" placeholder="Tu Nombre" class="input-stylish" style="margin-bottom:15px; text-align:center;">
+            <input type="tel" id="welcome-phone" placeholder="Teléfono" class="input-stylish" style="margin-bottom:25px; text-align:center;">
+            <button class="btn-modal-action" onclick="registrarBienvenida()">ENTRAR</button>
+            <p onclick="cerrarWelcome()" style="color:#666; font-size:0.75rem; margin-top:20px; cursor:pointer; text-decoration:underline;">Entrar como anónimo</p>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <header class="hero-optimizado">
+        <img src="https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=600&q=60" class="hero-bg" alt="Ambiente" loading="lazy">
+        <div class="overlay">
+            <div class="logo-area">
+                <div class="logo-container">
+                    <img src="img/logo.png" alt="Logotipo D' La Vida" class="main-logo">
+                </div>
+                <h1 class="brand-name">D' La Vida Bar</h1>
+                <p class="tagline">NEON NOIR EXPERIENCE</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-wrapper">
+        <div class="search-box">
+            <span class="search-icon" style="color: var(--neon-cyan);">🔍</span>
+            <input type="text" id="search-input" placeholder="Buscar cóctel, plato...">
+        </div>
+    </div>
+
+    <div class="filters-container">
+        <nav class="filters">
+            <button class="filter-btn active" onclick="filtrar('todos', this)">Todos</button>
+            <button class="filter-btn" onclick="filtrar('cocteles', this)">Cócteles</button>
+            <button class="filter-btn" onclick="filtrar('cervezas', this)">Cervezas</button>
+            <button class="filter-btn" onclick="filtrar('tapas', this)">Picar</button>
+            <button class="filter-btn" onclick="filtrar('fuertes', this)">Platos</button>
+        </nav>
+    </div>
+
+    <main class="container">
+        <h3 class="section-title">Nuestra Carta</h3>
+        <div id="menu-grid" class="menu-grid"></div>
+    </main>
+
+    <footer style="text-align:center; padding: 30px 20px; color: #333; font-size: 0.8rem;">
+    <p style="margin-bottom: 8px;">D' La Vida Bar © 2025</p>
+    
+    <p style="font-size: 0.7rem; color: #555;">
+        Digital Experience by 
+        <a href="https://agenciaseniors.github.io/agencia/" target="_blank" rel="noopener" 
+           style="color: var(--neon-cyan); text-decoration: none; font-weight: 600; transition: 0.3s;">
+           AGENCY SENIORS
+        </a>
+    </p>
+
+    <div style="margin-top: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <span id="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #ccc;"></span>
+        <span id="connection-status">Comprobando...</span>
+    </div>
+
+    <a href="login.html" style="color: #444; text-decoration:none; margin-top:20px; display:inline-block; font-size: 0.7rem; border: 1px solid #333; padding: 4px 10px; border-radius: 4px;">
+        🔒 Acceso Staff
+    </a>
+</footer>
+
+    <div id="modal-detalle" class="modal-overlay" onclick="if(event.target == this) cerrarDetalle()">
+        <div class="modal-card">
+            <div class="btn-close-modal" onclick="cerrarDetalle()">✕</div>
+            <div class="modal-image-wrapper">
+                <img id="det-img" src="" alt="Producto" loading="lazy">
+            </div>
+            <div class="modal-body-content">
+                <h2 id="det-titulo" class="modal-title-elegant">Nombre</h2>
+                <span id="det-precio" class="modal-price-tag">$0.00</span>
+                <p id="det-desc" class="modal-description">...</p>
+                
+                <div id="box-curiosidad" class="ia-badge" style="display:none;">
+                    <span class="ia-title">⚡ Dato Curioso</span>
+                    <p id="det-curiosidad" class="ia-text">...</p>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; border-top:1px solid #222; padding-top:15px;">
+                    <span style="color:#666; font-size:0.8rem;">Valoración:</span>
+                    <span id="det-rating-big" style="color:var(--neon-green); font-size:1.2rem; font-weight:bold;">★ 5.0</span>
+                </div>
+                <button class="btn-modal-action" style="margin-top:15px;" onclick="abrirOpinionDesdeDetalle()">CALIFICAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-opinion" class="modal-overlay" onclick="if(event.target == this) cerrarModalOpiniones()">
+        <div class="modal-card" style="padding: 30px;">
+            <span class="close-btn-float" style="top:10px; right:10px;" onclick="cerrarModalOpiniones()">×</span>
+            <h3 class="modal-title-elegant" style="text-align:center; margin-bottom:20px; font-size:2rem; color:var(--neon-magenta);">Tu Opinión</h3>
+            
+            <div class="stars" id="stars-container" style="font-size:3rem; color:#333; cursor:pointer; margin-bottom:25px; text-align:center;">
+                <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+            </div>
+            
+            <input type="text" id="cliente-nombre" placeholder="Tu Nombre" class="input-stylish" style="margin-bottom:15px;">
+            <textarea id="cliente-comentario" rows="3" placeholder="Comentario..." class="input-stylish" style="margin-bottom:20px;"></textarea>
+            
+            <button class="btn-big-action" onclick="enviarOpinion()">ENVIAR</button>
+        </div>
+    </div>
+    <button class="fab-ia" onclick="abrirShaker()" style="background: linear-gradient(135deg, #ff0055, #ff5500); color:white;">
+    <span class="material-icons">local_bar</span>
+    <span class="fab-text">Mixer IA</span>
+</button>
+
+<div id="modal-shaker" class="modal-overlay">
+    <div class="modal-content shaker-card">
+        <button class="btn-close-modal" onclick="cerrarShaker()">
+            <span class="material-icons">close</span>
+        </button>
+
+        <h3 class="shaker-title">El Mixer Mágico 🍸</h3>
+        <p class="shaker-subtitle">Elige 3 "esencias" y agita tu móvil (o pulsa el botón).</p>
+
+        <div class="essences-grid" id="essences-grid">
+            </div>
+
+        <div class="shaker-container">
+            <div id="shaker-img" class="shaker-visual">
+                <span class="material-icons" style="font-size: 4rem; color:#ccc;">sports_bar</span>
+            </div>
+            <div id="shaker-status" class="shaker-status">Añade ingredientes...</div>
+        </div>
+
+        <button id="btn-mix-manual" class="btn-big-action" onclick="procesarMezcla()" disabled>
+            ¡MEZCLAR AHORA! 🌪️
+        </button>
+    </div>
+</div>
+    <script src="js/script.js"></script>
+</body>
+</html>

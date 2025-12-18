@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Gerencial | D' La Vida Bar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css"> <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+</head>
+<body>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+            <h1 class="login-logo">D' La Vida Bar</h1>
+            <p class="login-subtitle">Panel de Control</p>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <label>Usuario</label>
+                    <input type="email" id="email" class="input-stylish" placeholder="correo@ejemplo.com" required>
+                </div>
+                
+                <div class="input-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="password" class="input-stylish" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn-big-action" id="btn-login">INICIAR SESIÓN</button>
+                <p id="error-msg" style="color:#ff5252; font-size:0.8rem; margin-top:20px; min-height:20px;"></p>
+            </form>
+
+            <a href="index.html" style="color:#666; font-size:0.8rem; text-decoration:none; display:block; margin-top:30px; border-top:1px solid #333; padding-top:15px;">
+                ← Volver al Menú
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btn-login');
+            const errorMsg = document.getElementById('error-msg');
+
+            btn.textContent = "Verificando..."; btn.style.opacity = "0.7"; errorMsg.textContent = "";
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email, password: password
+            });
+
+            if (error) {
+                errorMsg.textContent = "Credenciales inválidas.";
+                btn.textContent = "INICIAR SESIÓN"; btn.style.opacity = "1";
+            } else {
+                window.location.href = "admin.html";
+            }
+        });
+    </script>
+</body>
+</html>

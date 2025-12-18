@@ -1,0 +1,83 @@
+/* reviews.css - Estilos del Panel de Opiniones */
+
+/* 1. Métricas Superiores */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.metric-card {
+    background: linear-gradient(145deg, #1e1e24, #141418);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.metric-value { font-size: 2rem; font-weight: 800; color: white; display: block; margin: 5px 0; }
+.metric-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+
+/* 2. Filtros */
+.reviews-filter {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+}
+
+.filter-pill {
+    background: transparent;
+    border: 1px solid #444;
+    color: #ccc;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: 0.3s;
+    white-space: nowrap;
+}
+.filter-pill.active { background: var(--gold); color: black; border-color: var(--gold); font-weight: bold; }
+
+/* 3. Grid de Opiniones */
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.review-card {
+    background: #1a1a20;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+    transition: transform 0.2s;
+}
+.review-card:hover { transform: translateY(-3px); border-color: rgba(255, 215, 0, 0.3); }
+
+.review-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.review-stars { color: var(--gold); letter-spacing: 2px; font-size: 1rem; }
+.review-date { font-size: 0.7rem; color: #666; }
+
+.review-product {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; margin-bottom: 15px;
+}
+.review-prod-img { width: 35px; height: 35px; border-radius: 6px; object-fit: cover; }
+.review-prod-name { font-size: 0.85rem; font-weight: 600; color: #ddd; }
+
+.review-body { color: #aaa; font-size: 0.9rem; line-height: 1.5; font-style: italic; margin-bottom: 15px; }
+.review-footer { margin-top: auto; }
+.review-author { font-size: 0.8rem; color: white; font-weight: bold; }
+.review-email { display: block; font-size: 0.75rem; color: #555; font-weight: normal; }
+
+.btn-delete-review {
+    position: absolute; bottom: 15px; right: 15px;
+    background: none; border: none; color: #444; cursor: pointer;
+    transition: 0.2s;
+}
+.btn-delete-review:hover { color: var(--red-danger); }

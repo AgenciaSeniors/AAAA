@@ -1,0 +1,205 @@
+/* admin.css - Estilos Exclusivos para Panel Gerencial y Login */
+
+body.admin-body { 
+    background: radial-gradient(circle at 50% -20%, #1a1a20, #000); 
+    min-height: 100vh; 
+    color: white;
+    font-family: 'Montserrat', sans-serif;
+    margin: 0; padding: 0;
+    padding-bottom: 50px;
+}
+
+/* --- LOGIN --- */
+.login-wrapper {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+    background: url('https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?auto=format&fit=crop&w=1000&q=60') center/cover;
+    position: relative;
+}
+.login-wrapper::before { content:''; position:absolute; inset:0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); }
+
+.login-card {
+    position: relative; z-index: 2;
+    background: rgba(30, 30, 35, 0.9); border: 1px solid rgba(255,215,0,0.1);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6); padding: 40px 30px;
+    border-radius: 20px; width: 100%; max-width: 400px; text-align: center;
+}
+.login-logo { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 2rem; margin-bottom: 5px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+.login-subtitle { color: #888; font-size: 0.85rem; margin-bottom: 30px; letter-spacing: 1px; }
+
+/* --- HEADER ADMIN --- */
+.admin-header {
+    background: rgba(20, 20, 20, 0.95); padding: 15px 20px; position: sticky; top: 0; z-index: 100;
+    border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;
+    backdrop-filter: blur(10px); box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+.admin-title { font-family: 'Playfair Display', serif; color: white; margin: 0; font-size: 1.5rem; }
+.admin-badge { background: linear-gradient(45deg, var(--gold), #b8860b); color: black; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 10px; }
+
+/* --- TABS NAVEGACIÓN --- */
+.admin-tabs {
+    display: flex; justify-content: center; gap: 20px; padding: 20px 0;
+    background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;
+}
+.tab-btn {
+    background: transparent; border: none; color: #888; font-size: 1rem; font-weight: 600;
+    padding: 10px 20px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    border-radius: 8px; transition: all 0.3s ease;
+}
+.tab-btn:hover { color: white; background: rgba(255,255,255,0.05); }
+.tab-btn.active { color: var(--gold); background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.2); }
+
+/* --- DASHBOARD GRID --- */
+.dashboard-grid { 
+    display: grid; gap: 20px; padding: 20px; 
+    grid-template-columns: 350px 1fr; align-items: start; 
+}
+
+/* ZONAS DE CONTENIDO */
+.upload-zone, .inventory-zone, .reviews-zone { 
+    background: #1a1a20; padding: 25px; border-radius: 16px; 
+    border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+}
+
+/* FORMULARIOS E INPUTS */
+.input-group { margin-bottom: 20px; text-align: left; }
+.input-group label { display: block; font-size: 0.8rem; color: var(--gold); margin-bottom: 5px; font-weight: 600; }
+.input-stylish { 
+    width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: white; 
+    border-radius: 8px; font-size: 1rem; outline: none; transition: 0.3s; 
+}
+.input-stylish:focus { border-color: var(--gold); background: #2a2a2a; }
+.btn-big-action { 
+    width: 100%; background: var(--gold); border: none; padding: 15px; border-radius: 12px; 
+    font-weight: 800; cursor: pointer; transition: 0.3s; 
+}
+.btn-big-action:hover { box-shadow: 0 5px 20px var(--gold-glow); transform: translateY(-2px); }
+
+.file-upload-wrapper {
+    position: relative; height: 120px; border: 2px dashed rgba(255,255,255,0.2);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; cursor: pointer; transition: 0.3s; background: rgba(0,0,0,0.2);
+}
+.file-upload-wrapper:hover { border-color: var(--gold); background: rgba(212, 175, 55, 0.05); }
+.file-upload-wrapper input { opacity: 0; position: absolute; width: 100%; height: 100%; cursor: pointer; }
+.file-upload-text { color: #888; font-size: 0.8rem; margin-top: 10px; }
+
+/* --- LISTA DE INVENTARIO --- */
+.inventory-list { margin-top: 10px; }
+.inventory-item { 
+    display: flex; align-items: center; gap: 15px; padding: 15px; 
+    border-bottom: 1px solid rgba(255,255,255,0.08); background: #1f1f23;
+    border-radius: 8px; margin-bottom: 10px; transition: 0.2s; 
+}
+.inventory-item:hover { transform: translateX(5px); border-left: 3px solid var(--gold); }
+
+.item-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid #333; }
+.item-meta { flex-grow: 1; }
+.item-title { font-weight: 600; font-size: 0.95rem; color: white; display: block; }
+.item-price { color: var(--gold); font-size: 0.9rem; font-weight: bold; }
+.item-status { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; font-weight: 700; }
+.status-ok { background: rgba(0,230,118,0.15); color: var(--green-success); }
+.status-bad { background: rgba(255,82,82,0.15); color: var(--red-danger); }
+
+/* BOTONES DE ACCIÓN (Iconos) */
+.action-btn-group { display: flex; gap: 8px; }
+.icon-btn { 
+    width: 36px; height: 36px; border-radius: 8px; border: none; 
+    display: flex; align-items: center; justify-content: center; 
+    cursor: pointer; background: #2a2a30; color: #aaa; transition: 0.2s;
+}
+.icon-btn:hover { color: white; transform: translateY(-2px); }
+.btn-del:hover { background: rgba(255,82,82,0.2); color: var(--red-danger); }
+
+/* UTILIDADES VISUALES */
+.vista-seccion { animation: fadeIn 0.4s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==========================================================================
+   CORRECCIONES RESPONSIVE (MÓVILES) - AQUÍ ESTÁ LA MAGIA ✨
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* 1. Dashboard en una sola columna */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 15px; padding: 10px;
+    }
+
+    /* 2. Transformar filas de inventario en "tarjetas" */
+    .inventory-item {
+        flex-wrap: wrap; /* Permite que los elementos bajen */
+        padding: 12px;
+    }
+    .item-meta {
+        width: calc(100% - 70px); /* Resto del espacio menos la foto */
+    }
+    
+    /* 3. Grupo de botones: abajo y grandes para tocar fácil */
+    .action-btn-group {
+        width: 100%;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        justify-content: space-between; /* Distribución uniforme */
+    }
+    .icon-btn {
+        flex-grow: 1; /* Botones anchos */
+        height: 40px; /* Más altos para el dedo */
+    }
+
+    /* 4. Tabs con scroll horizontal */
+    .admin-tabs {
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding: 15px 20px;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+    }
+    .admin-tabs::-webkit-scrollbar { display: none; } /* Ocultar barra scroll */
+
+    /* 5. Ajustes Header */
+    .admin-title { font-size: 1.2rem; }
+    .admin-header { padding: 12px; }
+}
+
+/* --- ESTILOS DASHBOARD MÉTRICAS --- */
+
+.chart-container {
+    background: rgba(0,0,0,0.2);
+    border-radius: 12px;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 20px;
+}
+
+/* Ajuste de tarjetas en la vista de Visitas */
+#vista-visitas .dashboard-grid {
+    /* En escritorio: Columna izquierda gráficos (más ancha), derecha ranking */
+    grid-template-columns: 2fr 1fr; 
+}
+
+@media (max-width: 900px) {
+    #vista-visitas .dashboard-grid {
+        grid-template-columns: 1fr; /* En móvil/tablet todo en una columna */
+    }
+}
+/* --- REGLAS VITALES PARA PESTAÑAS (Copia esto en admin.css) --- */
+
+/* 1. Ocultar todas las secciones por defecto */
+.vista-seccion {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* 2. MOSTRAR la sección que tenga la clase 'active' */
+.vista-seccion.active {
+    display: block !important; /* El !important fuerza que se vea */
+    opacity: 1 !important;
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Animación de entrada suave */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

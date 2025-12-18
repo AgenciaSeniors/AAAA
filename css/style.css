@@ -1,0 +1,382 @@
+/* style.css - Identidad Visual: Neon Noir (D' La Vida Bar) */
+
+/* 1. IMPORTACIÓN DE FUENTES (Yellowtail para Títulos, Montserrat para Lectura) */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&family=Yellowtail&display=swap');
+
+:root {
+    /* --- PALETA NEON NOIR --- */
+    --bg-noir: #050505;       /* Fondo Base: Negro Profundo */
+    --bg-surface: #0f0f0f;    /* Superficies: Casi negro */
+    
+    /* Colores Neón (Alta Saturación) */
+    --neon-red: #FF003C;      /* Rojo Vida (Botones, Ofertas) */
+    --neon-green: #CCFF00;    /* Verde Lima (Precios) */
+    --neon-cyan: #00F0FF;     /* Cian Eléctrico (Hielo, Detalles) */
+    --neon-magenta: #BD00FF;  /* Magenta (Títulos) */
+    
+    --text-primary: #FFFFFF;  /* Blanco Puro (Lectura) */
+    
+    /* Tipografías */
+    --font-neon: 'Yellowtail', cursive;     /* Títulos Artísticos */
+    --font-body: 'Montserrat', sans-serif;  /* Textos Funcionales */
+    
+    /* Efectos */
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --neon-shadow: 0 0 10px rgba(189, 0, 255, 0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body { 
+    background-color: var(--bg-noir); 
+    color: var(--text-primary); 
+    font-family: var(--font-body); 
+    padding-bottom: 100px;
+    overflow-x: hidden;
+}
+
+/* --- HERO & HEADER --- */
+.hero-optimizado { 
+    height: 40vh; /* Altura ajustada para el logo */
+    position: relative; 
+    overflow: hidden; 
+    border-bottom: 2px solid var(--neon-cyan); /* Borde neón sutil */
+    background: #000; 
+    box-shadow: 0 10px 40px -10px black;
+}
+
+.hero-bg { 
+    width: 100%; height: 100%; object-fit: cover; 
+    position: absolute; top: 0; left: 0; z-index: 0; 
+    opacity: 0.5; /* Oscurecido para resaltar el logo */
+}
+
+.overlay { 
+    position: relative; z-index: 1; width: 100%; height: 100%; 
+    background: linear-gradient(to top, var(--bg-noir) 10%, rgba(5,5,5,0.4)); 
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: center; 
+    padding: 30px; text-align: center;
+}
+
+/* --- LOGO E IDENTIDAD --- */
+.logo-container {
+    margin-bottom: 5px;
+}
+.main-logo {
+    width: 120px; /* Tamaño controlado del logo.png */
+    height: auto;
+    filter: drop-shadow(0 0 10px rgba(255, 0, 60, 0.4)); /* Resplandor rojo detrás */
+    animation: float 6s ease-in-out infinite;
+}
+@keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-5px); } 100% { transform: translateY(0px); } }
+
+.brand-name {
+    font-family: var(--font-neon); 
+    font-size: 2.5rem;
+    color: var(--text-primary);
+    margin: 0;
+    text-shadow: 0 0 10px var(--neon-magenta), 0 0 20px var(--neon-red); /* Doble neón */
+    line-height: 1.1;
+}
+
+.tagline {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+    margin-top: 5px;
+    opacity: 0.9;
+}
+
+/* --- BUSCADOR --- */
+.search-wrapper { padding: 0 20px; margin-top: -25px; position: relative; z-index: 20; }
+.search-box { 
+    background: rgba(20, 20, 20, 0.95); 
+    backdrop-filter: blur(10px); 
+    border: 1px solid var(--neon-magenta); 
+    border-radius: 50px; display: flex; align-items: center; padding: 5px 20px; 
+    box-shadow: 0 0 20px rgba(189, 0, 255, 0.15);
+}
+#search-input { width: 100%; padding: 12px 0; background: transparent; border: none; color: white; font-family: var(--font-body); font-size: 1rem; outline: none; }
+.search-icon { color: var(--neon-cyan); margin-right: 10px; font-size: 1.2rem; }
+
+/* --- FILTROS --- */
+.filters-container { 
+    position: sticky; top: 0; z-index: 90; 
+    background: rgba(5, 5, 5, 0.95); 
+    backdrop-filter: blur(12px); 
+    padding: 15px 0; border-bottom: 1px solid #222; 
+}
+.filters { display: flex; gap: 10px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
+.filter-btn { 
+    background: transparent; color: #fff; 
+    border: 1px solid #333; 
+    padding: 8px 20px; border-radius: 100px; 
+    font-family: var(--font-body); font-size: 0.85rem;
+    cursor: pointer; transition: 0.3s; white-space: nowrap;
+}
+.filter-btn.active { 
+    background: var(--bg-noir); 
+    color: var(--neon-cyan); 
+    border-color: var(--neon-cyan); 
+    font-weight: 700; 
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+}
+
+/* --- GRID MENÚ --- */
+.container { padding: 25px 20px; }
+.section-title { 
+    font-family: var(--font-neon); 
+    color: var(--neon-magenta); 
+    font-size: 2.2rem; margin-bottom: 25px; 
+    text-shadow: 0 0 8px rgba(189, 0, 255, 0.4);
+}
+
+.menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+
+/* TARJETA DE PRODUCTO */
+.card { 
+    background: var(--bg-surface); 
+    border-radius: 16px; overflow: hidden; 
+    border: 1px solid #222; 
+    position: relative; cursor: pointer; 
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:active { transform: scale(0.98); }
+
+.img-box { height: 160px; background: #111; position: relative; }
+.img-box img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+
+.info { padding: 15px; }
+.card h3 { 
+    font-family: var(--font-neon); 
+    font-size: 1.5rem; 
+    color: var(--text-primary); 
+    margin-bottom: 5px; 
+    font-weight: 400;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.short-desc {
+    font-family: var(--font-body);
+    font-size: 0.75rem; color: #aaa;
+    margin-bottom: 12px; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+
+/* PRECIOS EN VERDE LIMA */
+.price { 
+    color: var(--neon-green); 
+    font-family: var(--font-body); 
+    font-weight: 800; font-size: 1.1rem; 
+    text-shadow: 0 0 5px rgba(204, 255, 0, 0.2);
+}
+
+.rating-pill { color: #888; font-size: 0.8rem; }
+
+/* BADGES */
+.badge-destacado { 
+    position: absolute; top: 10px; right: 10px; 
+    background: var(--neon-red); color: white; 
+    padding: 4px 10px; border-radius: 4px; 
+    font-size: 0.65rem; font-weight: 800; z-index: 10; font-family: var(--font-body);
+    box-shadow: 0 0 10px var(--neon-red);
+}
+
+.card.agotado { opacity: 0.5; filter: grayscale(100%); pointer-events: none; }
+.badge-agotado { 
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); 
+    color: var(--neon-red); border: 2px solid var(--neon-red); 
+    padding: 8px 15px; font-weight: 900; font-size: 1rem; border-radius: 6px; z-index: 20; 
+}
+
+/* --- TOASTS --- */
+#toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 400px; pointer-events: none; }
+.toast { 
+    background: rgba(20, 20, 20, 0.95); color: white; padding: 16px 20px; 
+    border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+    border: 1px solid #333; backdrop-filter: blur(10px); 
+    display: flex; align-items: center; gap: 15px; pointer-events: auto; 
+    font-family: var(--font-body); font-size: 0.9rem; 
+    animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+}
+.toast.success { border-left: 4px solid var(--neon-green); }
+.toast.error { border-left: 4px solid var(--neon-red); }
+
+@keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+
+/* --- MEDIA QUERIES (Para móviles) --- */
+@media (max-width: 768px) {
+    .menu-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .container { padding: 15px 12px; }
+    .card h3 { font-size: 1.3rem; }
+} 
+/* ↑↑ IMPORTANTE: Esta llave cierra el Media Query. ¡No la borres! ↑↑ */
+
+
+/* =========================================
+   ESTILOS DEL SHAKER VIRTUAL (Mixer IA)
+   ========================================= */
+
+/* 1. Botón Flotante (FAB) */
+.fab-ia {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ff0055, #ff5500); /* Color Lava */
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(255, 0, 85, 0.4);
+    cursor: pointer;
+    z-index: 9999; /* Por encima de todo */
+    font-weight: bold;
+    font-family: 'Montserrat', sans-serif;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.fab-ia:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 6px 25px rgba(255, 0, 85, 0.6);
+}
+
+.fab-text {
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+}
+
+/* 2. Modal del Shaker */
+.shaker-card {
+    background: #121212; /* Fondo oscuro elegante */
+    border: 1px solid #333;
+    text-align: center;
+    width: 90%;
+    max-width: 380px;
+    padding: 30px 20px;
+    border-radius: 20px;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    /* Aseguramos que se centre si modal.css no lo hace */
+    margin: auto; 
+}
+
+.shaker-title { 
+    color: white; 
+    margin-bottom: 5px; 
+    font-family: var(--font-neon); 
+    font-size: 2rem;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.shaker-subtitle { 
+    color: #888; 
+    font-size: 0.9rem; 
+    margin-bottom: 25px; 
+    font-family: var(--font-body);
+}
+
+/* 3. Grid de Ingredientes */
+.essences-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 30px;
+}
+
+.essence-btn {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 15px 5px;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.essence-btn span { font-size: 1.8rem; }
+.essence-btn small { font-size: 0.75rem; text-transform: uppercase; font-weight: 600; }
+
+.essence-btn:hover { background: #252525; }
+
+.essence-btn.selected {
+    background: var(--gold, #FFD700); /* Fallback a dorado si no existe var */
+    color: black;
+    border-color: var(--gold, #FFD700);
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+/* 4. Animación Coctelera */
+.shaker-container {
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.shaker-visual {
+    width: 90px;
+    height: 90px;
+    background: #1e1e1e;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #444;
+    transition: 0.3s;
+    position: relative;
+}
+
+.shaker-visual .material-icons { font-size: 3.5rem; color: #555; transition: 0.3s; }
+
+/* Estado: Listo para mezclar */
+.shaker-visual.ready {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    border: 2px solid white;
+    box-shadow: 0 0 25px rgba(255, 165, 0, 0.4);
+    animation: pulse 2s infinite;
+}
+.shaker-visual.ready .material-icons { color: white; }
+
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 165, 0, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(255, 165, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 165, 0, 0); } }
+
+/* Estado: Agitando */
+.shaker-visual.shaking {
+    animation: shake-hard 0.5s ease-in-out infinite;
+    background: #ff0055; /* Rojo intenso al agitar */
+    border-color: #ff0055;
+}
+
+@keyframes shake-hard {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-10deg); }
+    20% { transform: translate(-3px, 0px) rotate(10deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(10deg); }
+    50% { transform: translate(-1px, 2px) rotate(-10deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-10deg); }
+}
+
+.shaker-status { 
+    margin-top: 15px; 
+    font-size: 0.9rem; 
+    color: #666; 
+    font-weight: 500;
+    min-height: 20px;
+}

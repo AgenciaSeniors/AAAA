@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Gerencial | The Night Bar</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/reviews.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    <script src="js/config.js"></script>
+</head>
+<body class="admin-body">
+
+    <header class="admin-header">
+        <div style="display:flex; align-items:center;">
+            <h1 class="admin-title">Panel Gerencial</h1>
+            <span class="admin-badge">ADMIN</span>
+        </div>
+        <div style="display:flex; gap:15px; align-items:center;">
+            <a href="index.html" style="color:#aaa; text-decoration:none; font-size:0.8rem;">Ver Carta</a>
+            <button onclick="cerrarSesion()" style="background:none; border:none; color:#ff5252; cursor:pointer;" title="Salir">
+                <span class="material-icons">logout</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="admin-tabs">
+        <button class="tab-btn active" onclick="cambiarVista('inventario')">
+            <span class="material-icons">inventory_2</span> Inventario
+        </button>
+        <button class="tab-btn" onclick="cambiarVista('opiniones')">
+            <span class="material-icons">reviews</span> Opiniones
+        </button>
+        <button class="tab-btn" onclick="cambiarVista('visitas')">
+            <span class="material-icons">trending_up</span> Visitas
+        </button>
+    </div>
+
+    <main class="admin-content">
+        
+        <div id="vista-inventario" class="vista-seccion active">
+            <div class="dashboard-grid">
+                
+                <div class="upload-zone">
+                    <h3 style="color:white; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
+                        Gestión de Producto
+                    </h3>
+                    
+                    <form id="form-producto">
+                        <input type="hidden" id="edit-id">
+
+                        <div class="input-group">
+                            <label>Nombre</label>
+                            <input type="text" id="nombre" class="input-stylish" required>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                            <div class="input-group">
+                                <label>Precio</label>
+                                <input type="number" id="precio" class="input-stylish" step="0.01" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Categoría</label>
+                                <select id="categoria" class="input-stylish">
+                                    <option value="cocteles">Cocteles</option>
+                                    <option value="cervezas">Cervezas</option>
+                                    <option value="licores">Vinos/Licor</option>
+                                    <option value="bebidas_sin">Bebidas s/a</option>
+                                    <option value="italiana">Pizzas/Pastas</option>
+                                    <option value="fuertes">Carnes</option>
+                                    <option value="tapas">Para Picar</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Foto <small style="color:#666; font-weight:normal;">(Opcional al editar)</small></label>
+                            <div class="file-upload-wrapper" onclick="document.getElementById('imagen-file').click()">
+                                <span class="material-icons" style="font-size:2rem; color:#666; margin-bottom:5px;">cloud_upload</span>
+                                <span class="file-upload-text">Toca para subir imagen</span>
+                                <input type="file" id="imagen-file" accept="image/*">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Descripción</label>
+                            <textarea id="descripcion" class="input-stylish" rows="2"></textarea>
+                        </div>
+
+                        <div style="background:#25252b; padding:15px; border-radius:10px; border:1px dashed #444; margin-bottom:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <span style="color:var(--gold); font-size:0.8rem; font-weight:bold;">✨ Dato Curioso (IA)</span>
+                                <button type="button" id="btn-ia" onclick="generarCuriosidad()" style="background:var(--gold); border:none; padding:5px 12px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.7rem;">Generar</button>
+                            </div>
+                            <span id="loader-ia" style="display:none; color:#888; font-size:0.7rem;">Conectando...</span>
+                            <textarea id="curiosidad" class="input-stylish" rows="2" style="font-size:0.85rem; background:#1a1a20;" placeholder="Automático..."></textarea>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+                            <input type="checkbox" id="destacado" style="width:18px; height:18px; accent-color:var(--gold);">
+                            <label for="destacado" style="margin:0; cursor:pointer; color:#ccc;">Marcar como "Destacado" 🌟</label>
+                        </div>
+
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button type="submit" class="btn-big-action" id="btn-submit">GUARDAR PRODUCTO</button>
+                            <button type="button" id="btn-cancelar" onclick="cancelarEdicion()" style="background:transparent; border:1px solid #555; color:#ccc; padding:15px; border-radius:12px; cursor:pointer; display:none;">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="inventory-zone">
+                    <h3 style="color:white; margin-bottom:20px;">Inventario Actual</h3>
+                    
+                    <div style="margin-bottom: 20px; position:relative;">
+                        <span class="material-icons" style="position:absolute; left:10px; top:13px; color:#888; font-size:1.2rem;">search</span>
+                        <input type="text" id="search-inventory" onkeyup="buscarInventario(event)" placeholder="Buscar por nombre, descripción o categoría..." class="input-stylish" style="width:100%; padding:12px 10px 12px 35px; border-radius: 8px;">
+                    </div>
+                    
+                    <div id="lista-admin" class="inventory-list">
+                        </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="vista-opiniones" class="vista-seccion" style="display:none;">
+            <div class="reviews-zone">
+                <h3 style="color:white; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
+                    💬 Feedback de Clientes
+                </h3>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-value" id="stat-promedio">--</span>
+                        <span class="metric-label">Promedio General</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value" id="stat-total">0</span>
+                        <span class="metric-label">Opiniones Totales</span>
+                    </div>
+                    <div class="metric-card" style="border-color: rgba(255,215,0,0.2);">
+                        <div style="font-size:1.5rem; margin:5px 0;">🏆</div>
+                        <span class="metric-label" id="stat-mejor">--</span>
+                    </div>
+                </div>
+
+                <div class="reviews-filter">
+                    <button class="filter-pill active" onclick="filtrarOpiniones('todas', this)">Todas</button>
+                    <button class="filter-pill" onclick="filtrarOpiniones('5', this)">5 Estrellas 🌟</button>
+                    <button class="filter-pill" onclick="filtrarOpiniones('alertas', this)">Alertas (1-2) ⚠️</button>
+                </div>
+
+                <div id="grid-opiniones" class="reviews-grid">
+                    </div>
+            </div>
+        </div>
+
+        <div id="vista-visitas" class="vista-seccion" style="display:none;">
+            <div class="dashboard-grid"> 
+                <div style="display:flex; flex-direction:column; gap:20px;">
+                    
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <span class="metric-value" id="stat-hoy">--</span>
+                            <span class="metric-label">Visitas Hoy</span>
+                            <small id="trend-hoy" style="color:#888; display:block; margin-top:5px;">...</small>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value" id="stat-mes">--</span>
+                            <span class="metric-label">Este Mes</span>
+                        </div>
+                        <div class="metric-card" style="border-color: rgba(0,230,118,0.2);">
+                            <span class="metric-value" id="stat-tasa-retorno">--</span>
+                            <span class="metric-label">Retorno</span>
+                        </div>
+                    </div>
+
+                    <div class="reviews-zone">
+                        <h4 style="color:var(--gold); margin-bottom:15px;">📊 Tendencia (Últimos 15 días)</h4>
+                        <div class="chart-container" style="position: relative; height:300px; width:100%">
+                            <canvas id="chart-visitas"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="reviews-zone">
+                        <h4 style="color:var(--gold); margin-bottom:15px;">🕒 Horas Punta (Histórico)</h4>
+                        <div class="chart-container" style="position: relative; height:250px; width:100%">
+                            <canvas id="chart-horas"></canvas>
+                        </div>
+                        <p style="color:#666; font-size:0.8rem; margin-top:10px; text-align:center;">
+                            Muestra a qué hora suelen escanear más el menú.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="reviews-zone">
+                    <h3 style="color:white; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
+                        🏆 Clientes VIP
+                    </h3>
+                    <div class="metrics-grid" style="grid-template-columns: 1fr; margin-bottom:20px;">
+                         <div class="metric-card">
+                            <span class="metric-value" id="stat-unique-clients">--</span>
+                            <span class="metric-label">Total Clientes Históricos</span>
+                        </div>
+                    </div>
+
+                    <div id="top-clientes-list" class="inventory-list">
+                        <p style="text-align:center; color:#666; padding:15px;">Cargando VIPs...</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script src="js/admin.js"></script>
+    <script src="js/reviews.js"></script>
+    <script src="js/metrics.js"></script> 
+</body>
+</html>
