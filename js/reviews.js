@@ -81,14 +81,22 @@ function actualizarEstadisticasOpiniones(data) {
     if (elProm) elProm.textContent = promedio;
 }
 function filtrarOpiniones(filtro, btn) {
-    // Actualizar botones UI
+    // 1. Actualizar la interfaz (botones)
     document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 
+    // 2. Aplicar el filtro usando la propiedad correcta: "puntuacion"
     let filtradas = opinionesGlobal;
-    if (filtro === '5') filtradas = opinionesGlobal.filter(o => o.estrellas === 5);
-    if (filtro === 'alertas') filtradas = opinionesGlobal.filter(o => o.estrellas <= 2);
     
+    if (filtro === '5') {
+        // Cambiamos "estrellas" por "puntuacion"
+        filtradas = opinionesGlobal.filter(o => o.puntuacion === 5);
+    } else if (filtro === 'alertas') {
+        // Cambiamos "estrellas" por "puntuacion"
+        filtradas = opinionesGlobal.filter(o => o.puntuacion <= 2);
+    }
+    
+    // 3. Volver a dibujar las reseñas en pantalla
     renderizarOpiniones(filtradas);
 }
 
