@@ -187,6 +187,27 @@ async function registrarBienvenida() {
         }
     }
 }
+// --- OPTIMIZACIÓN: PRECARGA DE IMÁGENES ---
+function precargarImagenes(productos) {
+    if (!productos || productos.length === 0) return;
+
+    // Usamos 'requestIdleCallback' para no bloquear la interacción del usuario
+    // Si el navegador no lo soporta, usamos setTimeout
+    const ejecutarPrecarga = window.requestIdleCallback || ((cb) => setTimeout(cb, 1000));
+
+    ejecutarPrecarga(() => {
+        productos.forEach(prod => {
+            if (prod.imagen_url) {
+                // Creamos una imagen en memoria. Al asignar el src, el navegador
+                // intenta descargarla. Nuestro nuevo SW interceptará esta petición
+                // y guardará la imagen en caché silenciosamente.
+                const img = new Image();
+                img.src = prod.imagen_url;
+            }
+        });
+        console.log(`📡 Iniciando precarga de ${productos.length} imágenes para modo offline.`);
+    });
+}
 
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
@@ -226,6 +247,7 @@ async function cargarMenu() {
         localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
         todosLosProductos = productosProcesados;
         renderizarMenu(todosLosProductos);
+        precargarImagenes(productosProcesados);
 
     } catch (err) {
         console.warn("Offline o error:", err);
@@ -279,6 +301,14 @@ if(searchInput) {
     searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
         const term = normalizarTexto(e.target.value); // <--- USAR AQUÍ
+        // 2. Si el usuario borró todo, restauramos el menú completo inmediatamente
+        if (term.length === 0) {
+            renderizarMenu(todosLosProductos);
+            return;
+        }
+        // 3. OPTIMIZACIÓN: Si escribe menos de 2 letras, NO hacemos nada.
+        if (term.length < 2) return;
+        // 4. Si pasa las validaciones, esperamos 300ms antes de filtrar
         searchTimeout = setTimeout(() => {
             const lista = todosLosProductos.filter(p => 
                 normalizarTexto(p.nombre).includes(term) || // <--- USAR AQUÍ
