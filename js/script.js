@@ -641,3 +641,14 @@ function mostrarResultadoShaker(nombreRecibido) {
     
     shakerState.isProcessing = false;
 }
+
+function cerrarWelcome() {
+    const modal = document.getElementById('modal-welcome');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.style.display = 'none', 400);
+        
+        // Opcional: Registrar que lo cerró para no mostrarlo de nuevo en esta sesión
+        localStorage.setItem('ultima_visita_ts', Date.now().toString());
+    }
+}
