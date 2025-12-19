@@ -1,4 +1,80 @@
 // js/metrics.js - Métricas Completas (Visitas + Horas + Top Clientes)
+// js/reviews.js - Gestión de Feedback de Clientes
+let opinionesGlobal = [];
+
+async function cargarOpiniones() {
+    console.log("Cargando opiniones...");
+    const { data, error } = await supabaseClient
+        .from('opiniones') // Asegúrate de que tu tabla se llame 'opiniones'
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error cargando opiniones:", error);
+        return;
+    }
+
+    opinionesGlobal = data;
+    renderizarOpiniones(data);
+    actualizarEstadisticasOpiniones(data);
+}
+
+function renderizarOpiniones(lista) {
+    const container = document.getElementById('grid-opiniones');
+    if (!container) return;
+
+    if (lista.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#666;">No hay opiniones aún.</p>';
+        return;
+    }
+
+    container.innerHTML = lista.map(op => {
+        const estrellas = "⭐".repeat(op.estrellas);
+        const fecha = new Date(op.created_at).toLocaleDateString();
+        return `
+            <div class="review-card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span style="color:var(--gold); font-weight:bold;">${op.nombre || 'Anónimo'}</span>
+                    <small style="color:#666;">${fecha}</small>
+                </div>
+                <div style="font-size:0.9rem; margin-bottom:10px;">${estrellas}</div>
+                <p style="color:#ccc; font-size:0.85rem; font-style:italic;">"${op.comentario}"</p>
+                ${op.producto ? `<small style="display:block; margin-top:10px; color:#888;">Sobre: <b>${op.producto}</b></small>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function filtrarOpiniones(filtro, btn) {
+    // Actualizar botones UI
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    let filtradas = opinionesGlobal;
+    if (filtro === '5') filtradas = opinionesGlobal.filter(o => o.estrellas === 5);
+    if (filtro === 'alertas') filtradas = opinionesGlobal.filter(o => o.estrellas <= 2);
+    
+    renderizarOpiniones(filtradas);
+}
+
+function actualizarEstadisticasOpiniones(data) {
+    if (data.length === 0) return;
+    
+    const total = data.length;
+    const suma = data.reduce((acc, curr) => acc + curr.estrellas, 0);
+    const promedio = (suma / total).toFixed(1);
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-promedio').textContent = promedio;
+    
+    // Producto mejor valorado (si guardas el nombre del producto en la opinión)
+    const conteo = {};
+    data.filter(o => o.producto).forEach(o => {
+        conteo[o.producto] = (conteo[o.producto] || 0) + 1;
+    });
+    const mejor = Object.keys(conteo).reduce((a, b) => conteo[a] > conteo[b] ? a : b, "--");
+    document.getElementById('stat-mejor').textContent = mejor;
+}
 
 async function cargarMetricasVisitas() {
     console.log("Cargando métricas completas...");
