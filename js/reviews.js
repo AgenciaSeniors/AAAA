@@ -70,15 +70,48 @@ function renderizarOpiniones(lista) {
 function actualizarEstadisticasOpiniones(data) {
     if (!data || data.length === 0) return;
     
+    // 1. Estadísticas Generales (Lo que ya tenías)
     const total = data.length;
-    const suma = data.reduce((acc, curr) => acc + (curr.puntuacion || 0), 0);
-    const promedio = (suma / total).toFixed(1);
+    const sumaTotal = data.reduce((acc, curr) => acc + (curr.puntuacion || 0), 0);
+    const promedioGeneral = (sumaTotal / total).toFixed(1);
 
     const elTotal = document.getElementById('stat-total');
     const elProm = document.getElementById('stat-promedio');
-    
     if (elTotal) elTotal.textContent = total;
-    if (elProm) elProm.textContent = promedio;
+    if (elProm) elProm.textContent = promedioGeneral;
+
+    // 2. Lógica para el "Mejor Trago" 🏆
+    const prodsMap = {};
+
+    // Agrupamos sumas y conteos por nombre de producto
+    data.forEach(op => {
+        // Usamos el nombre que viene de la relación 'productos' que agregamos antes
+        const nombreProd = op.productos?.nombre || "Desconocido";
+        if (!prodsMap[nombreProd]) {
+            prodsMap[nombreProd] = { suma: 0, cantidad: 0 };
+        }
+        prodsMap[nombreProd].suma += (op.puntuacion || 0);
+        prodsMap[nombreProd].cantidad++;
+    });
+
+    let mejorNombre = "--";
+    let maxPromedio = 0;
+
+    // Calculamos el promedio de cada uno y buscamos el más alto
+    for (const nombre in prodsMap) {
+        const promedio = prodsMap[nombre].suma / prodsMap[nombre].cantidad;
+        // Solo cuenta si tiene un promedio alto y al menos un par de votos para que sea justo
+        if (promedio > maxPromedio) {
+            maxPromedio = promedio;
+            mejorNombre = nombre;
+        }
+    }
+
+    // 3. Mostrar el resultado en el ID 'stat-mejor'
+    const elMejor = document.getElementById('stat-mejor');
+    if (elMejor) {
+        elMejor.textContent = mejorNombre;
+    }
 }
 function filtrarOpiniones(filtro, btn) {
     // 1. Actualizar la interfaz (botones)
