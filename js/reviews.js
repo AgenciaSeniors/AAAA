@@ -99,6 +99,29 @@ function calcularMetricas(lista) {
     const elMejor = document.getElementById('stat-mejor');
     if(elMejor) elMejor.textContent = mejor;
 }
+// Función para filtrar las reseñas (Faltaba esta lógica)
+function filtrarOpiniones(criterio, btn) {
+    // 1. Actualizar estilo de los botones (Quitar 'active' a todos y dárselo al clickeado)
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+
+    // 2. Filtrar la lista global según el criterio
+    let listaFiltrada = [];
+
+    if (criterio === 'todas') {
+        // Mostrar todo
+        listaFiltrada = opinionesGlobal;
+    } else if (criterio === '5') {
+        // Solo las de 5 estrellas
+        listaFiltrada = opinionesGlobal.filter(op => op.puntuacion === 5);
+    } else if (criterio === 'alertas') {
+        // Solo las malas (1 o 2 estrellas)
+        listaFiltrada = opinionesGlobal.filter(op => op.puntuacion <= 2);
+    }
+
+    // 3. Volver a pintar la grilla con la lista filtrada
+    renderizarOpiniones(listaFiltrada);
+}
 
 async function borrarOpinion(id) {
     if(confirm("¿Borrar opinión?")) {
