@@ -219,7 +219,16 @@ function filtrar(cat, btn) {
     if(btn) btn.classList.add('active');
     if(searchInput) searchInput.value = '';
     
-    const lista = cat === 'todos' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === cat);
+    const catNormalizada = cat.toLowerCase().trim();
+
+    const lista = catNormalizada === 'todos' 
+        ? todosLosProductos 
+        : todosLosProductos.filter(p => {
+            // Protección contra null y normalización
+            const catProd = (p.categoria || '').toLowerCase().trim(); 
+            return catProd === catNormalizada;
+        });
+
     renderizarMenu(lista);
 }
 
@@ -299,13 +308,15 @@ function actualizarEstrellas() {
 async function enviarOpinion() {
     if (puntuacion === 0) { showToast("¡Marca las estrellas!", "warning"); return; }
 
-    // Rate Limiting (Anti-Spam Local)
-    const LAST_OPINION = 'last_opinion_ts';
+    // CORRECCIÓN: Clave única por producto
+    const LAST_OPINION = `last_opinion_ts_${productoActual.id}`; 
+    
     const lastTime = localStorage.getItem(LAST_OPINION);
     const ahora = Date.now();
     
+    // Cooldown de 12 horas
     if (lastTime && (ahora - parseInt(lastTime)) < 12 * 60 * 60 * 1000) {
-        showToast("Solo puedes opinar cada 12 horas.", "warning");
+        showToast("Ya opinaste sobre esto hoy.", "warning"); // Mensaje más claro
         return;
     }
 
@@ -465,7 +476,9 @@ function actualizarEstadoShaker() {
 
 // --- DETECTOR DE AGITACIÓN (SHAKE) ---
 function iniciarDetectorMovimiento() {
-    if (window.DeviceMotionEvent) {
+    if (watchID) {
+            window.removeEventListener('devicemotion', watchID, true);
+        }
         // Umbral de sensibilidad
         const umbral = 15; 
         let lastX = 0, lastY = 0, lastZ = 0;
@@ -508,7 +521,7 @@ function iniciarDetectorMovimiento() {
         window.addEventListener('devicemotion', handleMotion, true);
         watchID = handleMotion; // Guardar referencia para quitarlo luego
     }
-}
+
 
 function detenerDetectorMovimiento() {
     if (watchID) {
@@ -569,26 +582,36 @@ async function procesarMezcla() {
 }
 
 function mostrarResultadoShaker(nombreRecibido) {
-    // 1. Limpiamos el nombre recibido por si acaso
     const nombreIA = nombreRecibido.toLowerCase().trim();
 
-    // 2. Buscador flexible
-    const producto = todosLosProductos.find(p => {
+    // 1. Encontrar TODOS los posibles candidatos, no solo el primero
+    const candidatos = todosLosProductos.filter(p => {
         const nombreBD = p.nombre.toLowerCase();
-        // Verifica si el nombre de la IA está en la BD o viceversa
         return nombreBD.includes(nombreIA) || nombreIA.includes(nombreBD);
     });
 
     cerrarShaker();
 
-    if (producto) {
-        abrirDetalle(producto.id);
-        showToast(`✨ Combinación perfecta: ${producto.nombre}`);
+    let elegido = null;
+
+    if (candidatos.length > 0) {
+        // 2. Elegir uno al azar de los candidatos encontrados (rompe el sesgo del orden)
+        const indiceAleatorio = Math.floor(Math.random() * candidatos.length);
+        elegido = candidatos[indiceAleatorio];
+        showToast(`✨ Combinación perfecta: ${elegido.nombre}`);
     } else {
-        // En lugar de un error feo, si no lo encuentra, mostramos el primer destacado
-        const fallback = todosLosProductos.find(p => p.destacado) || todosLosProductos[0];
-        abrirDetalle(fallback.id);
+        // 3. Fallback Aleatorio (Antes siempre elegía el mismo destacado)
+        const destacados = todosLosProductos.filter(p => p.destacado);
+        const pool = destacados.length > 0 ? destacados : todosLosProductos;
+        
+        const indiceFallback = Math.floor(Math.random() * pool.length);
+        elegido = pool[indiceFallback];
+        
         showToast("¡Sorpresa! Prueba nuestra recomendación de la casa", "info");
+    }
+
+    if (elegido) {
+        abrirDetalle(elegido.id);
     }
     
     shakerState.isProcessing = false;
