@@ -530,54 +530,79 @@ function detenerDetectorMovimiento() {
     }
 }
 
-// --- LLAMADA A LA IA ---
 async function procesarMezcla() {
+    // 1. Evitar dobles clics
     if (shakerState.isProcessing) return;
     shakerState.isProcessing = true;
-    detenerDetectorMovimiento(); // Parar sensores
+    detenerDetectorMovimiento(); // Parar el acelerómetro para ahorrar batería
 
-    // UI Feedback
+    // 2. Feedback Visual para el usuario
     const btn = document.getElementById('btn-mix-manual');
     const status = document.getElementById('shaker-status');
     const visual = document.getElementById('shaker-img');
     
-    btn.textContent = "Mezclando sabores...";
-    status.textContent = "🧠 La IA está probando la mezcla...";
-    visual.classList.add('shaking'); // Animación perpetua mientras carga
+    btn.textContent = "Analizando sabores...";
+    btn.disabled = true;
+    status.textContent = "🧠 El Sommelier IA está pensando...";
+    visual.classList.add('shaking'); // Inicia animación
 
-    // Preparar datos para Google Script
-    // 1. Obtenemos nombres de productos de tu variable global todosLosProductos
-    const menuSimple = todosLosProductos.map(p => p.nombre).join(', ');
-    
-    // 2. URL de tu Script
+    // 3. Configuración de la petición
+    // NOTA: Asegúrate de que esta URL sea la de tu nuevo script desplegado
     const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbyyJoRpC1mYNKNlKxjZVAT0dyXYW79wFq_IbV0KOll2bY0cjWXoUN7K-71lzB6TgJ5x/exec";
 
     try {
+        // Hacemos la petición a Google Apps Script
         const response = await fetch(URL_SCRIPT, {
             method: 'POST',
-            // Enviamos un JSON stringificado como pide tu script doPost(e)
             body: JSON.stringify({
-                tipo: "Cualquiera", // Genérico, la IA decidirá
-                sabor: shakerState.seleccionados.join(', '), // Ej: "Fresco, Dulce, Fiesta"
-                menu: menuSimple // Contexto vital para la IA
+                // Solo enviamos los sabores elegidos. 
+                // La IA ya tiene acceso directo a Supabase para ver el inventario real.
+                sabor: shakerState.seleccionados.join(', ') 
             }),
-            headers: { "Content-Type": "text/plain" } // Evita preflight CORS
+            headers: { "Content-Type": "text/plain" } // Evita errores de CORS (preflight)
         });
 
         const data = await response.json();
         
-        if (data.recomendacion) {
+        // 4. Manejo de la Respuesta Inteligente
+        if (data.success && data.recomendacion) {
+            // Si Groq nos da una justificación ("Elegí este porque..."), la mostramos
+            if (data.justificacion) {
+                showToast(`💡 ${data.justificacion}`, "info");
+            }
+            
+            // Llamamos a tu función existente para mostrar el producto
+            // Importante: data.recomendacion debe ser el nombre exacto del producto
             mostrarResultadoShaker(data.recomendacion);
+            
+            status.textContent = "¡Recomendación lista!";
         } else {
-            throw new Error("Sin respuesta válida");
+            throw new Error(data.error || "Respuesta inválida de la IA");
         }
 
     } catch (error) {
-        console.error(error);
-        status.textContent = "Error de conexión. Intenta de nuevo.";
+        console.error("Error en Shaker IA:", error);
+        
+        // 5. Fallback Local (Plan B)
+        // Si falla la IA o internet, no dejamos al usuario esperando: elegimos uno local al azar
+        showToast("Conexión lenta... Usando recomendación de la casa", "warning");
+        
+        const destacados = todosLosProductos.filter(p => p.destacado && p.estado !== 'agotado');
+        const pool = destacados.length > 0 ? destacados : todosLosProductos;
+        
+        if (pool.length > 0) {
+            const random = pool[Math.floor(Math.random() * pool.length)];
+            mostrarResultadoShaker(random.nombre);
+        } else {
+            status.textContent = "No hay productos disponibles.";
+        }
+
+    } finally {
+        // 6. Limpieza final
         shakerState.isProcessing = false;
         visual.classList.remove('shaking');
-        btn.textContent = "¡MEZCLAR AHORA!";
+        btn.textContent = "¡MEZCLAR OTRA VEZ!";
+        btn.disabled = false;
     }
 }
 
