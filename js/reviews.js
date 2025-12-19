@@ -254,8 +254,6 @@ async function cargarTopClientes() {
 
     container.innerHTML = '<p style="text-align:center; color:#666;">Analizando datos...</p>';
 
-    // NOTA: Esto asume que tu tabla 'visitas' tiene columnas 'nombre' y 'telefono'.
-    // Si no las tiene, tendrás que modificar el .select() para traer los datos correctos.
     const { data, error } = await supabaseClient
     .from('clientes')
     .select('nombre, telefono, visitas(id)');
