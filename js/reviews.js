@@ -1,16 +1,15 @@
-// js/metrics.js - Métricas Completas (Visitas + Horas + Top Clientes)
-// js/reviews.js - Gestión de Feedback de Clientes
+// js/reviews.js - Gestión de Feedback y Opiniones
 let opinionesGlobal = [];
 
 async function cargarOpiniones() {
     console.log("Cargando opiniones...");
     const { data, error } = await supabaseClient
-        .from('opiniones') // Asegúrate de que tu tabla se llame 'opiniones'
+        .from('opiniones')
         .select('*')
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error("Error cargando opiniones:", error);
+        console.error("Error opiniones:", error);
         return;
     }
 
@@ -23,28 +22,37 @@ function renderizarOpiniones(lista) {
     const container = document.getElementById('grid-opiniones');
     if (!container) return;
 
-    if (lista.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#666;">No hay opiniones aún.</p>';
-        return;
-    }
-
     container.innerHTML = lista.map(op => {
-        const estrellas = "⭐".repeat(op.estrellas);
+        const puntos = op.puntuacion || 0; // Usar 'puntuacion' como en script.js
+        const estrellas = "⭐".repeat(puntos);
         const fecha = new Date(op.created_at).toLocaleDateString();
+        
         return `
             <div class="review-card">
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="color:var(--gold); font-weight:bold;">${op.nombre || 'Anónimo'}</span>
+                    <span style="color:var(--gold); font-weight:bold;">${op.cliente_nombre || 'Anónimo'}</span>
                     <small style="color:#666;">${fecha}</small>
                 </div>
                 <div style="font-size:0.9rem; margin-bottom:10px;">${estrellas}</div>
-                <p style="color:#ccc; font-size:0.85rem; font-style:italic;">"${op.comentario}"</p>
-                ${op.producto ? `<small style="display:block; margin-top:10px; color:#888;">Sobre: <b>${op.producto}</b></small>` : ''}
+                <p style="color:#ccc; font-size:0.85rem; font-style:italic;">"${op.comentario || ''}"</p>
             </div>
         `;
     }).join('');
 }
 
+function actualizarEstadisticasOpiniones(data) {
+    if (!data || data.length === 0) return;
+    
+    const total = data.length;
+    const suma = data.reduce((acc, curr) => acc + (curr.puntuacion || 0), 0);
+    const promedio = (suma / total).toFixed(1);
+
+    const elTotal = document.getElementById('stat-total');
+    const elProm = document.getElementById('stat-promedio');
+    
+    if (elTotal) elTotal.textContent = total;
+    if (elProm) elProm.textContent = promedio;
+}
 function filtrarOpiniones(filtro, btn) {
     // Actualizar botones UI
     document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
@@ -57,24 +65,6 @@ function filtrarOpiniones(filtro, btn) {
     renderizarOpiniones(filtradas);
 }
 
-function actualizarEstadisticasOpiniones(data) {
-    if (data.length === 0) return;
-    
-    const total = data.length;
-    const suma = data.reduce((acc, curr) => acc + curr.estrellas, 0);
-    const promedio = (suma / total).toFixed(1);
-
-    document.getElementById('stat-total').textContent = total;
-    document.getElementById('stat-promedio').textContent = promedio;
-    
-    // Producto mejor valorado (si guardas el nombre del producto en la opinión)
-    const conteo = {};
-    data.filter(o => o.producto).forEach(o => {
-        conteo[o.producto] = (conteo[o.producto] || 0) + 1;
-    });
-    const mejor = Object.keys(conteo).reduce((a, b) => conteo[a] > conteo[b] ? a : b, "--");
-    document.getElementById('stat-mejor').textContent = mejor;
-}
 
 async function cargarMetricasVisitas() {
     console.log("Cargando métricas completas...");
