@@ -156,8 +156,8 @@ async function cargarTopClientes() {
     // NOTA: Esto asume que tu tabla 'visitas' tiene columnas 'nombre' y 'telefono'.
     // Si no las tiene, tendrás que modificar el .select() para traer los datos correctos.
     const { data, error } = await supabaseClient
-        .from('visitas')
-        .select('nombre, telefono'); 
+    .from('clientes')
+    .select('nombre, telefono, visitas(id)');
 
     if (error || !data || data.length === 0) {
         container.innerHTML = '<p style="text-align:center; color:#666;">No hay datos de clientes registrados.</p>';
