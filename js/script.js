@@ -534,74 +534,57 @@ async function procesarMezcla() {
     // 1. Evitar dobles clics
     if (shakerState.isProcessing) return;
     shakerState.isProcessing = true;
-    detenerDetectorMovimiento(); // Parar el acelerómetro para ahorrar batería
+    detenerDetectorMovimiento(); 
 
-    // 2. Feedback Visual para el usuario
+    // 2. Feedback Visual simple
     const btn = document.getElementById('btn-mix-manual');
     const status = document.getElementById('shaker-status');
     const visual = document.getElementById('shaker-img');
     
-    btn.textContent = "Analizando sabores...";
+    btn.textContent = "Mezclando...";
     btn.disabled = true;
-    status.textContent = "🧠 El Sommelier IA está pensando...";
-    visual.classList.add('shaking'); // Inicia animación
+    status.textContent = "Preparando tu recomendación...";
+    visual.classList.add('shaking');
 
-    // 3. Configuración de la petición
-    // NOTA: Asegúrate de que esta URL sea la de tu nuevo script desplegado
+    // 3. URL de tu Script de Google (Asegúrate que sea la última versión implementada)
     const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
 
     try {
-        // Hacemos la petición a Google Apps Script
         const response = await fetch(URL_SCRIPT, {
             method: 'POST',
             body: JSON.stringify({
-                // Solo enviamos los sabores elegidos. 
-                // La IA ya tiene acceso directo a Supabase para ver el inventario real.
-                sabor: shakerState.seleccionados.join(', ') 
+                sabor: shakerState.seleccionados.join(', ')
             }),
-            headers: { "Content-Type": "text/plain" } // Evita errores de CORS (preflight)
+            headers: { "Content-Type": "text/plain" }
         });
 
         const data = await response.json();
         
-        // 4. Manejo de la Respuesta Inteligente
         if (data.success && data.recomendacion) {
-            // Si Groq nos da una justificación ("Elegí este porque..."), la mostramos
-            if (data.justificacion) {
-                showToast(`💡 ${data.justificacion}`, "info");
-            }
+            // CAMBIO AQUÍ: Eliminamos el showToast de la justificación.
+            // La IA elige silenciosamente y solo mostramos el producto.
             
-            // Llamamos a tu función existente para mostrar el producto
-            // Importante: data.recomendacion debe ser el nombre exacto del producto
             mostrarResultadoShaker(data.recomendacion);
-            
-            status.textContent = "¡Recomendación lista!";
+            status.textContent = "¡Listo!";
         } else {
-            throw new Error(data.error || "Respuesta inválida de la IA");
+            throw new Error(data.error || "Respuesta inválida");
         }
 
     } catch (error) {
-        console.error("Error en Shaker IA:", error);
+        console.error("Error silencioso:", error);
         
-        // 5. Fallback Local (Plan B)
-        // Si falla la IA o internet, no dejamos al usuario esperando: elegimos uno local al azar
-        showToast("Conexión lenta... Usando recomendación de la casa", "warning");
-        
+        // Fallback: Si algo falla, mostramos uno al azar sin asustar al usuario
         const destacados = todosLosProductos.filter(p => p.destacado && p.estado !== 'agotado');
         const pool = destacados.length > 0 ? destacados : todosLosProductos;
         
         if (pool.length > 0) {
             const random = pool[Math.floor(Math.random() * pool.length)];
             mostrarResultadoShaker(random.nombre);
-        } else {
-            status.textContent = "No hay productos disponibles.";
         }
-
     } finally {
-        // 6. Limpieza final
         shakerState.isProcessing = false;
         visual.classList.remove('shaking');
-        btn.textContent = "¡MEZCLAR OTRA VEZ!";
+        btn.textContent = "¡MEZCLAR DE NUEVO!";
         btn.disabled = false;
     }
 }
