@@ -232,9 +232,9 @@ async function generarCuriosidadIA() {
     console.log("🚀 Iniciando generación de curiosidad...");
 
     // 1. Obtener elementos del DOM usando los IDs que definimos en el HTML
-    const nameInput = document.getElementById('product-name'); 
-    const curiosityInput = document.getElementById('product-curiosity');
-    const btn = document.getElementById('btn-generate-ai');
+    const nameInput = document.getElementById('nombre'); // Antes era 'product-name'
+    const curiosityInput = document.getElementById('curiosidad'); // Antes era 'product-curiosity'
+    const btn = document.getElementById('btn-ia'); // Antes era 'btn-generate-ai'
 
     // 2. Validaciones de seguridad
     if (!nameInput) {
