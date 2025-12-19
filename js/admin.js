@@ -257,7 +257,7 @@ async function generarCuriosidadIA() {
     try {
         // 4. Usamos la URL desde CONFIG (definida en config.js)
         // Si CONFIG no existe, usa una cadena vacía para evitar error y saltar al catch
-        const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.SCRIPT_URL : "";
+        const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "";
         
         if (!scriptUrl) {
             throw new Error("La URL del script no está configurada en config.js");
