@@ -537,7 +537,7 @@ async function procesarMezcla() {
     const menuSimple = todosLosProductos.map(p => p.nombre).join(', ');
     
     // 2. URL de tu Script
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbwfGlwmuKVSy630EnyWR4gJ0k-5hPVIwWg_bXS07m0v79KahgZ8J3Eyvi_DQu1-MbOg/exec";
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbyyJoRpC1mYNKNlKxjZVAT0dyXYW79wFq_IbV0KOll2bY0cjWXoUN7K-71lzB6TgJ5x/exec";
 
     try {
         const response = await fetch(URL_SCRIPT, {
