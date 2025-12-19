@@ -226,27 +226,46 @@ async function restaurarProducto(id) {
     cargarAdmin();
 }
 
-// IA CURIOSIDAD (Mantenido igual)
-async function generarCuriosidad() {
-    const nombre = document.getElementById('nombre').value;
-    const out = document.getElementById('curiosidad');
-    const btn = document.getElementById('btn-ia');
-    const loader = document.getElementById('loader-ia');
+async function generarCuriosidadContextual() {
+    // 1. Obtener el valor del campo donde escribes el nombre del producto
+    // Asegúrate de que el ID coincida con tu HTML (ej: 'nombre', 'input-name', etc.)
+    const inputNombre = document.getElementById('nombre'); 
+    const output = document.getElementById('curiosidad'); // El textarea donde va el resultado
+    const btn = document.getElementById('btn-curiosidad');
 
-    if(!nombre) { alert("Pon un nombre primero"); return; }
-    
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
+    // Validación simple
+    if (!inputNombre || !inputNombre.value.trim()) {
+        alert("⚠️ Por favor, escribe el nombre del producto antes de pedir una curiosidad.");
+        inputNombre.focus();
+        return;
+    }
 
-    btn.disabled = true; loader.style.display = "inline"; out.value = "Pensando...";
+    // Feedback visual
+    const textoOriginal = btn.textContent;
+    btn.textContent = "🤔 Pensando...";
+    btn.disabled = true;
 
     try {
-        const res = await fetch(URL_SCRIPT, { method:'POST', body: JSON.stringify({producto:nombre})});
-        const json = await res.json();
-        out.value = json.curiosidad || "Sin respuesta";
-    } catch(e) {
-        out.value = "Error conexión IA";
+        // 2. Llamada al Script pasando el nombre como parámetro
+        // URL_SCRIPT debe estar definida en tu config.js o al inicio de este archivo
+        const url = `${URL_SCRIPT}?action=getCuriosity&productName=${encodeURIComponent(inputNombre.value)}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            // Efecto de máquina de escribir o inserción directa
+            output.value = data.texto.replace(/['"]+/g, ''); // Limpiamos comillas si la IA las puso
+        } else {
+            alert("Error: " + data.texto);
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("No se pudo conectar con la IA.");
     } finally {
-        btn.disabled = false; loader.style.display = "none";
+        btn.textContent = textoOriginal;
+        btn.disabled = false;
     }
 }
 
