@@ -2,10 +2,16 @@
 let opinionesGlobal = [];
 
 async function cargarOpiniones() {
-    console.log("Cargando opiniones...");
+    console.log("Cargando opiniones con datos de producto...");
     const { data, error } = await supabaseClient
         .from('opiniones')
-        .select('*')
+        .select(`
+            *,
+            productos (
+                nombre,
+                imagen_url
+            )
+        `)
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -17,24 +23,45 @@ async function cargarOpiniones() {
     renderizarOpiniones(data);
     actualizarEstadisticasOpiniones(data);
 }
-
 function renderizarOpiniones(lista) {
     const container = document.getElementById('grid-opiniones');
     if (!container) return;
 
+    if (lista.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#888; grid-column:1/-1;">No hay opiniones para mostrar.</p>';
+        return;
+    }
+
     container.innerHTML = lista.map(op => {
-        const puntos = op.puntuacion || 0; // Usar 'puntuacion' como en script.js
+        const puntos = op.puntuacion || 0;
         const estrellas = "⭐".repeat(puntos);
         const fecha = new Date(op.created_at).toLocaleDateString();
         
+        // Obtenemos los datos del producto (con fallback por si no existe)
+        const infoProducto = op.productos || { nombre: 'Producto eliminado', imagen_url: 'https://via.placeholder.com/50' };
+        
         return `
             <div class="review-card">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="color:var(--gold); font-weight:bold;">${op.cliente_nombre || 'Anónimo'}</span>
-                    <small style="color:#666;">${fecha}</small>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #333;">
+                    <img src="${infoProducto.imagen_url}" 
+                         style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:1px solid #444;" 
+                         alt="prod">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="color:var(--gold); font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">
+                            ${infoProducto.nombre}
+                        </span>
+                        <small style="color:#666; font-size:0.7rem;">${fecha}</small>
+                    </div>
                 </div>
-                <div style="font-size:0.9rem; margin-bottom:10px;">${estrellas}</div>
-                <p style="color:#ccc; font-size:0.85rem; font-style:italic;">"${op.comentario || ''}"</p>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <span style="color:#fff; font-weight:600; font-size:0.9rem;">${op.cliente_nombre || 'Anónimo'}</span>
+                    <div style="font-size:0.8rem;">${estrellas}</div>
+                </div>
+
+                <p style="color:#aaa; font-size:0.85rem; font-style:italic; margin-top:5px; line-height:1.4;">
+                    "${op.comentario || 'Sin comentario'}"
+                </p>
             </div>
         `;
     }).join('');
