@@ -548,7 +548,7 @@ async function procesarMezcla() {
 
     // 3. Configuración de la petición
     // NOTA: Asegúrate de que esta URL sea la de tu nuevo script desplegado
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbyyJoRpC1mYNKNlKxjZVAT0dyXYW79wFq_IbV0KOll2bY0cjWXoUN7K-71lzB6TgJ5x/exec";
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzyKZwIp4_3i1PNn0awo7hV7Ww6LpF9JLA9B831yPrnOtJz4ZoXwr_3FleVdUEVyaw4/exec";
 
     try {
         // Hacemos la petición a Google Apps Script
