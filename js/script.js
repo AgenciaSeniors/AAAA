@@ -278,30 +278,38 @@ const searchInput = document.getElementById('search-input');
 if(searchInput) {
     searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
-        const term = e.target.value.toLowerCase();
+        const term = normalizarTexto(e.target.value); // <--- USAR AQUÍ
         searchTimeout = setTimeout(() => {
             const lista = todosLosProductos.filter(p => 
-                (p.nombre || '').toLowerCase().includes(term) || 
-                (p.descripcion || '').toLowerCase().includes(term) // Corrección Crash por null
+                normalizarTexto(p.nombre).includes(term) || // <--- USAR AQUÍ
+                normalizarTexto(p.descripcion).includes(term) // <--- USAR AQUÍ
             );
             renderizarMenu(lista);
         }, 300);
     });
 }
 
+
 function filtrar(cat, btn) {
+    // 1. Gestión visual de los botones
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     if(btn) btn.classList.add('active');
+    
+    // 2. Limpiar barra de búsqueda si se usa un filtro
     if(searchInput) searchInput.value = '';
     
-    const catNormalizada = cat.toLowerCase().trim();
+    // 3. Normalizar la categoría seleccionada (ej: "Cócteles" -> "cocteles")
+    const catFiltro = normalizarTexto(cat);
 
-    const lista = catNormalizada === 'todos' 
+    // 4. Filtrado inteligente
+    const lista = catFiltro === 'todos' 
         ? todosLosProductos 
         : todosLosProductos.filter(p => {
-            // Protección contra null y normalización
-            const catProd = (p.categoria || '').toLowerCase().trim(); 
-            return catProd === catNormalizada;
+            // Normalizamos la categoría que viene de la Base de Datos
+            const catProd = normalizarTexto(p.categoria);
+            
+            // Ahora "Cócteles" (BD) será igual a "cocteles" (Botón)
+            return catProd === catFiltro;
         });
 
     renderizarMenu(lista);
@@ -753,4 +761,12 @@ function registrarServiceWorker() {
                 console.log('Fallo al registrar Service Worker:', error);
             });
     }
+}
+
+function normalizarTexto(texto) {
+    return (texto || '')           // Protegemos contra null/undefined
+        .toLowerCase()             // A minúsculas
+        .normalize("NFD")          // Descompone letras de sus acentos (ó -> o + ´)
+        .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos separados
+        .trim();                   // Quita espacios extra
 }
