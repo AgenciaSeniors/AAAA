@@ -226,45 +226,67 @@ async function restaurarProducto(id) {
     cargarAdmin();
 }
 
-async function generarCuriosidadContextual() {
-    // 1. Obtener el valor del campo donde escribes el nombre del producto
-    // Asegúrate de que el ID coincida con tu HTML (ej: 'nombre', 'input-name', etc.)
-    const inputNombre = document.getElementById('nombre'); 
-    const output = document.getElementById('curiosidad'); // El textarea donde va el resultado
-    const btn = document.getElementById('btn-curiosidad');
+// En js/admin.js
 
-    // Validación simple
-    if (!inputNombre || !inputNombre.value.trim()) {
-        alert("⚠️ Por favor, escribe el nombre del producto antes de pedir una curiosidad.");
-        inputNombre.focus();
+async function generarCuriosidadIA() {
+    console.log("🚀 Iniciando generación de curiosidad...");
+
+    // 1. Obtener elementos del DOM usando los IDs que definimos en el HTML
+    const nameInput = document.getElementById('product-name'); 
+    const curiosityInput = document.getElementById('product-curiosity');
+    const btn = document.getElementById('btn-generate-ai');
+
+    // 2. Validaciones de seguridad
+    if (!nameInput) {
+        console.error("❌ Error: No encuentro el input con id='product-name'");
+        alert("Error interno: Falta el campo de nombre en el HTML.");
         return;
     }
 
-    // Feedback visual
-    const textoOriginal = btn.textContent;
-    btn.textContent = "🤔 Pensando...";
+    if (!nameInput.value.trim()) {
+        alert("⚠️ Escribe primero el nombre del producto.");
+        nameInput.focus();
+        return;
+    }
+
+    // 3. Feedback visual (Cambiamos el botón)
+    const originalText = btn.textContent;
+    btn.textContent = "🔮 Pensando...";
     btn.disabled = true;
 
     try {
-        // 2. Llamada al Script pasando el nombre como parámetro
-        // URL_SCRIPT debe estar definida en tu config.js o al inicio de este archivo
-        const url = `${URL_SCRIPT}?action=getCuriosity&productName=${encodeURIComponent(inputNombre.value)}`;
+        // 4. Usamos la URL desde CONFIG (definida en config.js)
+        // Si CONFIG no existe, usa una cadena vacía para evitar error y saltar al catch
+        const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.SCRIPT_URL : "";
         
-        const response = await fetch(url);
+        if (!scriptUrl) {
+            throw new Error("La URL del script no está configurada en config.js");
+        }
+
+        console.log(`📡 Conectando a IA para: ${nameInput.value}`);
+        
+        // Codificamos el nombre para que pueda viajar en la URL
+        const nombreCodificado = encodeURIComponent(nameInput.value);
+        
+        // Llamada al Google Apps Script
+        const response = await fetch(`${scriptUrl}?action=getCuriosity&productName=${nombreCodificado}`);
         const data = await response.json();
 
+        console.log("✅ Respuesta recibida:", data);
+
         if (data.success) {
-            // Efecto de máquina de escribir o inserción directa
-            output.value = data.texto.replace(/['"]+/g, ''); // Limpiamos comillas si la IA las puso
+            // Limpiamos comillas extras si la IA las puso
+            curiosityInput.value = data.texto.replace(/^"|"$/g, '');
         } else {
-            alert("Error: " + data.texto);
+            alert("La IA respondió con un error: " + data.texto);
         }
 
     } catch (error) {
-        console.error(error);
-        alert("No se pudo conectar con la IA.");
+        console.error("❌ Error grave:", error);
+        alert("Error de conexión: " + error.message);
     } finally {
-        btn.textContent = textoOriginal;
+        // 5. Restaurar el botón pase lo que pase
+        btn.textContent = originalText;
         btn.disabled = false;
     }
 }
