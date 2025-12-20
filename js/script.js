@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
-// --- LÓGICA DE VISITAS Y BIENVENIDA (CORREGIDA) ---
 async function checkWelcome() {
     const clienteId = localStorage.getItem('cliente_id');
     const modal = document.getElementById('modal-welcome');
