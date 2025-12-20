@@ -63,7 +63,7 @@ async function checkWelcome() {
         // Lógica de registro en base de datos (Cooldown 12h)
         const ultimaVisita = localStorage.getItem('ultima_visita_ts');
         const ahora = Date.now();
-        const HORAS_12 = 12 * 60 * 60 * 1000; 
+        const HORAS_12 = 5 * 1000; 
 
         if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > HORAS_12) {
             console.log("Registrando visita recurrente...");
