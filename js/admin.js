@@ -206,14 +206,50 @@ if(form) {
 }
 
 // 6. TOGGLES
+// 6. TOGGLES (Versiones Seguras)
+
 async function toggleDestacado(id, val) {
-    await supabaseClient.from('productos').update({ destacado: !val }).eq('id', id);
-    cargarAdmin();
+    try {
+        // Intentamos actualizar en Supabase
+        const { error } = await supabaseClient
+            .from('productos')
+            .update({ destacado: !val })
+            .eq('id', id);
+
+        // Si hay error en la respuesta de la BD, lo lanzamos
+        if (error) throw error;
+
+        // Éxito: Feedback visual y recarga
+        showToast(val ? "Quitado de destacados" : "¡Destacado activado!", "success");
+        await cargarAdmin(); 
+
+    } catch (err) {
+        console.error("Error toggleDestacado:", err);
+        showToast("Error de conexión. Intenta de nuevo.", "error");
+    }
 }
+
 async function toggleEstado(id, val) {
-    const nuevo = val === 'disponible' ? 'agotado' : 'disponible';
-    await supabaseClient.from('productos').update({ estado: nuevo }).eq('id', id);
-    cargarAdmin();
+    try {
+        const nuevo = val === 'disponible' ? 'agotado' : 'disponible';
+        
+        const { error } = await supabaseClient
+            .from('productos')
+            .update({ estado: nuevo })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        // Feedback específico según el nuevo estado
+        const mensaje = nuevo === 'agotado' ? "Producto marcado como AGOTADO" : "Producto disponible nuevamente";
+        showToast(mensaje, "success");
+        
+        await cargarAdmin();
+
+    } catch (err) {
+        console.error("Error toggleEstado:", err);
+        showToast("No se pudo cambiar el estado. Revisa tu conexión.", "error");
+    }
 }
 async function eliminarProducto(id) {
     if(confirm("¿Eliminar?")) {
@@ -292,3 +328,23 @@ async function generarCuriosidadIA() {
 }
 
 document.addEventListener('DOMContentLoaded', checkAuth);
+
+// Función auxiliar para notificaciones en el Admin
+function showToast(msg, tipo = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const t = document.createElement('div');
+    t.className = `toast ${tipo}`; // Usa tus clases CSS existentes
+    t.innerHTML = `<span class="toast-msg">${msg}</span>`;
+    container.appendChild(t);
+
+    setTimeout(() => {
+        t.style.animation = 'fadeOut 0.4s forwards';
+        setTimeout(() => t.remove(), 400);
+    }, 3000);
+}
