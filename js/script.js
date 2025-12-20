@@ -42,32 +42,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
+// --- LÓGICA DE VISITAS Y BIENVENIDA (MODO PRUEBA: 10 SEGUNDOS) ---
 async function checkWelcome() {
     const clienteId = localStorage.getItem('cliente_id');
     const modal = document.getElementById('modal-welcome');
 
     if (clienteId) {
         // CASO 1: CLIENTE QUE REGRESA
-        // Ocultamos el modal de registro porque ya lo conocemos
         if (modal) modal.style.display = 'none';
 
-        // --- NUEVO: MOSTRAR MENSAJE DE BIENVENIDA ---
         const nombreGuardado = localStorage.getItem('cliente_nombre') || 'Amigo';
         
-        // Usamos un setTimeout para esperar a que cargue la interfaz y se vea bonito
+        // Mensaje de bienvenida visual
         setTimeout(() => {
             showToast(`¡Qué bueno verte de nuevo, ${nombreGuardado}! 🍹`, "success");
         }, 1500);
-        // ---------------------------------------------
 
-        // Lógica de registro en base de datos (Cooldown 12h)
+        // Lógica de registro en base de datos (MODIFICADO PARA PRUEBAS)
         const ultimaVisita = localStorage.getItem('ultima_visita_ts');
         const ahora = Date.now();
-        const HORAS_12 = 5 * 1000; 
+        
+        // CAMBIO AQUÍ: 10 segundos en lugar de 12 horas
+        const TIEMPO_ESPERA = 10 * 1000; // 10 segundos * 1000 ms
 
-        if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > HORAS_12) {
-            console.log("Registrando visita recurrente...");
-            // Registramos visita en BD sin molestar
+        if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > TIEMPO_ESPERA) {
+            console.log("Registrando visita recurrente (Prueba 10s)...");
+            
             if (typeof supabaseClient !== 'undefined') {
                 const { error } = await supabaseClient.from('visitas').insert([{
                     cliente_id: clienteId,
@@ -81,7 +81,6 @@ async function checkWelcome() {
         }
     } else {
         // CASO 2: CLIENTE NUEVO
-        // Mostrar modal de registro
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
