@@ -133,6 +133,44 @@ function filtrarOpiniones(filtro, btn) {
     renderizarOpiniones(filtradas);
 }
 
+
+async function cargarMetricasVisitas() {
+    console.log("Cargando métricas completas...");
+
+    const hoy = new Date();
+    const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString();
+    const inicioDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).toISOString();
+
+    // 1. Cifras Generales
+    // Total Histórico
+    const { count: total, error: errTotal } = await supabaseClient
+        .from('visitas')
+        .select('*', { count: 'exact', head: true });
+    if (!errTotal) setText('stat-unique-clients', total); 
+
+    // Mes Actual
+    const { count: mes, error: errMes } = await supabaseClient
+        .from('visitas')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', inicioMes);
+    if (!errMes) setText('stat-mes', mes);
+
+    // Hoy
+    const { count: dia, error: errDia } = await supabaseClient
+        .from('visitas')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', inicioDia);
+    if (!errDia) {
+        setText('stat-hoy', dia);
+        setText('trend-hoy', "Tiempo real");
+    }
+
+    // 2. Cargar Gráficos y Listas
+    cargarGraficoTendencia();
+    cargarGraficoHoras();  // ¡Agregado!
+    cargarTopClientes();   // ¡Agregado!
+}
+
 // --- GRÁFICO 1: TENDENCIA (Últimos 7 días) ---
 async function cargarGraficoTendencia() {
     const canvas = document.getElementById('chart-visitas');
