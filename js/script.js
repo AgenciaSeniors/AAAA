@@ -533,10 +533,21 @@ function renderizarEsencias() {
     grid.innerHTML = '';
     
     ESENCIAS.forEach(esencia => {
-        const btn = document.createElement('div');
-        btn.className = 'essence-btn';
+        const btn = document.createElement('button'); // <--- CAMBIO A BUTTON
+        btn.type = 'button'; // Buena práctica para evitar submit accidentales
+        btn.className = 'essence-btn'; // Asegúrate que tu CSS no dependa de que sea un div
+        
+        // Accesibilidad: Indicamos si está presionado o no
+        const isSelected = shakerState.seleccionados.includes(esencia.nombre);
+        btn.setAttribute('aria-pressed', isSelected);
+        
         btn.innerHTML = `<span>${esencia.icono}</span><small>${esencia.nombre}</small>`;
-        btn.onclick = () => toggleEsencia(esencia, btn);
+        
+        btn.onclick = () => {
+            toggleEsencia(esencia, btn);
+            // Actualizamos el estado ARIA al hacer click
+            btn.setAttribute('aria-pressed', btn.classList.contains('selected'));
+        };
         grid.appendChild(btn);
     });
 }

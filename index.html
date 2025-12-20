@@ -27,7 +27,7 @@
             <input type="text" id="welcome-nombre" placeholder="Tu Nombre" class="input-stylish" style="margin-bottom:15px; text-align:center;">
             <input type="tel" id="welcome-phone" placeholder="Teléfono" class="input-stylish" style="margin-bottom:25px; text-align:center;">
             <button class="btn-modal-action" onclick="registrarBienvenida()">ENTRAR</button>
-            <p onclick="cerrarWelcome()" style="color:#666; font-size:0.75rem; margin-top:20px; cursor:pointer; text-decoration:underline;">Entrar como anónimo</p>
+            <button onclick="cerrarWelcome()" style="background:none; border:none; padding:0; color:#666; font-size:0.75rem; margin-top:20px; cursor:pointer; text-decoration:underline; font-family: inherit;">Entrar como anónimo</button>
         </div>
     </div>
 
@@ -91,7 +91,9 @@
 
     <div id="modal-detalle" class="modal-overlay" onclick="if(event.target == this) cerrarDetalle()">
         <div class="modal-card">
-            <div class="btn-close-modal" onclick="cerrarDetalle()">✕</div>
+            <button class="btn-close-modal" onclick="cerrarDetalle()" type="button" aria-label="Cerrar detalles">
+                    ✕
+                </button>
             <div class="modal-image-wrapper">
                 <img id="det-img" src="" alt="Producto" loading="lazy">
             </div>
@@ -116,7 +118,9 @@
 
     <div id="modal-opinion" class="modal-overlay" onclick="if(event.target == this) cerrarModalOpiniones()">
         <div class="modal-card" style="padding: 30px;">
-            <span class="close-btn-float" style="top:10px; right:10px;" onclick="cerrarModalOpiniones()">×</span>
+            <button class="close-btn-float" style="top:10px; right:10px; background:none; border:none; color:white; font-size:2rem; cursor:pointer;" onclick="cerrarModalOpiniones()" type="button" aria-label="Cerrar opinión">
+    ×
+</button>
             <h3 class="modal-title-elegant" style="text-align:center; margin-bottom:20px; font-size:2rem; color:var(--neon-magenta);">Tu Opinión</h3>
             
             <div class="stars" id="stars-container" style="font-size:3rem; color:#333; cursor:pointer; margin-bottom:25px; text-align:center;">

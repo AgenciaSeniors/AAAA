@@ -38,7 +38,23 @@
     z-index: 10; transition: transform 0.2s;
 }
 .btn-close-modal:active { transform: scale(0.9); }
+/* Reseteo básico para botones que antes eran divs */
+button.btn-close-modal,
+button.essence-btn,
+button.close-btn-float {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font: inherit;
+    outline: inherit;
+    cursor: pointer;
+}
 
+/* Para mejorar la accesibilidad visual del foco (navegación por teclado) */
+button:focus-visible {
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: 2px;
+}
 .modal-body-content { padding: 0 25px 25px 25px; margin-top: -40px; position: relative; z-index: 5; }
 
 /* Tipografía Neón para el título del modal */
