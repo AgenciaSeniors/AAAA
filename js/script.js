@@ -42,29 +42,47 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
+// --- LÓGICA DE VISITAS Y BIENVENIDA (CORREGIDA) ---
 async function checkWelcome() {
     const clienteId = localStorage.getItem('cliente_id');
     const modal = document.getElementById('modal-welcome');
 
     if (clienteId) {
+        // CASO 1: CLIENTE QUE REGRESA
+        // Ocultamos el modal de registro porque ya lo conocemos
         if (modal) modal.style.display = 'none';
 
+        // --- NUEVO: MOSTRAR MENSAJE DE BIENVENIDA ---
+        const nombreGuardado = localStorage.getItem('cliente_nombre') || 'Amigo';
+        
+        // Usamos un setTimeout para esperar a que cargue la interfaz y se vea bonito
+        setTimeout(() => {
+            showToast(`¡Qué bueno verte de nuevo, ${nombreGuardado}! 🍹`, "success");
+        }, 1500);
+        // ---------------------------------------------
+
+        // Lógica de registro en base de datos (Cooldown 12h)
         const ultimaVisita = localStorage.getItem('ultima_visita_ts');
         const ahora = Date.now();
-        const HORAS_12 = 12 * 60 * 60 * 1000;
+        const HORAS_12 = 12 * 60 * 60 * 1000; 
 
         if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > HORAS_12) {
             console.log("Registrando visita recurrente...");
-            const { error } = await supabaseClient.from('visitas').insert([{
-                cliente_id: clienteId,
-                motivo: 'Regreso al Menú'
-            }]);
+            // Registramos visita en BD sin molestar
+            if (typeof supabaseClient !== 'undefined') {
+                const { error } = await supabaseClient.from('visitas').insert([{
+                    cliente_id: clienteId,
+                    motivo: 'Regreso al Menú'
+                }]);
 
-            if (!error) {
-                localStorage.setItem('ultima_visita_ts', ahora.toString());
+                if (!error) {
+                    localStorage.setItem('ultima_visita_ts', ahora.toString());
+                }
             }
         }
     } else {
+        // CASO 2: CLIENTE NUEVO
+        // Mostrar modal de registro
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
