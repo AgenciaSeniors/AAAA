@@ -1,7 +1,44 @@
-// js/admin.js - Panel de Administración (Corregido y Seguro)
+// js/admin.js - Panel de Administración (Refactorizado con Store y Seguridad)
 
-let inventarioGlobal = []; 
-let searchTimeout; 
+// --- GESTIÓN DE ESTADO CENTRALIZADO (STORE) ---
+const AdminStore = {
+    state: {
+        inventory: [],
+        searchTimeout: null,
+        currentEditId: null
+    },
+
+    setInventory(list) { this.state.inventory = list; },
+    getInventory() { return this.state.inventory; },
+
+    filterInventory(term) {
+        if (!term) return this.state.inventory;
+        const lowerTerm = term.toLowerCase();
+        return this.state.inventory.filter(p => 
+            (p.nombre || '').toLowerCase().includes(lowerTerm) || 
+            (p.descripcion || '').toLowerCase().includes(lowerTerm) ||
+            (p.categoria || '').toLowerCase().includes(lowerTerm)
+        );
+    }
+};
+
+// FUNCIÓN AUXILIAR DE NOTIFICACIONES (Autorreparable)
+function showToast(msg, tipo = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+    const t = document.createElement('div');
+    t.className = `toast ${tipo}`;
+    t.innerHTML = `<span class="toast-msg">${msg}</span>`;
+    container.appendChild(t);
+    setTimeout(() => { 
+        t.style.animation = 'fadeOut 0.4s forwards'; 
+        setTimeout(() => t.remove(), 400); 
+    }, 3000);
+}
 
 // FUNCIÓN DE SEGURIDAD (Sanitización)
 function escapeHTML(str) {
@@ -27,11 +64,12 @@ async function cargarAdmin() {
 
     if (error) {
         console.error("Error productos:", error);
+        showToast("Error al cargar inventario", "error");
         return;
     }
     
-    inventarioGlobal = data;
-    renderizarInventario(inventarioGlobal);
+    AdminStore.setInventory(data);
+    renderizarInventario(AdminStore.getInventory());
 }
 
 async function cerrarSesion() {
@@ -72,7 +110,6 @@ function renderizarInventario(lista) {
     }
 
     const html = lista.map(item => {
-        // Sanitizamos TODO lo que viene de la BD
         const nombreSafe = escapeHTML(item.nombre);
         const precioSafe = escapeHTML(item.precio);
         
@@ -111,21 +148,18 @@ function renderizarInventario(lista) {
 }
 
 function buscarInventario(e) {
-    clearTimeout(searchTimeout);
-    const term = e.target.value.toLowerCase();
-    searchTimeout = setTimeout(() => {
-        const filtrada = inventarioGlobal.filter(p => 
-            (p.nombre || '').toLowerCase().includes(term) || 
-            (p.descripcion || '').toLowerCase().includes(term) ||
-            (p.categoria || '').toLowerCase().includes(term)
-        );
+    clearTimeout(AdminStore.state.searchTimeout);
+    const term = e.target.value;
+    
+    AdminStore.state.searchTimeout = setTimeout(() => {
+        const filtrada = AdminStore.filterInventory(term);
         renderizarInventario(filtrada);
     }, 300);
 }
 
 // 4. EDICIÓN / CREACIÓN
 function prepararEdicion(id) {
-    const prod = inventarioGlobal.find(p => p.id === id);
+    const prod = AdminStore.getInventory().find(p => p.id === id);
     if (!prod) return;
 
     document.getElementById('edit-id').value = prod.id;
@@ -170,7 +204,6 @@ if(form) {
                 destacado: document.getElementById('destacado').checked
             };
 
-            // Imagen
             const fileInput = document.getElementById('imagen-file');
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
@@ -193,158 +226,113 @@ if(form) {
             }
 
             if (errorDb) throw errorDb;
-            alert(id ? "Actualizado" : "Creado");
+            showToast(id ? "Producto Actualizado" : "Producto Creado", "success");
             cancelarEdicion();
             cargarAdmin();
 
         } catch (err) {
-            alert("Error: " + err.message);
+            showToast("Error: " + err.message, "error");
         } finally {
             btn.textContent = txtOriginal; btn.disabled = false;
         }
     });
 }
 
-// 6. TOGGLES
 // 6. TOGGLES (Versiones Seguras)
-
 async function toggleDestacado(id, val) {
     try {
-        // Intentamos actualizar en Supabase
         const { error } = await supabaseClient
             .from('productos')
             .update({ destacado: !val })
             .eq('id', id);
 
-        // Si hay error en la respuesta de la BD, lo lanzamos
         if (error) throw error;
 
-        // Éxito: Feedback visual y recarga
         showToast(val ? "Quitado de destacados" : "¡Destacado activado!", "success");
         await cargarAdmin(); 
 
     } catch (err) {
         console.error("Error toggleDestacado:", err);
-        showToast("Error de conexión. Intenta de nuevo.", "error");
+        showToast("Error de conexión.", "error");
     }
 }
 
 async function toggleEstado(id, val) {
     try {
         const nuevo = val === 'disponible' ? 'agotado' : 'disponible';
-        
         const { error } = await supabaseClient
             .from('productos')
             .update({ estado: nuevo })
             .eq('id', id);
 
         if (error) throw error;
-
-        // Feedback específico según el nuevo estado
-        const mensaje = nuevo === 'agotado' ? "Producto marcado como AGOTADO" : "Producto disponible nuevamente";
-        showToast(mensaje, "success");
-        
+        showToast(nuevo === 'agotado' ? "Marcado como AGOTADO" : "Marcado como DISPONIBLE", "success");
         await cargarAdmin();
 
     } catch (err) {
         console.error("Error toggleEstado:", err);
-        showToast("No se pudo cambiar el estado. Revisa tu conexión.", "error");
+        showToast("No se pudo cambiar el estado.", "error");
     }
-}
-async function eliminarProducto(id) {
-    if(confirm("¿Eliminar?")) {
-        await supabaseClient.from('productos').update({ activo: false }).eq('id', id);
-        cargarAdmin();
-    }
-}
-async function restaurarProducto(id) {
-    await supabaseClient.from('productos').update({ activo: true }).eq('id', id);
-    cargarAdmin();
 }
 
-// En js/admin.js
+async function eliminarProducto(id) {
+    if(confirm("¿Estás seguro de eliminar este producto?")) {
+        try {
+            const { error } = await supabaseClient.from('productos').update({ activo: false }).eq('id', id);
+            if(error) throw error;
+            showToast("Producto eliminado", "success");
+            cargarAdmin();
+        } catch(err) {
+            showToast("Error al eliminar", "error");
+        }
+    }
+}
+
+async function restaurarProducto(id) {
+    try {
+        const { error } = await supabaseClient.from('productos').update({ activo: true }).eq('id', id);
+        if(error) throw error;
+        showToast("Producto restaurado", "success");
+        cargarAdmin();
+    } catch(err) {
+        showToast("Error al restaurar", "error");
+    }
+}
 
 async function generarCuriosidadIA() {
-    console.log("🚀 Iniciando generación de curiosidad...");
+    const nameInput = document.getElementById('nombre');
+    const curiosityInput = document.getElementById('curiosidad');
+    const btn = document.getElementById('btn-ia');
 
-    // 1. Obtener elementos del DOM usando los IDs que definimos en el HTML
-    const nameInput = document.getElementById('nombre'); // Antes era 'product-name'
-    const curiosityInput = document.getElementById('curiosidad'); // Antes era 'product-curiosity'
-    const btn = document.getElementById('btn-ia'); // Antes era 'btn-generate-ai'
-
-    // 2. Validaciones de seguridad
-    if (!nameInput) {
-        console.error("❌ Error: No encuentro el input con id='product-name'");
-        alert("Error interno: Falta el campo de nombre en el HTML.");
+    if (!nameInput || !nameInput.value.trim()) {
+        showToast("Escribe primero el nombre del producto.", "warning");
+        if(nameInput) nameInput.focus();
         return;
     }
 
-    if (!nameInput.value.trim()) {
-        alert("⚠️ Escribe primero el nombre del producto.");
-        nameInput.focus();
-        return;
-    }
-
-    // 3. Feedback visual (Cambiamos el botón)
     const originalText = btn.textContent;
-    btn.textContent = "🔮 Pensando...";
-    btn.disabled = true;
+    btn.textContent = "🔮 ..."; btn.disabled = true;
 
     try {
-        // 4. Usamos la URL desde CONFIG (definida en config.js)
-        // Si CONFIG no existe, usa una cadena vacía para evitar error y saltar al catch
         const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "";
-        
-        if (!scriptUrl) {
-            throw new Error("La URL del script no está configurada en config.js");
-        }
+        if (!scriptUrl) throw new Error("URL de script no configurada");
 
-        console.log(`📡 Conectando a IA para: ${nameInput.value}`);
-        
-        // Codificamos el nombre para que pueda viajar en la URL
         const nombreCodificado = encodeURIComponent(nameInput.value);
-        
-        // Llamada al Google Apps Script
         const response = await fetch(`${scriptUrl}?action=getCuriosity&productName=${nombreCodificado}`);
         const data = await response.json();
 
-        console.log("✅ Respuesta recibida:", data);
-
         if (data.success) {
-            // Limpiamos comillas extras si la IA las puso
             curiosityInput.value = data.texto.replace(/^"|"$/g, '');
+            showToast("Curiosidad generada", "success");
         } else {
-            alert("La IA respondió con un error: " + data.texto);
+            showToast("La IA no respondió correctamente", "warning");
         }
-
     } catch (error) {
-        console.error("❌ Error grave:", error);
-        alert("Error de conexión: " + error.message);
+        console.error("Error IA:", error);
+        showToast("Error conectando con la IA", "error");
     } finally {
-        // 5. Restaurar el botón pase lo que pase
-        btn.textContent = originalText;
-        btn.disabled = false;
+        btn.textContent = originalText; btn.disabled = false;
     }
 }
 
 document.addEventListener('DOMContentLoaded', checkAuth);
-
-// Función auxiliar para notificaciones en el Admin
-function showToast(msg, tipo = 'success') {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        document.body.appendChild(container);
-    }
-
-    const t = document.createElement('div');
-    t.className = `toast ${tipo}`; // Usa tus clases CSS existentes
-    t.innerHTML = `<span class="toast-msg">${msg}</span>`;
-    container.appendChild(t);
-
-    setTimeout(() => {
-        t.style.animation = 'fadeOut 0.4s forwards';
-        setTimeout(() => t.remove(), 400);
-    }, 3000);
-}
