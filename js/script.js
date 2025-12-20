@@ -254,43 +254,102 @@ async function cargarMenu() {
     }
 }
 
+// --- RENDERIZADO POR SECCIONES (TIPO INSTAGRAM/UBER EATS) ---
+
 function renderizarMenu(lista) {
     const contenedor = document.getElementById('menu-grid');
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
     if (!lista || lista.length === 0) {
-        contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px;"><h4>Carta Vacía</h4></div>';
+        contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px;"><h4>No hay resultados</h4></div>';
         return;
     }
 
-    const html = lista.map(item => {
-        const esAgotado = item.estado === 'agotado';
-        let badgeHTML = '';
-        if (esAgotado) badgeHTML = `<span class="badge-agotado" style="color:var(--neon-red); border:1px solid var(--neon-red);">AGOTADO</span>`;
-        else if (item.destacado) badgeHTML = `<span class="badge-destacado">🔥 HOT</span>`;
+    // 1. Mapa de Categorías (Exacto como en tu Base de Datos)
+    const nombresCat = {
+        'cocteles': 'Cócteles de la Casa 🍸',
+        'cervezas': 'Cervezas Frías 🍺',
+        'licores': 'Vinos y Licores 🍷',
+        'bebidas_sin': 'Refrescos y Jugos 🥤',
+        'italiana': 'Pizzas y Pastas 🍕',
+        'fuertes': 'Platos Fuertes 🍽️',
+        'tapas': 'Para Picar 🍟',
+        'otros': 'Otros 🍴'
+    };
 
-        const img = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
-        const rating = item.ratingPromedio ? `★ ${item.ratingPromedio}` : '';
-        const accionClick = esAgotado ? '' : `onclick="abrirDetalle(${item.id})"`;
-        const claseAgotado = esAgotado ? 'agotado' : '';
+    // 2. Agrupamos los productos
+    const categorias = {};
+    // Orden deseado de aparición
+    const orden = ['cocteles', 'cervezas', 'licores', 'bebidas_sin', 'tapas', 'italiana', 'fuertes'];
 
-        return `
-            <div class="card ${claseAgotado}" ${accionClick}>
-                ${badgeHTML}
-                <div class="img-box"><img src="${img}" loading="lazy" alt="${item.nombre}"></div>
-                <div class="info">
-                    <h3>${item.nombre}</h3>
-                    <p class="short-desc">${item.descripcion || ''}</p>
-                    <div class="card-footer">
-                         <span class="price">$${item.precio}</span>
-                         <span class="rating-pill">${rating}</span>
-                    </div>
+    lista.forEach(item => {
+        const cat = item.categoria || 'otros';
+        if (!categorias[cat]) categorias[cat] = [];
+        categorias[cat].push(item);
+    });
+
+    // 3. Generamos el HTML respetando el orden
+    let htmlFinal = '';
+
+    // Primero las categorías definidas en el orden
+    orden.forEach(catKey => {
+        if (categorias[catKey] && categorias[catKey].length > 0) {
+            htmlFinal += construirSeccionHTML(catKey, nombresCat[catKey], categorias[catKey]);
+            delete categorias[catKey]; // Lo quitamos para no repetirlo
+        }
+    });
+
+    // Luego cualquier otra categoría que haya sobrado (ej. 'otros' o nuevas)
+    Object.keys(categorias).forEach(catKey => {
+        const titulo = nombresCat[catKey] || catKey.toUpperCase();
+        htmlFinal += construirSeccionHTML(catKey, titulo, categorias[catKey]);
+    });
+
+    contenedor.innerHTML = htmlFinal;
+    
+    // 4. Activamos el espía de scroll
+    setTimeout(iniciarScrollSpy, 100); 
+}
+
+// Función auxiliar para crear el bloque HTML de cada sección
+function construirSeccionHTML(id, titulo, items) {
+    return `
+        <section id="cat-${id}" class="category-section">
+            <h2 class="category-header">${titulo}</h2>
+            <div class="grid-productos">
+                ${items.map(item => generarCardHTML(item)).join('')}
+            </div>
+        </section>
+    `;
+}
+
+// Función auxiliar para la tarjeta (Misma lógica visual que tenías)
+function generarCardHTML(item) {
+    const esAgotado = item.estado === 'agotado';
+    const img = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
+    const rating = item.ratingPromedio ? `★ ${item.ratingPromedio}` : '';
+    const accionClick = esAgotado ? '' : `onclick="abrirDetalle(${item.id})"`;
+    const claseAgotado = esAgotado ? 'agotado' : '';
+    
+    let badgeHTML = '';
+    if (esAgotado) badgeHTML = `<span class="badge-agotado" style="color:var(--neon-red); border:1px solid var(--neon-red);">AGOTADO</span>`;
+    else if (item.destacado) badgeHTML = `<span class="badge-destacado">🔥 HOT</span>`;
+
+    return `
+        <div class="card ${claseAgotado}" ${accionClick}>
+            ${badgeHTML}
+            <div class="img-box"><img src="${img}" loading="lazy" alt="${item.nombre}"></div>
+            <div class="info">
+                <h3>${item.nombre}</h3>
+                <p class="short-desc">${item.descripcion || ''}</p>
+                <div class="card-footer">
+                     <span class="price">$${item.precio}</span>
+                     <span class="rating-pill">${rating}</span>
                 </div>
             </div>
-        `;
-    }).join('');
-    contenedor.innerHTML = html;
+        </div>
+    `;
 }
 
 // --- BÚSQUEDA Y FILTROS ---
@@ -316,18 +375,69 @@ if(searchInput) {
     });
 }
 
+// --- NAVEGACIÓN Y SCROLL SPY ---
+
 function filtrar(cat, btn) {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    if(btn) btn.classList.add('active');
+    // Si pulsan "Todos", volvemos arriba
+    if (cat === 'todos') {
+        renderizarMenu(AppStore.getProducts());
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Actualizamos botones manualmente
+        actualizarBotonesActivos('todos');
+        return;
+    }
+
+    // Buscamos la sección y scrolleamos hacia ella
+    const seccionId = `cat-${cat}`; // ej: cat-cocteles
+    const seccion = document.getElementById(seccionId);
     
-    if(searchInput) searchInput.value = '';
-    const catFiltro = normalizarTexto(cat);
+    if (seccion) {
+        // Cálculo para descontar el header fijo
+        const headerOffset = 130; 
+        const elementPosition = seccion.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth"
+        });
+    } else {
+        // Si la sección no existe (ej. no hay productos de esa categoría), filtramos normal
+        showToast("No hay productos en esta categoría hoy", "info");
+    }
+}
 
-    const lista = catFiltro === 'todos' 
-        ? AppStore.getProducts()
-        : AppStore.getProducts().filter(p => normalizarTexto(p.categoria) === catFiltro);
+function iniciarScrollSpy() {
+    const secciones = document.querySelectorAll('.category-section');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                // Obtenemos el ID puro (quitamos 'cat-')
+                const idPuro = entry.target.id.replace('cat-', '');
+                actualizarBotonesActivos(idPuro);
+            }
+        });
+    }, {
+        rootMargin: "-20% 0px -60% 0px" // Ajuste fino para detectar la sección activa al medio
+    });
 
-    renderizarMenu(lista);
+    secciones.forEach(sec => observer.observe(sec));
+}
+
+function actualizarBotonesActivos(categoriaActiva) {
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        // El botón debe tener onclick="filtrar('cocteles', this)"
+        // Comprobamos si el atributo onclick contiene la categoría activa
+        if (btn.getAttribute('onclick').includes(`'${categoriaActiva}'`)) {
+            btn.classList.add('active');
+        }
+        // Caso especial para 'todos' si estamos arriba del todo (opcional)
+        if (categoriaActiva === 'todos' && btn.textContent.includes('Todos')) {
+            btn.classList.add('active');
+        }
+    });
 }
 
 // --- DETALLES Y OPINIONES ---
