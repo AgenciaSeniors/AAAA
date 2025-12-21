@@ -258,22 +258,22 @@ async function toggleDestacado(id, val) {
         showToast("Error de conexión.", "error");
     }
 }
-
-// js/admin.js
-
 async function toggleEstado(id, estadoActual, btnElement) {
-    // 1. UI OPTIMISTA: Cambiamos visualmente AHORA MISMO
+    // 1. CAMBIO VISUAL INSTANTÁNEO (Ilusión de velocidad)
     const icono = btnElement.querySelector('.material-icons');
     const esDisponible = estadoActual === 'disponible';
     
-    // Simulamos el cambio visual inmediato
+    // Cambiamos el icono y color inmediatamente, sin esperar a internet
     icono.textContent = esDisponible ? 'toggle_off' : 'toggle_on';
-    btnElement.style.color = esDisponible ? '#666' : 'var(--green-success)'; // Gris o Verde
+    btnElement.style.color = esDisponible ? '#666' : 'var(--green-success)';
     
+    // Feedback visual rápido
+    showToast(esDisponible ? "Marcando como AGOTADO..." : "Activando...", "info");
+
     try {
         const nuevoEstado = esDisponible ? 'agotado' : 'disponible';
         
-        // 2. Enviamos a la base de datos en segundo plano
+        // 2. ENVIAR A SUPABASE (En segundo plano)
         const { error } = await supabaseClient
             .from('productos')
             .update({ estado: nuevoEstado })
@@ -281,18 +281,15 @@ async function toggleEstado(id, estadoActual, btnElement) {
 
         if (error) throw error;
 
-        // Feedback sutil y recarga real para confirmar
-        showToast(nuevoEstado === 'agotado' ? "Marcado como AGOTADO" : "Marcado como DISPONIBLE", "success");
-        
-        // Opcional: Si quieres que sea muy rápido, puedes quitar cargarAdmin() 
-        // pero es mejor dejarlo para asegurar que los datos son reales.
+        // Éxito real: Confirmamos con mensaje verde y recargamos datos
+        showToast(nuevoEstado === 'agotado' ? "Producto AGOTADO" : "Producto DISPONIBLE", "success");
         await cargarAdmin();
 
     } catch (err) {
         console.error("Error toggleEstado:", err);
-        showToast("Error de conexión. Revirtiendo...", "error");
+        showToast("Error de conexión. Revertiendo...", "error");
         
-        // 3. REVERTIR SI FALLA (Rollback visual)
+        // 3. SI FALLA: REVERTIMOS EL CAMBIO VISUAL (Rollback)
         icono.textContent = esDisponible ? 'toggle_on' : 'toggle_off';
         btnElement.style.color = esDisponible ? 'var(--green-success)' : '#666';
     }
