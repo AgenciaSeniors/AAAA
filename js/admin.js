@@ -257,21 +257,42 @@ async function toggleDestacado(id, val) {
     }
 }
 
-async function toggleEstado(id, val) {
+// js/admin.js
+
+async function toggleEstado(id, estadoActual, btnElement) {
+    // 1. UI OPTIMISTA: Cambiamos visualmente AHORA MISMO
+    const icono = btnElement.querySelector('.material-icons');
+    const esDisponible = estadoActual === 'disponible';
+    
+    // Simulamos el cambio visual inmediato
+    icono.textContent = esDisponible ? 'toggle_off' : 'toggle_on';
+    btnElement.style.color = esDisponible ? '#666' : 'var(--green-success)'; // Gris o Verde
+    
     try {
-        const nuevo = val === 'disponible' ? 'agotado' : 'disponible';
+        const nuevoEstado = esDisponible ? 'agotado' : 'disponible';
+        
+        // 2. Enviamos a la base de datos en segundo plano
         const { error } = await supabaseClient
             .from('productos')
-            .update({ estado: nuevo })
+            .update({ estado: nuevoEstado })
             .eq('id', id);
 
         if (error) throw error;
-        showToast(nuevo === 'agotado' ? "Marcado como AGOTADO" : "Marcado como DISPONIBLE", "success");
+
+        // Feedback sutil y recarga real para confirmar
+        showToast(nuevoEstado === 'agotado' ? "Marcado como AGOTADO" : "Marcado como DISPONIBLE", "success");
+        
+        // Opcional: Si quieres que sea muy rápido, puedes quitar cargarAdmin() 
+        // pero es mejor dejarlo para asegurar que los datos son reales.
         await cargarAdmin();
 
     } catch (err) {
         console.error("Error toggleEstado:", err);
-        showToast("No se pudo cambiar el estado.", "error");
+        showToast("Error de conexión. Revirtiendo...", "error");
+        
+        // 3. REVERTIR SI FALLA (Rollback visual)
+        icono.textContent = esDisponible ? 'toggle_on' : 'toggle_off';
+        btnElement.style.color = esDisponible ? 'var(--green-success)' : '#666';
     }
 }
 
