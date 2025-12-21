@@ -332,7 +332,7 @@ async function generarCuriosidadIA() {
         if (!scriptUrl) throw new Error("URL de script no configurada");
 
         const nombreCodificado = encodeURIComponent(nameInput.value);
-        const response = await fetch(`${scriptUrl}?action=getCuriosity&productName=${nombreCodificado}`);
+        const response = await fetch(`${scriptUrl}?action=getCuriosity&productName=${nombreCodificado}&v=${Date.now()}`);
         const data = await response.json();
 
         if (data.success) {
