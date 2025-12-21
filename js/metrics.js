@@ -1,32 +1,43 @@
 // js/metrics.js - Versión Corregida (Sin errores de Timezone)
 
 async function cargarMetricasVisitas() {
-    console.log("Calculando métricas con ajuste de zona horaria...");
+    console.log("Calculando métricas con ajuste REAL de zona horaria...");
     
-    // Obtenemos la fecha local en formato YYYY-MM-DD sin desfase UTC
-    const hoy = new Date();
-    const isoFecha = hoy.toLocaleDateString('en-CA'); // "2023-10-27"
-    const inicioDia = `${isoFecha}T00:00:00.000Z`;
-    const inicioMes = `${isoFecha.substring(0, 7)}-01T00:00:00.000Z`;
+    // 1. Obtenemos el momento actual
+    const ahora = new Date();
+
+    // 2. Calculamos la medianoche LOCAL (00:00:00 en el reloj del usuario)
+    // El constructor new Date(año, mes, dia) usa la zona horaria del dispositivo
+    const medianocheLocal = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
+    // 3. Calculamos el inicio del mes LOCAL
+    const inicioMesLocal = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+
+    // 4. Convertimos a ISO para Supabase
+    // .toISOString() hace la matemática automáticamente:
+    // Si en Cuba es 00:00 (medianoche), lo convertirá a "...T05:00:00.000Z" (UTC correcto)
+    const inicioDia = medianocheLocal.toISOString();
+    const inicioMes = inicioMesLocal.toISOString();
 
     try {
+        // ... (El resto de tu código de consultas sigue igual) ...
+        
         // 1. Total de Visitas (Histórico)
         const { count: totalH } = await supabaseClient
             .from('visitas')
             .select('*', { count: 'exact', head: true });
 
-        // 2. Visitas del Mes (Filtrado)
+        // 2. Visitas del Mes (Filtrado con fecha corregida)
         const { count: totalM } = await supabaseClient
             .from('visitas')
             .select('*', { count: 'exact', head: true })
             .gte('created_at', inicioMes);
 
-        // 3. Visitas de Hoy (Filtrado)
+        // 3. Visitas de Hoy (Filtrado con fecha corregida)
         const { count: totalD } = await supabaseClient
             .from('visitas')
             .select('*', { count: 'exact', head: true })
             .gte('created_at', inicioDia);
-
         // Actualización de la UI
         if (document.getElementById('stat-unique-clients')) 
             document.getElementById('stat-unique-clients').textContent = totalH || 0;
