@@ -122,27 +122,30 @@ function renderizarInventario(lista) {
         const img = item.imagen_url || 'https://via.placeholder.com/60';
         const opacity = item.activo ? '' : 'opacity:0.5; filter:grayscale(1);';
         const deletedLabel = !item.activo ? '<small style="color:red">(ELIMINADO)</small>' : '';
+        const isChecked = item.estado === 'disponible' ? 'checked' : '';
 
         return `
             <div class="inventory-item" style="${opacity}">
-                <img src="${img}" class="item-thumb" alt="img">
-                <div class="item-meta">
-                    <span class="item-title">${nombreSafe} ${item.destacado ? '🌟' : ''} ${deletedLabel}</span>
-                    <span class="item-price">$${precioSafe}</span>
-                    <span class="item-status ${statusClass}">${statusText}</span>
-                </div>
-                <div class="action-btn-group">
-                    <button class="icon-btn" onclick="prepararEdicion(${item.id})"><span class="material-icons">edit</span></button>
-                    <button class="icon-btn" style="color:${colorStar}" onclick="toggleDestacado(${item.id}, ${item.destacado})"><span class="material-icons">star</span></button>
-                    <button class="icon-btn" style="color:${colorState}" onclick="toggleEstado(${item.id}, '${item.estado}', this)">
-                        <span class="material-icons">${iconState}</span>
-                    </button>
-                    ${item.activo ? 
-                        `<button class="icon-btn btn-del" onclick="eliminarProducto(${item.id})"><span class="material-icons">delete</span></button>` :
-                        `<button class="icon-btn" style="color:green" onclick="restaurarProducto(${item.id})"><span class="material-icons">restore_from_trash</span></button>`
-                    }
-                </div>
-            </div>
+        <img src="${img}" class="item-thumb" alt="img">
+        <div class="item-meta">
+            <span class="item-title">${nombreSafe} ${item.destacado ? '🌟' : ''} ${deletedLabel}</span>
+            <span class="item-price">$${precioSafe}</span>
+            <span class="item-status ${statusClass}">${statusText}</span>
+        </div>
+        <div class="action-btn-group" style="align-items:center;"> <button class="icon-btn" onclick="prepararEdicion(${item.id})"><span class="material-icons">edit</span></button>
+            <button class="icon-btn" style="color:${colorStar}" onclick="toggleDestacado(${item.id}, ${item.destacado})"><span class="material-icons">star</span></button>
+            
+            <label class="switch" title="Cambiar Disponibilidad">
+                <input type="checkbox" ${isChecked} onchange="toggleEstado(${item.id}, this)">
+                <span class="slider"></span>
+            </label>
+            
+            ${item.activo ? 
+                `<button class="icon-btn btn-del" onclick="eliminarProducto(${item.id})"><span class="material-icons">delete</span></button>` :
+                `<button class="icon-btn" style="color:green" onclick="restaurarProducto(${item.id})"><span class="material-icons">restore_from_trash</span></button>`
+            }
+        </div>
+    </div>
         `;
     }).join('');
 
@@ -258,22 +261,15 @@ async function toggleDestacado(id, val) {
         showToast("Error de conexión.", "error");
     }
 }
-async function toggleEstado(id, estadoActual, btnElement) {
-    // 1. CAMBIO VISUAL INSTANTÁNEO (Ilusión de velocidad)
-    const icono = btnElement.querySelector('.material-icons');
-    const esDisponible = estadoActual === 'disponible';
-    
-    // Cambiamos el icono y color inmediatamente, sin esperar a internet
-    icono.textContent = esDisponible ? 'toggle_off' : 'toggle_on';
-    btnElement.style.color = esDisponible ? '#666' : 'var(--green-success)';
-    
-    // Feedback visual rápido
-    showToast(esDisponible ? "Marcando como AGOTADO..." : "Activando...", "info");
+
+async function toggleEstado(id, checkboxElement) {
+    const isAvailable = checkboxElement.checked;
+    const nuevoEstado = isAvailable ? 'disponible' : 'agotado';
+
+    showToast(isAvailable ? "Activando producto..." : "Marcando como AGOTADO...", "info");
 
     try {
-        const nuevoEstado = esDisponible ? 'agotado' : 'disponible';
-        
-        // 2. ENVIAR A SUPABASE (En segundo plano)
+        // 2. Enviar a Supabase
         const { error } = await supabaseClient
             .from('productos')
             .update({ estado: nuevoEstado })
@@ -281,17 +277,15 @@ async function toggleEstado(id, estadoActual, btnElement) {
 
         if (error) throw error;
 
-        // Éxito real: Confirmamos con mensaje verde y recargamos datos
-        showToast(nuevoEstado === 'agotado' ? "Producto AGOTADO" : "Producto DISPONIBLE", "success");
-        await cargarAdmin();
+        showToast(isAvailable ? "Producto DISPONIBLE" : "Producto AGOTADO", "success");
+        await cargarAdmin(); 
 
     } catch (err) {
         console.error("Error toggleEstado:", err);
         showToast("Error de conexión. Revertiendo...", "error");
         
-        // 3. SI FALLA: REVERTIMOS EL CAMBIO VISUAL (Rollback)
-        icono.textContent = esDisponible ? 'toggle_on' : 'toggle_off';
-        btnElement.style.color = esDisponible ? 'var(--green-success)' : '#666';
+        // 3. ROLLBACK: Si falla, devolvemos el interruptor a su posición original
+        checkboxElement.checked = !isAvailable; 
     }
 }
 
