@@ -58,41 +58,50 @@ async function cargarMetricasVisitas() {
         console.error("Error cargando métricas:", err);
     }
 }
-
-// Asegúrate de que cargarTopClientes maneje errores si no hay relación de BD
 async function cargarTopClientes() {
     const container = document.getElementById('top-clientes-list');
     if (!container) return;
 
-    // Si visitas(count) falla, es por falta de Foreign Key en Supabase
-    const { data: clientes, error } = await supabaseClient
-        .from('clientes')
-        .select('*, visitas(count)');
+    // Mostramos un estado de carga ligero
+    container.innerHTML = '<p style="text-align:center; color:#888; font-size:0.9rem;">Calculando líderes...</p>';
 
-    if (error) {
-        console.warn("Aviso: Verifica la Foreign Key entre Clientes y Visitas en Supabase.");
-        container.innerHTML = '<p style="text-align:center; color:#666;">Configura la relación en la BD para ver VIPs.</p>';
-        return;
-    }
+    try {
+        // LLAMADA OPTIMIZADA: Usamos .rpc() para ejecutar la función en el servidor
+        // Esto descarga solo 5 objetos JSON, rapidísimo.
+        const { data: ranking, error } = await supabaseClient
+            .rpc('obtener_top_clientes');
 
-    const ranking = (clientes || [])
-        .sort((a, b) => (b.visitas[0]?.count || 0) - (a.visitas[0]?.count || 0))
-        .slice(0, 5);
+        if (error) throw error;
 
-    container.innerHTML = ranking.map((c, i) => {
-        const iconos = ['👑', '🥇', '🥈', '🥉', '👤'];
-        return `
-            <div class="inventory-item" style="justify-content: space-between;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span>${iconos[i] || '👤'}</span>
-                    <div>
-                        <div class="item-title">${c.nombre}</div>
-                        <small>${c.telefono || 'Sin ID'}</small>
+        // Si no hay datos (base de datos vacía)
+        if (!ranking || ranking.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#666;">Aún no hay visitas registradas.</p>';
+            return;
+        }
+
+        // Renderizado (Idéntico a tu lógica visual, pero usando los datos directos)
+        container.innerHTML = ranking.map((c, i) => {
+            const iconos = ['👑', '🥇', '🥈', '🥉', '👤'];
+            // Nota: La RPC devuelve 'total_visitas', no 'visitas[0].count'
+            const cantidad = c.total_visitas || 0; 
+            
+            return `
+                <div class="inventory-item" style="justify-content: space-between;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span>${iconos[i] || '👤'}</span>
+                        <div>
+                            <div class="item-title">${c.nombre}</div>
+                            <small>${c.telefono || 'Sin Teléfono'}</small>
+                        </div>
                     </div>
-                </div>
-                <div style="text-align:right;">
-                    <span style="color:var(--gold); font-weight:bold;">${c.visitas[0]?.count || 0}</span>
-                </div>
-            </div>`;
-    }).join('');
+                    <div style="text-align:right;">
+                        <span style="color:var(--gold); font-weight:bold;">${cantidad}</span>
+                    </div>
+                </div>`;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error cargando ranking:", err);
+        container.innerHTML = '<p style="text-align:center; color:var(--neon-red);">Error de conexión</p>';
+    }
 }
