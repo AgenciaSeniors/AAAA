@@ -134,7 +134,7 @@ function renderizarInventario(lista) {
                 <div class="action-btn-group">
                     <button class="icon-btn" onclick="prepararEdicion(${item.id})"><span class="material-icons">edit</span></button>
                     <button class="icon-btn" style="color:${colorStar}" onclick="toggleDestacado(${item.id}, ${item.destacado})"><span class="material-icons">star</span></button>
-                    <button class="icon-btn" style="color:${colorState}" onclick="toggleEstado(${item.id}, '${item.estado}')"><span class="material-icons">${iconState}</span></button>
+                    <button class="icon-btn" style="color:${colorState}" onclick="toggleEstado(${item.id}, '${item.estado, this}')"><span class="material-icons">${iconState}</span></button>
                     ${item.activo ? 
                         `<button class="icon-btn btn-del" onclick="eliminarProducto(${item.id})"><span class="material-icons">delete</span></button>` :
                         `<button class="icon-btn" style="color:green" onclick="restaurarProducto(${item.id})"><span class="material-icons">restore_from_trash</span></button>`
