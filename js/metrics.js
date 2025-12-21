@@ -1,61 +1,50 @@
-// js/metrics.js - Versión Corregida (Sin errores de Timezone)
-
 async function cargarMetricasVisitas() {
-    console.log("Calculando métricas con ajuste REAL de zona horaria...");
-    
-    // 1. Obtenemos el momento actual
+    console.log("🚀 Cargando métricas optimizadas...");
+
+    // Cálculo de fechas locales (usando la corrección "cubana" que vimos antes)
     const ahora = new Date();
-
-    // 2. Calculamos la medianoche LOCAL (00:00:00 en el reloj del usuario)
-    // El constructor new Date(año, mes, dia) usa la zona horaria del dispositivo
     const medianocheLocal = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-
-    // 3. Calculamos el inicio del mes LOCAL
     const inicioMesLocal = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
-    // 4. Convertimos a ISO para Supabase
-    // .toISOString() hace la matemática automáticamente:
-    // Si en Cuba es 00:00 (medianoche), lo convertirá a "...T05:00:00.000Z" (UTC correcto)
-    const inicioDia = medianocheLocal.toISOString();
-    const inicioMes = inicioMesLocal.toISOString();
-
     try {
-        // ... (El resto de tu código de consultas sigue igual) ...
-        
-        // 1. Total de Visitas (Histórico)
-        const { count: totalH } = await supabaseClient
-            .from('visitas')
-            .select('*', { count: 'exact', head: true });
+        // LLAMADA ÚNICA A SUPABASE
+        // Enviamos las fechas calculadas y recibimos todo junto
+        const { data: metricas, error } = await supabaseClient
+            .rpc('obtener_contadores_dashboard', {
+                fecha_inicio_dia: medianocheLocal.toISOString(),
+                fecha_inicio_mes: inicioMesLocal.toISOString()
+            });
 
-        // 2. Visitas del Mes (Filtrado con fecha corregida)
-        const { count: totalM } = await supabaseClient
-            .from('visitas')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', inicioMes);
+        if (error) throw error;
 
-        // 3. Visitas de Hoy (Filtrado con fecha corregida)
-        const { count: totalD } = await supabaseClient
-            .from('visitas')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', inicioDia);
-        // Actualización de la UI
-        if (document.getElementById('stat-unique-clients')) 
-            document.getElementById('stat-unique-clients').textContent = totalH || 0;
-        
-        if (document.getElementById('stat-mes')) 
-            document.getElementById('stat-mes').textContent = totalM || 0;
-        
-        if (document.getElementById('stat-hoy')) {
-            document.getElementById('stat-hoy').textContent = totalD || 0;
-            document.getElementById('trend-hoy').textContent = "Sincronizado";
+        // Actualización de la UI (Instantánea)
+        if (metricas) {
+            // Histórico
+            if (document.getElementById('stat-unique-clients')) 
+                document.getElementById('stat-unique-clients').textContent = metricas.historico || 0;
+            
+            // Mensual
+            if (document.getElementById('stat-mes')) 
+                document.getElementById('stat-mes').textContent = metricas.mensual || 0;
+            
+            // Diario
+            if (document.getElementById('stat-hoy')) {
+                document.getElementById('stat-hoy').textContent = metricas.diario || 0;
+                document.getElementById('trend-hoy').textContent = "Al día";
+            }
         }
 
-        // Cargar componentes adicionales
+        // Cargar el resto de cosas (Gráficos y Ranking)
         if (typeof cargarGraficoTendencia === 'function') cargarGraficoTendencia();
-        if (typeof cargarTopClientes === 'function') cargarTopClientes();
+        if (typeof cargarTopClientes === 'function') cargarTopClientes(); // ¡Recuerda usar la versión optimizada aquí también!
 
     } catch (err) {
-        console.error("Error cargando métricas:", err);
+        console.error("Error en métricas:", err);
+        // Opcional: Mostrar guiones si falla
+        ['stat-unique-clients', 'stat-mes', 'stat-hoy'].forEach(id => {
+             const el = document.getElementById(id);
+             if(el) el.textContent = "-";
+        });
     }
 }
 async function cargarTopClientes() {
