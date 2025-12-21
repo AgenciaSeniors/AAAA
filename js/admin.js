@@ -47,13 +47,21 @@ function escapeHTML(str) {
         '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
     }[tag]));
 }
-
-// 1. VERIFICACIÓN AUTH
 async function checkAuth() {
     if (typeof supabaseClient === 'undefined') return;
+
+    // Verificar sesión con Supabase
     const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) window.location.href = "login.html";
-    else cargarAdmin();
+
+    if (!session) {
+        // Si no hay sesión, redirigir INMEDIATAMENTE sin mostrar nada
+        window.location.href = "login.html";
+    } else {
+        // Sesión válida: Cargar datos primero
+        await cargarAdmin();
+        // Y finalmente hacer visible la interfaz
+        document.body.classList.add('auth-verified');
+    }
 }
 
 async function cargarAdmin() {

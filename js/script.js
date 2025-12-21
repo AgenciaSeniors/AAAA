@@ -14,7 +14,7 @@ const AppStore = {
             shakeTimer: null
         }
     },
-
+    
     setProducts(list) { this.state.products = list; },
     getProducts() { return this.state.products; },
     
@@ -33,54 +33,71 @@ const AppStore = {
         this.state.shaker.shakeCount = 0;
     }
 };
+// Función para sanitizar HTML y prevenir XSS
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.toString().replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag]));
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-    checkWelcome(); 
-    cargarMenu();
-    updateConnectionStatus();
-    registrarServiceWorker();
-});
+async function generarFingerprint() {
+    const msg = navigator.userAgent + navigator.language + screen.colorDepth + screen.width + (new Date()).getTimezoneOffset();
+    const encoder = new TextEncoder();
+    const data = encoder.encode(msg);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
-// --- LÓGICA DE VISITAS Y BIENVENIDA (MODO PRUEBA: 10 SEGUNDOS) ---
 async function checkWelcome() {
-    const clienteId = localStorage.getItem('cliente_id');
     const modal = document.getElementById('modal-welcome');
+    let clienteId = localStorage.getItem('cliente_id');
+
+    // Si no hay ID local, intentamos recuperar por Fingerprint
+    if (!clienteId) {
+        try {
+            const fingerprint = await generarFingerprint();
+            
+            // Nota: Requiere que hayas creado la columna 'fingerprint' en tu tabla 'clientes' de Supabase
+            const { data: clienteExistente } = await supabaseClient
+                .from('clientes')
+                .select('id, nombre')
+                .eq('fingerprint', fingerprint)
+                .maybeSingle(); // Usamos maybeSingle para no lanzar error si no existe
+            
+            if (clienteExistente) {
+                clienteId = clienteExistente.id;
+                localStorage.setItem('cliente_id', clienteId);
+                localStorage.setItem('cliente_nombre', clienteExistente.nombre);
+                showToast(`¡Te reconocimos! Bienvenido de nuevo, ${clienteExistente.nombre} 👋`, "success");
+            }
+        } catch (e) {
+            console.warn("No se pudo verificar fingerprint:", e);
+        }
+    }
 
     if (clienteId) {
-        // CASO 1: CLIENTE QUE REGRESA
+        // CASO 1: CLIENTE RECONOCIDO
         if (modal) modal.style.display = 'none';
 
-        const nombreGuardado = localStorage.getItem('cliente_nombre') || 'Amigo';
-        
-        // Mensaje de bienvenida visual
-        setTimeout(() => {
-            showToast(`¡Qué bueno verte de nuevo, ${nombreGuardado}! 🍹`, "success");
-        }, 1500);
-
-        // Lógica de registro en base de datos (MODIFICADO PARA PRUEBAS)
         const ultimaVisita = localStorage.getItem('ultima_visita_ts');
         const ahora = Date.now();
-        
-        // CAMBIO AQUÍ: 10 segundos en lugar de 12 horas
-        const TIEMPO_ESPERA = 10 * 1000; // 10 segundos * 1000 ms
+        // Ajustado a 12 horas para producción (43200000 ms)
+        const TIEMPO_ESPERA = 12 * 60 * 60 * 1000; 
 
         if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > TIEMPO_ESPERA) {
-            console.log("Registrando visita recurrente (Prueba 10s)...");
-            
             if (typeof supabaseClient !== 'undefined') {
-                const { error } = await supabaseClient.from('visitas').insert([{
+                await supabaseClient.from('visitas').insert([{
                     cliente_id: clienteId,
                     motivo: 'Regreso al Menú'
                 }]);
-
-                if (!error) {
-                    localStorage.setItem('ultima_visita_ts', ahora.toString());
-                }
+                localStorage.setItem('ultima_visita_ts', ahora.toString());
             }
         }
     } else {
-        // CASO 2: CLIENTE NUEVO
+        // CASO 2: CLIENTE NUEVO (Mostrar Modal)
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
@@ -332,6 +349,11 @@ function construirSeccionHTML(id, titulo, items) {
 
 // Función auxiliar para la tarjeta (Misma lógica visual que tenías)
 function generarCardHTML(item) {
+    // Sanitización de datos antes de pintar
+    const nombreSafe = escapeHTML(item.nombre);
+    const descSafe = escapeHTML(item.descripcion);
+    const precioSafe = escapeHTML(item.precio);
+    
     const esAgotado = item.estado === 'agotado';
     const img = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
     const rating = item.ratingPromedio ? `★ ${item.ratingPromedio}` : '';
@@ -345,12 +367,12 @@ function generarCardHTML(item) {
     return `
         <div class="card ${claseAgotado}" ${accionClick}>
             ${badgeHTML}
-            <div class="img-box"><img src="${img}" loading="lazy" alt="${item.nombre}"></div>
+            <div class="img-box"><img src="${img}" loading="lazy" alt="${nombreSafe}"></div>
             <div class="info">
-                <h3>${item.nombre}</h3>
-                <p class="short-desc">${item.descripcion || ''}</p>
+                <h3>${nombreSafe}</h3>
+                <p class="short-desc">${descSafe}</p>
                 <div class="card-footer">
-                     <span class="price">$${item.precio}</span>
+                     <span class="price">$${precioSafe}</span>
                      <span class="rating-pill">${rating}</span>
                 </div>
             </div>
@@ -457,6 +479,7 @@ function abrirDetalle(id) {
     const imgEl = document.getElementById('det-img');
     if(imgEl) imgEl.src = p.imagen_url || '';
     
+    // Usamos textContent para seguridad (evita inyección HTML)
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
     setText('det-precio', `$${p.precio}`);
@@ -465,6 +488,8 @@ function abrirDetalle(id) {
     const box = document.getElementById('box-curiosidad');
     if (p.curiosidad && p.curiosidad.length > 5) {
         if(box) box.style.display = "block";
+        // Si la curiosidad viene de la IA y es texto plano, setText está bien.
+        // Si necesitas formato, usa: document.getElementById('det-curiosidad').innerHTML = escapeHTML(p.curiosidad);
         setText('det-curiosidad', p.curiosidad);
     } else {
         if(box) box.style.display = "none";
@@ -780,13 +805,16 @@ async function procesarMezcla() {
     status.textContent = "Preparando tu recomendación...";
     visual.classList.add('shaking');
 
-    // Usamos CONFIG si está disponible
-    const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
+    const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "";
 
     try {
         const response = await fetch(scriptUrl, {
             method: 'POST',
-            body: JSON.stringify({ sabor: shaker.selected.join(', ') }),
+            body: JSON.stringify({ 
+                sabor: shaker.selected.join(', '),
+                // Enviamos el token seguro
+                token: (typeof CONFIG !== 'undefined') ? CONFIG.API_TOKEN : ''
+            }),
             headers: { "Content-Type": "text/plain" }
         });
 
@@ -796,12 +824,12 @@ async function procesarMezcla() {
             mostrarResultadoShaker(data.recomendacion);
             status.textContent = "¡Listo!";
         } else {
-            throw new Error("Respuesta inválida");
+            throw new Error("Respuesta inválida o no autorizada");
         }
 
     } catch (error) {
         console.error("Error silencioso:", error);
-        // Fallback
+        // Fallback local en caso de error o ataque
         const destacados = AppStore.getProducts().filter(p => p.destacado && p.estado !== 'agotado');
         const pool = destacados.length > 0 ? destacados : AppStore.getProducts();
         

@@ -15,6 +15,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
     <script src="js/config.js"></script>
+    <style>
+        
+    body {
+        opacity: 0;
+        pointer-events: none; 
+        transition: opacity 0.3s ease-in;
+    }
+    body.auth-verified {
+        opacity: 1;
+        pointer-events: all;
+    }
+</style>
 </head>
 <body class="admin-body">
 
