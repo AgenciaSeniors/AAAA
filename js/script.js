@@ -266,22 +266,32 @@ function renderizarMenu(lista) {
         return;
     }
 
-    // 1. Mapa de Categorías (Exacto como en tu Base de Datos)
+    // 1. Mapa de Categorías
     const nombresCat = {
         'cocteles': 'Cócteles de la Casa 🍸',
         'cervezas': 'Cervezas Frías 🍺',
         'licores': 'Vinos y Licores 🍷',
-        'bebidas_sin': 'Refrescos y Jugos 🥤',
-        'italiana': 'Pizzas y Pastas 🍕',
-        'fuertes': 'Platos Fuertes 🍽️',
-        'tapas': 'Para Picar 🍟',
+        'tapas': 'Para Picar 🍟',          // <--- Subimos la comida
+        'italiana': 'Pizzas y Pastas 🍕',   // <--- Comida principal
+        'fuertes': 'Platos Fuertes 🍽️',    // <--- Comida fuerte
+        'bebidas_sin': 'Refrescos y Jugos 🥤', // <--- S/ Alcohol al final
         'otros': 'Otros 🍴'
     };
 
     // 2. Agrupamos los productos
     const categorias = {};
-    // Orden deseado de aparición
-    const orden = ['cocteles', 'cervezas', 'licores', 'bebidas_sin', 'tapas', 'italiana', 'fuertes'];
+    
+    // --- NUEVO ORDEN LÓGICO ---
+    const orden = [
+        'cocteles', 
+        'cervezas', 
+        'licores', 
+        'tapas',       // Comida ligera después del alcohol
+        'italiana',    // Comida media
+        'fuertes',     // Comida pesada
+        'bebidas_sin'  // Refrescos al final
+    ];
+    // ---------------------------
 
     lista.forEach(item => {
         const cat = item.categoria || 'otros';
@@ -292,15 +302,13 @@ function renderizarMenu(lista) {
     // 3. Generamos el HTML respetando el orden
     let htmlFinal = '';
 
-    // Primero las categorías definidas en el orden
     orden.forEach(catKey => {
         if (categorias[catKey] && categorias[catKey].length > 0) {
             htmlFinal += construirSeccionHTML(catKey, nombresCat[catKey], categorias[catKey]);
-            delete categorias[catKey]; // Lo quitamos para no repetirlo
+            delete categorias[catKey];
         }
     });
 
-    // Luego cualquier otra categoría que haya sobrado (ej. 'otros' o nuevas)
     Object.keys(categorias).forEach(catKey => {
         const titulo = nombresCat[catKey] || catKey.toUpperCase();
         htmlFinal += construirSeccionHTML(catKey, titulo, categorias[catKey]);
@@ -308,10 +316,8 @@ function renderizarMenu(lista) {
 
     contenedor.innerHTML = htmlFinal;
     
-    // 4. Activamos el espía de scroll
     setTimeout(iniciarScrollSpy, 100); 
 }
-
 // Función auxiliar para crear el bloque HTML de cada sección
 function construirSeccionHTML(id, titulo, items) {
     return `
