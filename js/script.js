@@ -970,25 +970,6 @@ function renderHeroHTML(aiData, temp) {
         </div>
     `;
 }
-async function askPairing(nombrePlato) {
-    showToast(`Buscando el maridaje ideal...`);
-    try {
-        const response = await fetch(CONFIG.URL_SCRIPT, {
-            method: "POST",
-            body: JSON.stringify({
-                action: "pairing",
-                producto: nombrePlato,
-                token: "DLV_SECURE_TOKEN_2025_X9"
-            })
-        });
-        const result = await response.json();
-        if (result.success) {
-            updateAndShowMatch(result.data, nombrePlato);
-        }
-    } catch (e) {
-        showToast("Sommelier temporalmente fuera de servicio.");
-    }
-}
 function updateAndShowMatch(data, platoBase) {
     const modal = document.getElementById('modal-match');
     const productoReal = AppStore.getProducts().find(p => p.id == data.id_elegido);
@@ -1016,11 +997,22 @@ function updateAndShowMatch(data, platoBase) {
     modal.classList.add('active');
 }
 async function askPairing(nombrePlato) {
-    // 1. Mostrar Feedback visual inmediato
-    showToast(`Buscando la mejor bebida para tu ${nombrePlato}...`);
+    const modal = document.getElementById('modal-match');
+    const loader = document.getElementById('match-loading');
+    const content = document.getElementById('match-content');
+    
+    // 1. ABRIR MODAL EN ESTADO "ESCANEO"
+    if(modal && loader && content) {
+        content.style.display = 'none'; // Ocultar resultado anterior
+        loader.style.display = 'block'; // Mostrar escáner
+        modal.classList.add('active');  // Abrir modal
+    } else {
+        showToast("Inicializando escáner..."); // Fallback si el HTML no está listo
+    }
 
     try {
-        const response = await fetch("https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec", {
+        // 2. LLAMADA A LA IA
+        const response = await fetch(CONFIG.URL_SCRIPT, {
             method: "POST",
             body: JSON.stringify({
                 action: "pairing",
@@ -1031,12 +1023,60 @@ async function askPairing(nombrePlato) {
         
         const result = await response.json();
         
+        // 3. SIMULAR UN PEQUEÑO RETRASO SI LA RESPUESTA FUE MUY RÁPIDA (Para lucir la animación)
+        await new Promise(r => setTimeout(r, 800)); 
+
         if (result.success) {
-            showPairingModal(result.data, nombrePlato);
+            updateAndShowMatch(result.data, nombrePlato);
+        } else {
+            throw new Error("Sin match");
         }
+
     } catch (e) {
-        showToast("El sommelier está ocupado.");
+        console.error(e);
+        showToast("El Sommelier está ocupado, intenta luego.", "error");
+        if(modal) modal.classList.remove('active');
     }
+}
+
+function updateAndShowMatch(data, platoBase) {
+    const modal = document.getElementById('modal-match');
+    const loader = document.getElementById('match-loading');
+    const content = document.getElementById('match-content');
+    
+    const productoReal = AppStore.getProducts().find(p => p.id == data.id_elegido);
+    if (!productoReal) return;
+
+    // A. Inyectar Datos
+    document.getElementById('match-plato-base').textContent = platoBase;
+    
+    // Usar imagen real de Supabase
+    const imgEl = document.getElementById('match-img');
+    imgEl.src = productoReal.imagen_url || 'img/logo.png';
+    
+    document.getElementById('match-producto-nombre').textContent = productoReal.nombre;
+    document.getElementById('match-justificacion').textContent = `"${data.copy_venta}"`;
+    
+    const btn = document.getElementById('match-btn-action');
+    btn.onclick = () => {
+        modal.classList.remove('active');
+        abrirDetalle(productoReal.id);
+    };
+
+    // B. Lógica de Colores Dinámicos (Frío vs Cálido)
+    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin'].includes(productoReal.categoria);
+    const card = modal.querySelector('.modal-card');
+    
+    // Resetear clases y aplicar la nueva
+    card.className = 'modal-card pairing-card'; 
+    card.classList.add(esBebida ? 'neon-cold' : 'neon-warm');
+
+    // C. Transición Visual: Ocultar Scanner -> Mostrar Resultado
+    loader.style.display = 'none';
+    content.style.display = 'block';
+    
+    // Pequeña animación de entrada para el contenido
+    content.style.animation = 'fadeIn 0.5s ease-out';
 }
 
 function showPairingModal(data, plato) {

@@ -589,3 +589,65 @@ body {
     .hero-ai { flex-direction: column-reverse; text-align: center; }
     .hero-image-glow img { max-width: 120px; }
 }
+
+/* --- ANIMACIÓN DE ESCÁNER IA --- */
+.scanner-wrapper {
+    text-align: center;
+    padding: 20px;
+    display: none; /* Se activa con JS */
+}
+
+/* Caja del escáner */
+.neon-scanner-box {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+    border: 2px solid var(--neon-cyan);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    background: rgba(0, 20, 40, 0.5);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+/* Línea láser que se mueve */
+.scan-line {
+    width: 100%;
+    height: 2px;
+    background: var(--neon-magenta);
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-shadow: 0 0 10px var(--neon-magenta), 0 0 20px var(--neon-magenta);
+    animation: scanning 1.5s linear infinite;
+}
+
+/* Rejilla decorativa de fondo */
+.scan-grid {
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+/* Animación del movimiento */
+@keyframes scanning {
+    0% { top: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+}
+
+/* Animación de texto parpadeante */
+.blink-text {
+    animation: textPulse 1s infinite alternate;
+}
+
+@keyframes textPulse {
+    from { opacity: 0.6; text-shadow: 0 0 5px var(--neon-cyan); }
+    to { opacity: 1; text-shadow: 0 0 15px var(--neon-cyan), 0 0 5px white; }
+}
+
+/* Clases de utilidad para mostrar/ocultar */
+.match-content-hidden { display: none; }
