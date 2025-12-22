@@ -39,6 +39,7 @@ self.addEventListener('activate', (e) => {
 
 // 3. Interceptación de Red (Estrategia: Cache First + Dynamic Caching)
 self.addEventListener('fetch', (e) => {
+  if (event.request.method !== 'GET') return;
   // Solo procesamos peticiones HTTP/HTTPS (evitamos chrome-extension://, etc)
   if (!e.request.url.startsWith('http')) return;
 
