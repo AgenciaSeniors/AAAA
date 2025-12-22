@@ -1095,3 +1095,38 @@ function renderHeroHTML(aiData, context) {
         </div>
     `;
 }
+
+async function askPairing(nombrePlato, btnElement) {
+    const originalText = btnElement ? btnElement.innerHTML : "🍷 Match";
+    if (btnElement) {
+        btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+        btnElement.disabled = true;
+    }
+
+    try {
+        const response = await fetch(CONFIG.URL_SCRIPT, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "pairing",
+                producto: nombrePlato,
+                token: "DLV_SECURE_TOKEN_2025_X9"
+            })
+        });
+        
+        const result = await response.json();
+
+        if (result.success && result.data.id_elegido) {
+            // Ir directo al detalle del producto recomendado
+            abrirDetalle(result.data.id_elegido, result.data.copy_venta);
+        } else {
+            showToast("No encontré un maridaje perfecto ahora.", "info");
+        }
+    } catch (e) {
+        showToast("Error de conexión con el Sommelier.", "error");
+    } finally {
+        if (btnElement) {
+            btnElement.innerHTML = originalText;
+            btnElement.disabled = false;
+        }
+    }
+}
