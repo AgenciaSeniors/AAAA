@@ -651,3 +651,51 @@ body {
 
 /* Clases de utilidad para mostrar/ocultar */
 .match-content-hidden { display: none; }
+
+/* ==========================================
+   🍷 ESTILOS PARA LA NOTA DEL SOMMELIER (AI)
+   ========================================== */
+
+.ai-pairing-note {
+    background: rgba(255, 0, 85, 0.08); /* Fondo magenta muy sutil */
+    border-left: 3px solid var(--neon-magenta); /* Borde de neón a la izquierda */
+    padding: 12px 16px;
+    border-radius: 4px 12px 12px 4px; /* Bordes redondeados asimétricos */
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(255, 0, 85, 0.1); /* Brillo tenue */
+    animation: slideInDown 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    border-top: 1px solid rgba(255, 0, 85, 0.1);
+}
+
+.ai-pairing-note small {
+    color: var(--neon-magenta);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
+    display: block;
+    margin-bottom: 6px;
+    font-family: 'Montserrat', sans-serif;
+    text-shadow: 0 0 5px rgba(255, 0, 85, 0.5);
+}
+
+.ai-pairing-note p {
+    color: #f0f0f0;
+    font-style: italic;
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.5;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* Animación de entrada para que la nota aparezca con estilo */
+@keyframes slideInDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

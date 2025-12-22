@@ -1095,32 +1095,6 @@ function renderHeroHTML(aiData, context) {
         </div>
     `;
 }
-function updateAndShowMatch(data, platoBase) {
-    const modal = document.getElementById('modal-match');
-    const productoReal = AppStore.getProducts().find(p => p.id == data.id_elegido);
-    
-    if (!productoReal || !modal) return;
-
-    // Actualización de elementos específicos (Sin innerHTML pesado)
-    document.getElementById('match-plato-base').textContent = platoBase;
-    document.getElementById('match-img').src = productoReal.imagen_url;
-    document.getElementById('match-producto-nombre').textContent = productoReal.nombre;
-    document.getElementById('match-justificacion').textContent = `"${data.copy_venta}"`;
-    
-    // Configurar acción del botón
-    const btn = document.getElementById('match-btn-action');
-    btn.onclick = () => {
-        modal.classList.remove('active');
-        abrirDetalle(productoReal.id);
-    };
-
-    // Aplicar color Neon dinámico según categoría
-    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin'].includes(productoReal.categoria);
-    const card = modal.querySelector('.modal-card');
-    card.className = `modal-card pairing-card ${esBebida ? 'neon-cold' : 'neon-warm'}`;
-
-    modal.classList.add('active');
-}
 // Sugerencia de corrección para askPairing
 async function askPairing(nombrePlato, btnElement) {
     // 1. Feedback visual en el botón para que el usuario sepa que algo pasa
@@ -1160,53 +1134,4 @@ async function askPairing(nombrePlato, btnElement) {
             btnElement.disabled = false;
         }
     }
-}
-function showPairingModal(data, plato) {
-    const container = document.getElementById('modal-container');
-    if (!container) return;
-
-    const productoReal = AppStore.getProducts().find(p => p.id == data.id_elegido);
-    const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
-    
-    // Para maridaje usamos siempre magenta para resaltar el "match"
-    const modalHTML = `
-        <div class="pairing-modal neon-warm">
-            <button class="btn-close-modal" onclick="document.getElementById('modal-container').classList.remove('active')">✕</button>
-            <h3 style="color: var(--neon-magenta);">🤝 Match Perfecto</h3>
-            <p>Para tu <strong>${plato}</strong>:</p>
-            <div class="pairing-result">
-                <img src="${imagenFinal}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; border:2px solid var(--neon-magenta);" onerror="this.src='img/logo.png'">
-                <div>
-                    <h4 style="color: white;">Recomendación IA</h4> 
-                    <p class="pairing-reason" style="font-style: italic; font-size: 0.9rem;">"${data.copy_venta}"</p>
-                </div>
-            </div>
-            <button class="btn-modal-action" onclick="abrirDetalle(${data.id_elegido})">Ver Producto</button>
-        </div>
-    `;
-    container.innerHTML = modalHTML;
-    container.classList.add('active');
-}function showPairingModal(data, plato) {
-    const container = document.getElementById('modal-container');
-    if (!container) return;
-
-    const productoReal = AppStore.getProducts().find(p => p.id == data.id_elegido);
-    const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
-
-    const modalHTML = `
-        <div class="pairing-modal">
-            <h3>🤝 Match Perfecto</h3>
-            <p>Para tu <strong>${plato}</strong>:</p>
-            <div class="pairing-result">
-                <img src="${imagenFinal}" width="60" onerror="this.src='img/logo.png'">
-                <div>
-                    <h4>Sugerencia</h4> 
-                    <p class="pairing-reason">"${data.copy_venta}"</p>
-                </div>
-            </div>
-            <button class="btn-modal-action" onclick="abrirDetalle(${data.id_elegido})">Ver Producto</button>
-        </div>
-    `;
-    container.innerHTML = modalHTML;
-    container.classList.add('active');
 }
