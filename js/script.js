@@ -723,12 +723,12 @@ window.addEventListener('offline', () => { updateConnectionStatus(); showToast("
 
 function normalizarTexto(texto) {
   if (!texto) return "";
-  
   return texto.toString()
     .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Separa y elimina solo los acentos
-    .replace(/[^a-z0-9\s]/g, "") // Mantiene letras, números y espacios. Elimina resto.
-    .replace(/\s+/g, " ") // Colapsa espacios múltiples a uno solo
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+    .replace(/[-_]/g, " ") // FIX: Convertir guiones y guiones bajos a espacio
+    .replace(/[^a-z0-9\s]/g, "") // Eliminar caracteres especiales restantes
+    .replace(/\s+/g, " ") // FIX: Colapsar múltiples espacios a uno
     .trim();
 }
 
@@ -997,46 +997,25 @@ async function procesarMezcla() {
 function calcularPuntajeMatch(busquedaNorm, candidatoNorm) {
   const tokensBusqueda = busquedaNorm.split(" ");
   const tokensCandidato = candidatoNorm.split(" ");
-  
   let puntaje = 0;
-  let coincidencias = 0;
-
-  // Palabras cortas pero significativas que merecen puntaje si hay match exacto
   const PALABRAS_SIGNIFICATIVAS = ["ron", "gin", "te", "tea", "mix", "red", "bm", "7"];
 
   tokensBusqueda.forEach(tokenB => {
-    // Ignoramos tokens vacíos, pero YA NO filtramos por longitud <= 3 indiscriminadamente
     if (!tokenB) return;
-
     let mejorMatchToken = 0;
-
     tokensCandidato.forEach(tokenC => {
-      // 1. Coincidencia Exacta
       if (tokenB === tokenC) {
-        let puntos = 10; // Base alta
-        // Bonus si es una palabra corta significativa (compensación por longitud)
-        if (PALABRAS_SIGNIFICATIVAS.includes(tokenB)) {
-          puntos += 5; 
-        }
+        let puntos = 10;
+        if (PALABRAS_SIGNIFICATIVAS.includes(tokenB)) puntos += 5; 
         mejorMatchToken = Math.max(mejorMatchToken, puntos);
-      } 
-      // 2. Coincidencia Parcial (el token de búsqueda está dentro del candidato)
-      // Ej: "Havana" dentro de "HavanaClub" o viceversa
-      else if (tokenC.includes(tokenB) || tokenB.includes(tokenC)) {
-        mejorMatchToken = Math.max(mejorMatchToken, 4); // Puntaje menor por parcial
+      } else if (tokenC.includes(tokenB) || tokenB.includes(tokenC)) {
+        mejorMatchToken = Math.max(mejorMatchToken, 4);
       }
     });
-
-    if (mejorMatchToken > 0) {
-      puntaje += mejorMatchToken;
-      coincidencias++;
-    }
+    if (mejorMatchToken > 0) puntaje += mejorMatchToken;
   });
 
-  // Factor de ajuste: Penalizar si el candidato es excesivamente largo comparado con la búsqueda
-  // para evitar falsos positivos en descripciones muy largas.
   const factorLongitud = 1 - (Math.abs(tokensCandidato.length - tokensBusqueda.length) * 0.05);
-  
   return puntaje * (factorLongitud > 0.5 ? factorLongitud : 0.5);
 }
 
@@ -1169,63 +1148,33 @@ function findProductWithFallback(aiData) {
     const idBuscado = aiData.id_elegido;
     const nombreBuscado = aiData.recomendacion;
     
-    // Métricas de depuración iniciales
-    console.log(`[DEBUG] Buscando producto... ID: ${idBuscado} | Nombre: "${nombreBuscado}" | Total en Store: ${products.length}`);
-
-    // 1. Intento Exacto por ID
+    // 1. ID Exacto
     let found = products.find(p => p.id == idBuscado);
-    if (found) {
-        if (!found.activo) {
-            console.warn(`[WARN] El producto ID ${idBuscado} existe pero NO está activo. Buscando alternativa...`);
-        } else {
-            return { product: found, method: 'ID_EXACTO' };
-        }
-    }
+    if (found && found.activo) return { product: found, method: 'ID_EXACTO' };
 
-    // 2. Intento por Nombre (Match Exacto o Scoring Mejorado)
+    // 2. Nombre / Scoring
     if (nombreBuscado) {
         const busquedaNorm = normalizarTexto(nombreBuscado);
-        
-        // A) Nombre exacto normalizado
         found = products.find(p => p.activo && normalizarTexto(p.nombre) === busquedaNorm);
         if (found) return { product: found, method: 'NOMBRE_EXACTO' };
 
-        // B) Scoring de similitud (usando la lógica existente de calcularPuntajeMatch)
-        // Filtramos solo activos antes de hacer el scoring costoso
         const candidatos = products
             .filter(p => p.activo)
-            .map(p => ({
-                producto: p,
-                score: calcularPuntajeMatch(busquedaNorm, normalizarTexto(p.nombre))
-            }))
+            .map(p => ({ producto: p, score: calcularPuntajeMatch(busquedaNorm, normalizarTexto(p.nombre)) }))
             .sort((a, b) => b.score - a.score);
 
-        // Umbral de confianza (>= 8 puntos)
         if (candidatos.length > 0 && candidatos[0].score >= 8) {
             return { product: candidatos[0].producto, method: 'SCORING_NOMBRE' };
         }
     }
 
-    // 3. Intento por Categoría (Fallback Contextual)
-    // Intentamos inferir la categoría o usamos 'cocteles' como base segura
+    // 3. Categoría
     const categoriaTarget = aiData.categoria || 'cocteles';
-    const porCategoria = products.filter(p => p.categoria === categoriaTarget && p.activo && p.stock > 0);
-    
-    if (porCategoria.length > 0) {
-        // Devolvemos uno aleatorio de la categoría para variar
-        const randomCat = porCategoria[Math.floor(Math.random() * porCategoria.length)];
-        return { product: randomCat, method: `FALLBACK_CATEGORIA (${categoriaTarget})` };
-    }
+    const porCategoria = products.filter(p => p.categoria === categoriaTarget && p.activo);
+    if (porCategoria.length > 0) return { product: porCategoria[0], method: 'FALLBACK_CATEGORIA' };
 
-    // 4. Fallback Final: Producto Destacado ("La Vieja Confiable")
-    const destacados = products.filter(p => p.destacado && p.activo);
-    if (destacados.length > 0) {
-        // Preferimos el primero o uno random de los destacados
-        return { product: destacados[0], method: 'FALLBACK_DESTACADO' };
-    }
-
-    // 5. Último recurso (Emergencia): El primer producto activo que encontremos
-    return { product: products.find(p => p.activo) || null, method: 'EMERGENCIA_TOTAL' };
+    // 4. Default
+    return { product: products.find(p => p.activo) || null, method: 'EMERGENCIA' };
 }
 /**
  * Renderiza el Hero Section con validaciones y manejo de errores.
