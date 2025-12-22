@@ -46,12 +46,31 @@ async function getUserContext() {
     const ahora = new Date();
     const hora = ahora.getHours() + ":" + ahora.getMinutes();
     
-    // Simulación de clima (Para producción usarías una API como OpenWeather)
-    // Aquí asumimos calor si es de día en Cuba, fresco si es de noche
-    const esDeDia = ahora.getHours() > 8 && ahora.getHours() < 19;
-    const temperatura = esDeDia ? 32 : 24; 
+    // Configuración de OpenWeather (Reemplaza con tu API KEY)
+    const API_KEY = "3bc237701499f9b6b03de6f10e1e65d6"; 
+    const LAT = "21.9297"; // Latitud de Sancti Spíritus
+    const LON = "-79.4440"; // Longitud de Sancti Spíritus
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
 
-    return { hora, temperatura };
+    let temperatura = 28; // Valor por defecto (promedio en Cuba)
+    let climaDesc = "despejado";
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.main) {
+            temperatura = Math.round(data.main.temp);
+            climaDesc = data.weather[0].description;
+            console.log(`🌤️ Clima real detectado: ${temperatura}°C, ${climaDesc}`);
+        }
+    } catch (e) {
+        console.warn("No se pudo obtener el clima real, usando estimación horaria.");
+        // Fallback: Si es de día asumimos calor, si es de noche algo más fresco
+        const esDeDia = ahora.getHours() > 8 && ahora.getHours() < 19;
+        temperatura = esDeDia ? 32 : 24;
+    }
+
+    return { hora, temperatura, descripcion: climaDesc };
 }
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
 // --- LÓGICA DE VISITAS Y BIENVENIDA (MODO PRUEBA: 10 SEGUNDOS) ---
@@ -813,19 +832,21 @@ async function procesarMezcla() {
     try {
         const response = await fetch(scriptUrl, {
             method: 'POST',
-            body: JSON.stringify({ sabor: shaker.selected.join(', ') }),
-            headers: { "Content-Type": "text/plain" }
+            body: JSON.stringify({ 
+                action: "shaker", // Acción explícita
+                sabor: shaker.selected.join(', '),
+                token: "DLV_SECURE_TOKEN_2025_X9"
+            })
         });
 
-        const data = await response.json();
+        const res = await response.json();
         
-        if (data.success && data.recomendacion) {
-            mostrarResultadoShaker(data.recomendacion);
+        if (res.success && res.data && res.data.recomendacion) {
+            mostrarResultadoShaker(res.data.recomendacion);
             status.textContent = "¡Listo!";
         } else {
             throw new Error("Respuesta inválida");
         }
-
     } catch (error) {
         console.error("Error silencioso:", error);
         // Fallback
@@ -874,21 +895,20 @@ async function loadDynamicHero() {
     const context = await getUserContext();
     const container = document.getElementById('hero-ai-container');
 
-    if (!container) return; // Seguridad
+    if (!container) return; 
 
-    container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando el clima...</div>';
+    container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando el clima real...</div>';
     container.classList.remove('hidden');
 
     try {
-        // CORRECCIÓN: URL COMPLETA
         const scriptUrl = "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
         
         const response = await fetch(scriptUrl, {
             method: "POST",
             body: JSON.stringify({
                 action: "hero",
-                contexto: context,
-                token: "DLV_SECURE_TOKEN_2025_X9" // Asegura que el token coincida con tu backend
+                contexto: context, // Aquí enviamos la temp real
+                token: "DLV_SECURE_TOKEN_2025_X9"
             })
         });
         
@@ -901,21 +921,21 @@ async function loadDynamicHero() {
         container.classList.add('hidden');
     }
 }
-
 function renderHeroHTML(aiData, temp) {
     const container = document.getElementById('hero-ai-container');
-    const mensajeClima = temp > 28 ? "Para este calor 🔥" : "Para disfrutar la noche 🌙";
+    // Personalizamos el mensaje según la temperatura real obtenida
+    const mensajeClima = temp > 29 ? `¡Hace calor! (${temp}°C) ☀️` : `Noche fresca (${temp}°C) 🌙`;
     
     container.innerHTML = `
         <div class="hero-content">
             <span class="ai-badge">${mensajeClima}</span>
-            <h2>${aiData.copy_venta}</h2>
-            <button onclick="addToCart('${aiData.id_elegido}')" class="btn-primary">
-                Pedir ahora <i class="fas fa-arrow-right"></i>
+            <h2 style="margin: 10px 0;">${aiData.copy_venta}</h2>
+            <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-primary">
+                Ver recomendación <i class="fas fa-arrow-right"></i>
             </button>
         </div>
         <div class="hero-image-glow">
-            <img src="img/${aiData.id_elegido}.webp" alt="Recomendación" onerror="this.src='img/logo.png'">
+            <img src="img/${aiData.id_elegido}.webp" alt="Sugerencia" onerror="this.src='img/logo.png'">
         </div>
     `;
 }
@@ -945,21 +965,22 @@ async function askPairing(nombrePlato) {
 }
 
 function showPairingModal(data, plato) {
+    // Usamos el contenedor que añadiremos al index.html
     const container = document.getElementById('modal-container');
     if (!container) return;
 
     const modalHTML = `
         <div class="pairing-modal">
-            <h3>🤝 Maridaje Perfecto</h3>
+            <h3>🤝 Match Perfecto</h3>
             <p>Para tu <strong>${plato}</strong>:</p>
             <div class="pairing-result">
                 <img src="img/${data.id_elegido}.webp" width="60" onerror="this.src='img/logo.png'">
                 <div>
-                    <h4>${data.id_elegido}</h4> 
+                    <h4>Recomendación IA</h4> 
                     <p class="pairing-reason">"${data.copy_venta}"</p>
                 </div>
             </div>
-            <button class="btn-primary" onclick="addToCart('${data.id_elegido}')">Añadir al pedido</button>
+            <button class="btn-modal-action" onclick="abrirDetalle(${data.id_elegido})">Ver Producto</button>
         </div>
     `;
     container.innerHTML = modalHTML;
