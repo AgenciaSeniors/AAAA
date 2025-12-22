@@ -41,7 +41,8 @@ const AppStore = {
     // Selección de producto segura
     setActiveProduct(productId) { 
         // Buscamos siempre en el array maestro para evitar errores si el filtro cambia
-        const found = this.state.products.find(p => p.id === productId);
+        // CORRECCIÓN: Usamos '==' en lugar de '===' para que funcione si el ID llega como texto
+        const found = this.state.products.find(p => p.id == productId);
         this.state.activeProduct = found || null;
         this.state.reviewScore = 0;
         return this.state.activeProduct;
@@ -1110,7 +1111,10 @@ async function askPairing(nombrePlato, btnElement) {
     if (btnElement) btnElement.disabled = true;
 
     try {
-        const response = await fetch(CONFIG.URL_SCRIPT, {
+        // CORRECCIÓN: Fallback de seguridad si CONFIG no ha cargado
+        const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
+
+        const response = await fetch(scriptUrl, {
             method: "POST",
             body: JSON.stringify({
                 action: "pairing",
