@@ -1096,17 +1096,17 @@ function renderHeroHTML(aiData, context) {
     `;
 }
 async function askPairing(nombreProducto, btn) {
-    // 1. Guardar el contenido original para restaurarlo luego
-    const originalHTML = btn.innerHTML;
+    const modal = document.getElementById('modal-match');
+    const loading = document.getElementById('match-loading');
+    const content = document.getElementById('match-content');
     
-    // 2. Estado de carga visual en el botón
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Buscando...`;
-    btn.classList.add('loading');
+    // 1. Mostrar modal y estado de carga
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    loading.style.display = 'block';
+    content.style.display = 'none';
 
-    showToast(`Buscando maridaje para "${nombreProducto}"...`, "info");
-
-    const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
+    const scriptUrl = CONFIG.URL_SCRIPT;
 
     try {
         const response = await fetch(scriptUrl, {
@@ -1121,18 +1121,36 @@ async function askPairing(nombreProducto, btn) {
         const res = await response.json();
         
         if (res.success && res.data) {
-            abrirDetalle(res.data.id_elegido, res.data.copy_venta);
-        } else {
-            throw new Error("Respuesta inválida");
-        }
+            // Buscamos el producto recomendado en nuestro inventario local
+            const recomendado = AppStore.getProducts().find(p => p.id == res.data.id_elegido);
+            
+            if (recomendado) {
+                // Rellenar datos en el modal de Match
+                document.getElementById('match-plato-base').textContent = nombreProducto;
+                document.getElementById('match-img').src = recomendado.imagen_url || 'img/logo.png';
+                document.getElementById('match-producto-nombre').textContent = recomendado.nombre;
+                document.getElementById('match-justificacion').textContent = res.data.copy_venta;
+                
+                // Configurar el botón de acción final
+                document.getElementById('match-btn-action').onclick = () => {
+                    cerrarMatch();
+                    abrirDetalle(recomendado.id, res.data.copy_venta);
+                };
 
+                // Cambiar de "Cargando" a "Resultado"
+                loading.style.display = 'none';
+                content.style.display = 'block';
+            }
+        }
     } catch (error) {
         console.error("Error en Match:", error);
-        showToast("No pudimos conectar con el Sommelier.", "error");
-    } finally {
-        // 3. Restaurar el botón a su estado original
-        btn.disabled = false;
-        btn.innerHTML = originalHTML;
-        btn.classList.remove('loading');
+        showToast("Error conectando con el Sommelier.", "error");
+        cerrarMatch();
     }
+}
+
+function cerrarMatch() {
+    const modal = document.getElementById('modal-match');
+    modal.classList.remove('active');
+    setTimeout(() => modal.style.display = 'none', 300);
 }
