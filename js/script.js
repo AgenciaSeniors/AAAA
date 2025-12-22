@@ -884,7 +884,7 @@ async function loadDynamicHero() {
     container.classList.remove('hidden');
 
     try {
-        const response = await fetch("AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC", {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec", {
             method: "POST",
             body: JSON.stringify({
                 action: "hero",
@@ -956,7 +956,7 @@ function showPairingModal(data, plato) {
             <h3>🤝 Maridaje Perfecto</h3>
             <p>Para tu <strong>${plato}</strong>:</p>
             <div class="pairing-result">
-                <img src="img/${data.id_elegido}.webp" width="50" onerror="this.src='img/logo.png'>
+                <img src="img/${data.id_elegido}.webp" width="50" onerror="this.src='img/logo.png'">
                 <div>
                     <h4>${data.id_elegido}</h4> <p class="pairing-reason">"${data.copy_venta}"</p>
                 </div>
