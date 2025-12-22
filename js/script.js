@@ -73,45 +73,44 @@ async function getUserContext() {
     return { hora, temperatura, descripcion: climaDesc };
 }
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
-// --- LÓGICA DE VISITAS Y BIENVENIDA (MODO PRUEBA: 10 SEGUNDOS) ---
 async function checkWelcome() {
     const clienteId = localStorage.getItem('cliente_id');
+    // Verificamos si es un invitado temporal (solo dura mientras el navegador esté abierto)
+    const esInvitado = sessionStorage.getItem('es_invitado') === 'true';
     const modal = document.getElementById('modal-welcome');
 
-    if (clienteId) {
-        // CASO 1: CLIENTE QUE REGRESA
+    // CASO A: Usuario Registrado O Invitado Activo
+    if (clienteId || esInvitado) {
         if (modal) modal.style.display = 'none';
 
-        const nombreGuardado = localStorage.getItem('cliente_nombre') || 'Amigo';
-        
-        // Mensaje de bienvenida visual
-        setTimeout(() => {
-            showToast(`¡Qué bueno verte de nuevo, ${nombreGuardado}! 🍹`, "success");
-        }, 1500);
-
-        // Lógica de registro en base de datos (MODIFICADO PARA PRUEBAS)
-        const ultimaVisita = localStorage.getItem('ultima_visita_ts');
-        const ahora = Date.now();
-        
-        // CAMBIO AQUÍ: 10 segundos en lugar de 12 horas
-        const TIEMPO_ESPERA = 10 * 1000; // 10 segundos * 1000 ms
-
-        if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > TIEMPO_ESPERA) {
-            console.log("Registrando visita recurrente (Prueba 10s)...");
+        // Solo ejecutamos lógica de base de datos si es un CLIENTE REAL
+        if (clienteId) {
+            const nombreGuardado = localStorage.getItem('cliente_nombre') || 'Amigo';
             
-            if (typeof supabaseClient !== 'undefined') {
-                const { error } = await supabaseClient.from('visitas').insert([{
-                    cliente_id: clienteId,
-                    motivo: 'Regreso al Menú'
-                }]);
+            setTimeout(() => {
+                // Solo mostrar toast si no acaba de registrarse (evitar doble toast)
+                if (!sessionStorage.getItem('recien_registrado')) {
+                    showToast(`¡Qué bueno verte de nuevo, ${nombreGuardado}! 🍹`, "success");
+                }
+            }, 1500);
 
-                if (!error) {
+            // Lógica de visitas (Solo para IDs reales)
+            const ultimaVisita = localStorage.getItem('ultima_visita_ts');
+            const ahora = Date.now();
+            const TIEMPO_ESPERA = 10 * 1000; 
+
+            if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > TIEMPO_ESPERA) {
+                if (typeof supabaseClient !== 'undefined') {
+                    await supabaseClient.from('visitas').insert([{
+                        cliente_id: clienteId,
+                        motivo: 'Regreso al Menú'
+                    }]);
                     localStorage.setItem('ultima_visita_ts', ahora.toString());
                 }
             }
         }
     } else {
-        // CASO 2: CLIENTE NUEVO
+        // CASO B: Usuario Nuevo (o invitado que cerró el navegador)
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
@@ -203,13 +202,14 @@ async function registrarBienvenida() {
         localStorage.setItem('cliente_id', clienteId);
         localStorage.setItem('cliente_nombre', nombre);
         localStorage.setItem('ultima_visita_ts', Date.now().toString());
-
+        sessionStorage.removeItem('es_invitado');
         cerrarWelcome();
         showToast(`¡Hola de nuevo, ${nombre}!`, "success");
 
     } catch (err) {
         console.error("Error registro:", err);
         showToast("Error de conexión. Entrando como invitado...", "error");
+        sessionStorage.setItem('es_invitado', 'true');
         setTimeout(() => cerrarWelcome(), 1500);
     } finally {
         if(btn) { btn.textContent = "ENTRAR"; btn.disabled = false; }
@@ -221,7 +221,6 @@ function cerrarWelcome() {
     if (modal) {
         modal.classList.remove('active');
         setTimeout(() => modal.style.display = 'none', 400);
-        localStorage.setItem('ultima_visita_ts', Date.now().toString());
     }
 }
 
@@ -641,7 +640,12 @@ window.addEventListener('online', () => { updateConnectionStatus(); showToast("C
 window.addEventListener('offline', () => { updateConnectionStatus(); showToast("Modo Offline", "warning"); });
 
 function normalizarTexto(texto) {
-    return (texto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    if (!texto) return "";
+    return texto.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Quita acentos
+        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "") // Quita signos de puntuación
+        .trim();
 }
 
 function registrarServiceWorker() {
@@ -814,26 +818,29 @@ function detenerDetectorMovimiento() {
 
 async function procesarMezcla() {
     const shaker = AppStore.getShakerState();
-    if (shaker.isProcessing) return;
+    if (shaker.isProcessing) return; // Evitar dobles clics
+    
     shaker.isProcessing = true;
     detenerDetectorMovimiento(); 
 
+    // Referencias al DOM
     const btn = document.getElementById('btn-mix-manual');
     const status = document.getElementById('shaker-status');
     const visual = document.getElementById('shaker-img');
     
-    btn.textContent = "Mezclando..."; btn.disabled = true;
-    status.textContent = "Preparando tu recomendación...";
-    visual.classList.add('shaking');
+    // Estado de "Cargando"
+    if(btn) { btn.textContent = "Mezclando..."; btn.disabled = true; }
+    if(status) status.textContent = "El Sommelier está pensando...";
+    if(visual) visual.classList.add('shaking');
 
-    // Usamos CONFIG si está disponible
+    // URL del script (usa CONFIG si existe)
     const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
 
     try {
         const response = await fetch(scriptUrl, {
             method: 'POST',
             body: JSON.stringify({ 
-                action: "shaker", // Acción explícita
+                action: "shaker",
                 sabor: shaker.selected.join(', '),
                 token: "DLV_SECURE_TOKEN_2025_X9"
             })
@@ -841,53 +848,91 @@ async function procesarMezcla() {
 
         const res = await response.json();
         
-        if (res.success && res.data && res.data.recomendacion) {
-            mostrarResultadoShaker(res.data.recomendacion);
-            status.textContent = "¡Listo!";
+        if (res.success && res.data) {
+            // MEJORA: Pasamos tanto el nombre como el ID (si el backend lo devuelve)
+            // Esto soluciona la fragilidad si el backend empieza a enviar IDs.
+            mostrarResultadoShaker(res.data.recomendacion, res.data.id_elegido);
+            if(status) status.textContent = "¡Listo!";
         } else {
-            throw new Error("Respuesta inválida");
+            throw new Error("Respuesta de IA vacía o inválida");
         }
+
     } catch (error) {
-        console.error("Error silencioso:", error);
-        // Fallback
-        const destacados = AppStore.getProducts().filter(p => p.destacado && p.estado !== 'agotado');
-        const pool = destacados.length > 0 ? destacados : AppStore.getProducts();
+        console.warn("Fallo en la IA, usando Sommelier Local (Fallback):", error);
         
-        if (pool.length > 0) {
-            const random = pool[Math.floor(Math.random() * pool.length)];
-            mostrarResultadoShaker(random.nombre);
+        // Lógica Fallback: Elegimos algo rico localmente si falla internet
+        const productos = AppStore.getProducts();
+        // Preferimos destacados que no estén agotados
+        const pool = productos.filter(p => p.destacado && p.estado !== 'agotado');
+        // Si no hay, usamos cualquiera
+        const candidatos = pool.length > 0 ? pool : productos;
+        
+        if (candidatos.length > 0) {
+            const random = candidatos[Math.floor(Math.random() * candidatos.length)];
+            // Pasamos el ID explícito para asegurar el match
+            mostrarResultadoShaker(random.nombre, random.id);
+        } else {
+            showToast("No pudimos preparar nada. Intenta de nuevo.", "error");
         }
+
     } finally {
+        // Restaurar estado UI
         shaker.isProcessing = false;
-        visual.classList.remove('shaking');
-        btn.textContent = "¡MEZCLAR DE NUEVO!";
-        btn.disabled = false;
+        if(visual) visual.classList.remove('shaking');
+        if(btn) { btn.textContent = "¡MEZCLAR DE NUEVO!"; btn.disabled = false; }
     }
 }
 
-function mostrarResultadoShaker(nombreRecibido) {
-    const nombreIA = (nombreRecibido || '').toLowerCase().trim();
-    const candidatos = AppStore.getProducts().filter(p => {
-        const nombreBD = (p.nombre || '').toLowerCase();
-        if (!nombreBD || !nombreIA) return false;
-        return nombreBD.includes(nombreIA) || nombreIA.includes(nombreBD);
-    });
-
-    cerrarShaker();
+function mostrarResultadoShaker(nombreIA, idOpcional) {
+    const productos = AppStore.getProducts();
     let elegido = null;
 
-    if (candidatos.length > 0) {
-        elegido = candidatos[Math.floor(Math.random() * candidatos.length)];
-        showToast(`✨ Combinación perfecta: ${elegido.nombre}`);
-    } else {
-        const pool = AppStore.getProducts();
-        if (pool.length > 0) {
-            elegido = pool[Math.floor(Math.random() * pool.length)];
-            showToast("¡Sorpresa! Prueba nuestra recomendación", "info");
+    // ESTRATEGIA 1: Búsqueda Directa por ID (Infalible)
+    if (idOpcional) {
+        elegido = productos.find(p => p.id == idOpcional);
+    }
+
+    // ESTRATEGIA 2: Búsqueda Inteligente por Texto (Si falla el ID)
+    if (!elegido && nombreIA) {
+        const textoIA = normalizarTexto(nombreIA);
+        
+        // A. Intento exacto
+        elegido = productos.find(p => normalizarTexto(p.nombre) === textoIA);
+        
+        // B. Intento por palabras clave (Scoring)
+        if (!elegido) {
+            const palabrasIA = textoIA.split(' ').filter(w => w.length > 3);
+            let mejorPuntuacion = 0;
+
+            productos.forEach(prod => {
+                // Buscamos en nombre, descripción y categoría
+                const textoBD = normalizarTexto(`${prod.nombre} ${prod.descripcion} ${prod.categoria}`);
+                let puntos = 0;
+                palabrasIA.forEach(palabra => {
+                    if (textoBD.includes(palabra)) puntos++;
+                });
+
+                if (puntos > mejorPuntuacion) {
+                    mejorPuntuacion = puntos;
+                    elegido = prod;
+                }
+            });
         }
     }
 
-    if (elegido) abrirDetalle(elegido.id);
+    cerrarShaker();
+
+    if (elegido) {
+        showToast(`✨ Combinación perfecta: ${elegido.nombre}`);
+        abrirDetalle(elegido.id);
+    } else {
+        // Fallback final por si todo falla (muy raro con la lógica nueva)
+        showToast("¡Sorpresa! Prueba nuestra recomendación", "info");
+        const random = productos[Math.floor(Math.random() * productos.length)];
+        if(random) abrirDetalle(random.id);
+    }
+
+    // Asegurar que el flag de proceso se apague
     AppStore.state.shaker.isProcessing = false;
 }
 
@@ -991,6 +1036,7 @@ function updateAndShowMatch(data, platoBase) {
 
     modal.classList.add('active');
 }
+// Sugerencia de corrección para askPairing
 // Sugerencia de corrección para askPairing
 async function askPairing(nombrePlato) {
     const modal = document.getElementById('modal-match');

@@ -56,38 +56,54 @@ const NoirCopywriter = {
     getNoirMessage(context, productName) {
         if (!context || !productName) return "El misterio aguarda.";
 
-        const temp = context.temperatura; // Asumimos que viene en °C
+        // Convertimos a número para asegurar comparaciones correctas
+        const temp = parseFloat(context.temperatura); 
         const desc = (context.descripcion || "").toLowerCase();
-        const hora = parseInt(context.hora.split(':')[0]); // Extraemos la hora (0-23)
+        const hora = parseInt(context.hora.split(':')[0]); // Hora militar (0-23)
         
         let mood = 'default';
 
-        // 1. Prioridad: Lluvia
+        // 1. PRIORIDAD ABSOLUTA: Lluvia o Tormenta
+        // (La lluvia mata cualquier otro mood)
         if (desc.includes('lluvi') || desc.includes('llovizna') || desc.includes('tormenta')) {
             mood = 'rain';
         }
-        // 2. Prioridad: Hora (Noche profunda)
-        else if (hora >= 20 || hora <= 4) {
-            mood = 'night';
-        }
-        // 3. Prioridad: Temperatura (Calor)
-        else if (temp >= 30) {
+        
+        // 2. PRIORIDAD URGENTE: Calor Extremo (Corrige el sesgo)
+        // Si hace más de 33°C, no importa si es de noche; el calor es el protagonista.
+        else if (temp >= 33) {
             mood = 'heat';
         }
-        // 4. Prioridad: Atardecer (18:00 - 19:59)
+        
+        // 3. PRIORIDAD TEMPORAL: Atardecer (Golden Hour)
+        // Momento específico (18:00 - 19:59) que merece su propio copy antes que la "noche" genérica
         else if (hora >= 18 && hora < 20) {
             mood = 'sunset';
         }
-        // 5. Resto (Fresco o normal)
+
+        // 4. PRIORIDAD AMBIENTAL: Noche
+        // Si no es lluvia, ni calor extremo, ni atardecer... entonces es Noche Noir.
+        else if (hora >= 20 || hora <= 4) {
+            mood = 'night';
+        }
+        
+        // 5. PRIORIDAD DIURNA: Calor Estándar
+        // Si es de día y hace calor normal (pero no extremo)
+        else if (temp >= 28) {
+            mood = 'heat';
+        }
+        
+        // 6. PRIORIDAD CLIMÁTICA: Fresco
+        // Raro en Cuba, pero posible
         else if (temp < 24) {
             mood = 'cool';
         }
 
-        // Selección aleatoria dentro del mood
+        // Selección aleatoria dentro del mood detectado
         const options = this.phrases[mood] || this.phrases['default'];
         const template = options[Math.floor(Math.random() * options.length)];
 
-        // Inyectar producto y devolver
+        // Inyectar producto y devolver con formato HTML
         return template.replace('{{PRODUCTO}}', `<span class="highlight-product">${productName}</span>`);
     }
 };
