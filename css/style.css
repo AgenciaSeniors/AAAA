@@ -498,3 +498,59 @@ body {
     50% { transform: scale(1.05); }
     100% { transform: scale(1); }
 }
+
+/* --- HERO AI RESPONSIVE --- */
+.hero-ai {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(10, 10, 10, 0.8);
+    border-radius: 15px;
+    border: 1px solid var(--neon-cyan);
+    margin: 20px 10px;
+}
+
+/* Limitamos el tamaño de la foto y mantenemos proporción */
+.hero-image-glow img {
+    max-width: 180px; 
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 0 20px var(--neon-cyan);
+    object-fit: cover; /* Evita que la imagen se estire */
+}
+
+/* Ajustes para Móviles (Breakpoint de 768px) */
+@media (max-width: 768px) {
+    .hero-ai {
+        flex-direction: column-reverse; /* Foto arriba, texto abajo */
+        text-align: center;
+        padding: 15px;
+    }
+
+    .hero-image-glow img {
+        max-width: 140px; /* Más pequeña en móvil */
+        margin-bottom: 10px;
+    }
+
+    .hero-content h2 {
+        font-size: 1.2rem;
+    }
+}
+
+/* --- MARIDAJE IA RESPONSIVE --- */
+.pairing-result {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+}
+
+.pairing-result img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%; /* Imagen redonda tipo avatar */
+    border: 2px solid var(--neon-magenta);
+    object-fit: cover;
+}
