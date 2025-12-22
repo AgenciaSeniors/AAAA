@@ -408,7 +408,7 @@ function generarCardHTML(item) {
     const categoriasComida = ['tapas', 'italiana', 'fuertes', 'otros'];
     const esComida = categoriasComida.includes(item.categoria);
     const btnMatch = (esComida && !esAgotado) 
-        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}')">🍷 Match</button>` 
+        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}', this)">🍷 Match</button>` 
         : '';
 
     return `
