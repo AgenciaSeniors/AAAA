@@ -72,31 +72,33 @@ async function getUserContext() {
     const ahora = new Date();
     const hora = ahora.getHours() + ":" + ahora.getMinutes();
     
-    // Configuración de OpenWeather (Reemplaza con tu API KEY)
     const API_KEY = "3bc237701499f9b6b03de6f10e1e65d6"; 
-    const LAT = "21.9297"; // Latitud de Sancti Spíritus
-    const LON = "-79.4440"; // Longitud de Sancti Spíritus
+    const LAT = "21.9297"; 
+    const LON = "-79.4440"; 
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
 
-    let temperatura = 28; // Valor por defecto (promedio en Cuba)
+    let temp = 28; 
     let climaDesc = "despejado";
+    let isRaining = false;
 
     try {
         const res = await fetch(url);
         const data = await res.json();
         if (data.main) {
-            temperatura = Math.round(data.main.temp);
+            temp = Math.round(data.main.temp);
             climaDesc = data.weather[0].description;
-            console.log(`🌤️ Clima real detectado: ${temperatura}°C, ${climaDesc}`);
+            // Detectamos lluvia basándonos en los códigos de OpenWeather o el texto
+            isRaining = data.weather[0].main === "Rain" || climaDesc.includes("rain") || climaDesc.includes("lluvia");
+            console.log(`🌤️ Clima real: ${temp}°C, ${climaDesc} (Lluvia: ${isRaining})`);
         }
     } catch (e) {
-        console.warn("No se pudo obtener el clima real, usando estimación horaria.");
-        // Fallback: Si es de día asumimos calor, si es de noche algo más fresco
+        console.warn("Usando estimación horaria.");
         const esDeDia = ahora.getHours() > 8 && ahora.getHours() < 19;
-        temperatura = esDeDia ? 32 : 24;
+        temp = esDeDia ? 32 : 24;
     }
 
-    return { hora, temperatura, descripcion: climaDesc };
+    // Devolvemos 'temp' para que copywriter.js lo entienda
+    return { hora, temp, temperatura: temp, isRaining, descripcion: climaDesc };
 }
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
 async function checkWelcome() {
@@ -1022,22 +1024,22 @@ function mostrarResultadoShaker(nombreIA, idOpcional) {
 }
 
 async function loadDynamicHero() {
-    const context = await getUserContext();
     const container = document.getElementById('hero-ai-container');
-
     if (!container) return; 
-
-    // 1. ACTIVACIÓN VISUAL INMEDIATA (Atmosphere.js)
-    // Cambiamos las luces y el clima antes de que cargue el texto para dar sensación de velocidad.
-    if (typeof AtmosphereController !== 'undefined') {
-        AtmosphereController.setAtmosphere(context);
-    }
 
     container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando la atmósfera...</div>';
     container.classList.remove('hidden');
 
     try {
-        const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
+        // ESPERAR a que los productos estén en el AppStore (máximo 3 segundos)
+        let intentos = 0;
+        while (AppStore.getProducts().length === 0 && intentos < 30) {
+            await new Promise(r => setTimeout(r, 100));
+            intentos++;
+        }
+
+        const context = await getUserContext();
+        const scriptUrl = CONFIG.URL_SCRIPT;
         
         const response = await fetch(scriptUrl, {
             method: "POST",
@@ -1049,13 +1051,11 @@ async function loadDynamicHero() {
         });
         
         const result = await response.json();
-        if(result.success) {
-            // Pasamos el contexto completo (temp, hora, clima) a la función de renderizado
+        if(result.success && result.data) {
             renderHeroHTML(result.data, context);
         }
     } catch (e) {
         console.error("Fallo el Sommelier:", e);
-        // Si falla, ocultamos el contenedor o mostramos un fallback elegante
         container.classList.add('hidden');
     }
 }
@@ -1063,35 +1063,38 @@ function renderHeroHTML(aiData, context) {
     const container = document.getElementById('hero-ai-container');
     if (!container) return;
 
-    // Buscamos el producto real en el Store para obtener su imagen y nombre correctos
+    // Buscamos el producto comparando IDs con == (para ignorar si es string o number)
     const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
-    const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
-    const nombreProducto = productoReal ? productoReal.nombre : "Especialidad";
+    
+    if (!productoReal) {
+        container.classList.add('hidden');
+        return;
+    }
 
-    // 2. GENERACIÓN DE TEXTO NOIR (Copywriter.js)
-    // Si tenemos el Copywriter cargado, le pedimos una frase creativa.
-    // Si no, usamos el texto genérico que viene de la base de datos (fallback).
-    let mensajeNoir = aiData.copy_venta;
+    const imagenFinal = productoReal.imagen_url || 'img/logo.png';
+    const nombreProducto = productoReal.nombre;
+
+    // Obtener mensaje emocional del Sommelier (Copywriter)
+    let mensajeNoir = aiData.copy_venta; // Fallback de la IA
     
     if (typeof getNoirMessage === 'function') {
-    const ahora = new Date();
-    // getNoirMessage espera: weatherData, hora, minuto
-    mensajeNoir = getNoirMessage(context, ahora.getHours(), ahora.getMinutes());
-}
-    // Renderizamos el HTML final
-    // Nota: El 'ai-badge' ahora solo muestra la temperatura real, porque el "mensaje" emocional va en el título.
+        const ahora = new Date();
+        // getNoirMessage ya recibirá context.temp y context.isRaining correctamente
+        mensajeNoir = getNoirMessage(context, ahora.getHours(), ahora.getMinutes());
+    }
+
     container.innerHTML = `
         <div class="hero-content">
-            <span class="ai-badge">📍 Sancti Spíritus: ${context.temperatura}°C</span>
+            <span class="ai-badge">📍 Sancti Spíritus: ${context.temp}°C</span>
             <h2 class="noir-title">${mensajeNoir}</h2>
+            <p class="hero-suggestion">Hoy te sugerimos: <strong>${nombreProducto}</strong></p>
             
-            <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-neon-action">
+            <button onclick="abrirDetalle(${productoReal.id})" class="btn-neon-action">
                 Revelar Secreto <i class="fas fa-arrow-right"></i>
             </button>
-            
         </div>
         <div class="hero-image-glow">
-            <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
+            <img src="${imagenFinal}" alt="${nombreProducto}" onerror="this.src='img/logo.png'">
         </div>
     `;
 }
