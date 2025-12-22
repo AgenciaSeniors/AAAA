@@ -1073,11 +1073,11 @@ function renderHeroHTML(aiData, context) {
     // Si no, usamos el texto genérico que viene de la base de datos (fallback).
     let mensajeNoir = aiData.copy_venta;
     
-    if (typeof NoirCopywriter !== 'undefined') {
-        // Aquí ocurre la magia: Cruzamos el clima con el producto
-        mensajeNoir = NoirCopywriter.getNoirMessage(context, nombreProducto);
-    }
-
+    if (typeof getNoirMessage === 'function') {
+    const ahora = new Date();
+    // getNoirMessage espera: weatherData, hora, minuto
+    mensajeNoir = getNoirMessage(context, ahora.getHours(), ahora.getMinutes());
+}
     // Renderizamos el HTML final
     // Nota: El 'ai-badge' ahora solo muestra la temperatura real, porque el "mensaje" emocional va en el título.
     container.innerHTML = `
@@ -1094,4 +1094,35 @@ function renderHeroHTML(aiData, context) {
             <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
         </div>
     `;
+}
+async function askPairing(nombreProducto) {
+    showToast(`Buscando el maridaje ideal para "${nombreProducto}"...`, "info");
+
+    // Usamos la URL configurada o el fallback
+    const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
+
+    try {
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: "pairing",
+                producto: nombreProducto, // Nombre del plato que se envía a la IA
+                token: "DLV_SECURE_TOKEN_2025_X9" // Debe coincidir con el del servidor
+            })
+        });
+
+        const res = await response.json();
+        
+        if (res.success && res.data) {
+            // El backend devuelve 'id_elegido' (la bebida) y 'copy_venta' (el por qué)
+            // Abrimos el detalle de la bebida recomendada pasando la explicación
+            abrirDetalle(res.data.id_elegido, res.data.copy_venta);
+        } else {
+            throw new Error("No se pudo obtener una recomendación");
+        }
+
+    } catch (error) {
+        console.error("Error en Match:", error);
+        showToast("El Sommelier está ocupado. Intenta de nuevo.", "error");
+    }
 }
