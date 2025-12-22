@@ -1,12 +1,12 @@
 // js/script.js - Lógica Cliente (Refactorizado con AppStore)
 
-// --- GESTIÓN DE ESTADO CENTRALIZADO (STORE) ---
+// --- GESTIÓN DE ESTADO CENTRALIZADO (STORE REACTIVO) ---
 const AppStore = {
     state: {
-        products: [],
-        activeProduct: null,
+        products: [],       // Inventario completo (Base de datos)
+        visibleProducts: [], // Lo que el usuario ve actualmente (Filtrado)
+        activeProduct: null, // Producto seleccionado para el modal
         reviewScore: 0,
-        searchTimeout: null,
         shaker: {
             selected: [],
             isProcessing: false,
@@ -15,13 +15,39 @@ const AppStore = {
         }
     },
 
-    setProducts(list) { this.state.products = list; },
-    getProducts() { return this.state.products; },
-    
-    setActiveProduct(product) { 
-        this.state.activeProduct = product;
-        this.state.reviewScore = 0; // Reset score
+    // Inicializa o actualiza el inventario completo
+    setProducts(list) { 
+        this.state.products = list; 
+        this.state.visibleProducts = list; // Al inicio, todo es visible
     },
+
+    getProducts() { return this.state.products; },
+    getVisibleProducts() { return this.state.visibleProducts; },
+
+    // Lógica de filtrado CENTRALIZADA
+    filterProducts(term) {
+        if (!term || term.length < 2) {
+            this.state.visibleProducts = this.state.products;
+        } else {
+            const lowerTerm = normalizarTexto(term);
+            this.state.visibleProducts = this.state.products.filter(p => 
+                normalizarTexto(p.nombre).includes(lowerTerm) || 
+                normalizarTexto(p.descripcion).includes(lowerTerm)
+            );
+        }
+        return this.state.visibleProducts;
+    },
+    
+    // Selección de producto segura
+    setActiveProduct(productId) { 
+        // Buscamos siempre en el array maestro para evitar errores si el filtro cambia
+        const found = this.state.products.find(p => p.id === productId);
+        this.state.activeProduct = found || null;
+        this.state.reviewScore = 0;
+        return this.state.activeProduct;
+    },
+
+    getActiveProduct() { return this.state.activeProduct; },
 
     setReviewScore(score) { this.state.reviewScore = score; },
 
@@ -408,23 +434,18 @@ const searchInput = document.getElementById('search-input');
 if(searchInput) {
     searchInput.addEventListener('input', (e) => {
         clearTimeout(AppStore.state.searchTimeout);
-        const term = normalizarTexto(e.target.value);
+        const term = e.target.value; // No normalizamos aquí, lo hace el Store
         
-        if (term.length === 0) {
-            renderizarMenu(AppStore.getProducts());
-            return;
-        }
-        if (term.length < 2) return;
-
         AppStore.state.searchTimeout = setTimeout(() => {
-            const lista = AppStore.getProducts().filter(p => 
-                normalizarTexto(p.nombre).includes(term) || 
-                normalizarTexto(p.descripcion).includes(term)
-            );
-            renderizarMenu(lista);
+            // 1. Pedimos al Store que actualice su estado "visible"
+            const listaOficial = AppStore.filterProducts(term);
+            
+            // 2. Renderizamos lo que el Store nos dice
+            renderizarMenu(listaOficial);
         }, 300);
     });
 }
+
 
 // --- NAVEGACIÓN Y SCROLL SPY ---
 
@@ -491,23 +512,37 @@ function actualizarBotonesActivos(categoriaActiva) {
     });
 }
 
-// --- DETALLES Y OPINIONES ---
+// --- DETALLES Y OPINIONES (Refactorizado) ---
+
 function abrirDetalle(id) {
-    const prod = AppStore.getProducts().find(p => p.id === id);
-    if (!prod) return;
+    // 1. Fase de DATOS: Delegamos todo al Store
+    const producto = AppStore.setActiveProduct(id);
 
-    AppStore.setActiveProduct(prod);
-    const p = AppStore.state.activeProduct;
+    // Si el ID no existe en el Store, abortamos antes de tocar el DOM
+    if (!producto) {
+        console.error("Intento de abrir producto inexistente ID:", id);
+        showToast("Producto no disponible", "error");
+        return;
+    }
 
+    // 2. Fase de RENDERIZADO: Llamamos a una función pura de UI
+    renderizarModalDetalle(producto);
+}
+
+// Función exclusiva para manipular el DOM (Pura UI)
+function renderizarModalDetalle(p) {
     const imgEl = document.getElementById('det-img');
-    if(imgEl) imgEl.src = p.imagen_url || '';
-    
+    const box = document.getElementById('box-curiosidad');
+    const modal = document.getElementById('modal-detalle');
+
+    // Inyecciones seguras
+    if(imgEl) imgEl.src = p.imagen_url || 'img/logo.png';
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
     setText('det-precio', `$${p.precio}`);
     setText('det-rating-big', p.ratingPromedio ? `★ ${p.ratingPromedio}` : '★ --');
 
-    const box = document.getElementById('box-curiosidad');
+    // Lógica visual específica
     if (p.curiosidad && p.curiosidad.length > 5) {
         if(box) box.style.display = "block";
         setText('det-curiosidad', p.curiosidad);
@@ -515,15 +550,24 @@ function abrirDetalle(id) {
         if(box) box.style.display = "none";
     }
     
-    const modal = document.getElementById('modal-detalle');
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('active'), 10);
+    // Animación de entrada
+    if (modal) {
+        modal.style.display = 'flex';
+        // Pequeño delay para permitir que el display:flex se aplique antes de la opacidad
+        requestAnimationFrame(() => {
+            modal.classList.add('active');
+        });
+    }
 }
 
 function cerrarDetalle() {
     const modal = document.getElementById('modal-detalle');
-    modal.classList.remove('active');
-    setTimeout(() => modal.style.display = 'none', 350);
+    if (modal) {
+        modal.classList.remove('active');
+        // Limpiamos el producto activo al cerrar para evitar datos residuales
+        AppStore.state.activeProduct = null; 
+        setTimeout(() => modal.style.display = 'none', 350);
+    }
 }
 
 function abrirOpinionDesdeDetalle() {
@@ -758,16 +802,29 @@ function actualizarEstadoShaker() {
     }
 }
 
+// ==========================================
+// 🌪️ GESTIÓN DE SENSORES (Optimizado)
+// ==========================================
+
+// Variable global para almacenar la REFERENCIA EXACTA de la función
+let motionHandler = null; 
+
 function iniciarDetectorMovimiento() {
-    if (watchID) return;
+    // 1. LIMPIEZA PREVENTIVA (Defensa contra fugas)
+    // Antes de crear nada, nos aseguramos de matar cualquier listener anterior.
+    detenerDetectorMovimiento();
 
     const umbral = 15; 
     let lastX = 0, lastY = 0, lastZ = 0;
 
-    const handleMotion = (event) => {
+    // 2. Definimos el handler y lo guardamos en la variable global
+    motionHandler = (event) => {
         const shaker = AppStore.getShakerState();
+        
+        // Si ya estamos procesando, ignoramos movimientos para no saturar
         if (shaker.isProcessing || shaker.selected.length === 0) return;
 
+        // Soporte cruzado para aceleración con o sin gravedad
         const acc = event.accelerationIncludingGravity || event.acceleration;
         if (!acc) return;
 
@@ -775,16 +832,21 @@ function iniciarDetectorMovimiento() {
         const deltaY = Math.abs(acc.y - lastY);
         const deltaZ = Math.abs(acc.z - lastZ);
 
+        // Detectar sacudida fuerte
         if (deltaX + deltaY + deltaZ > umbral) {
             shaker.shakeCount++;
+            
+            // Feedback visual inmediato
             const imgShaker = document.getElementById('shaker-img');
             if(imgShaker) imgShaker.classList.add('shaking');
             
+            // Umbral de activación (5 sacudidas)
             if (shaker.shakeCount > 5) {
                 procesarMezcla();
-                shaker.shakeCount = 0;
+                shaker.shakeCount = 0; // Reset inmediato para evitar disparos dobles
             }
             
+            // Limpieza visual
             clearTimeout(shaker.shakeTimer);
             shaker.shakeTimer = setTimeout(() => {
                 if(imgShaker) imgShaker.classList.remove('shaking');
@@ -794,25 +856,29 @@ function iniciarDetectorMovimiento() {
         lastX = acc.x; lastY = acc.y; lastZ = acc.z;
     };
 
+    // 3. Solicitud de Permisos (iOS 13+) y Activación
     if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
             .then(state => {
                 if (state === 'granted') {
-                    window.addEventListener('devicemotion', handleMotion, true);
-                    watchID = handleMotion;
+                    window.addEventListener('devicemotion', motionHandler, true);
+                    console.log("📡 Sensor activado (iOS)");
                 }
             })
             .catch(console.error);
     } else {
-        window.addEventListener('devicemotion', handleMotion, true);
-        watchID = handleMotion;
+        // Android y navegadores estándar
+        window.addEventListener('devicemotion', motionHandler, true);
+        console.log("📡 Sensor activado (Android/Std)");
     }
 }
 
 function detenerDetectorMovimiento() {
-    if (watchID) {
-        window.removeEventListener('devicemotion', watchID, true);
-        watchID = null;
+    // Solo intentamos remover si existe una referencia válida
+    if (motionHandler) {
+        window.removeEventListener('devicemotion', motionHandler, true);
+        motionHandler = null; // Liberamos la memoria
+        console.log("🛑 Sensor detenido y memoria liberada");
     }
 }
 
