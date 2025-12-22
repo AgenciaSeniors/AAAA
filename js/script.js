@@ -1160,43 +1160,131 @@ async function loadDynamicHero() {
     heroSubtitle.style.opacity = "1";
   }
 }
+/**
+ * Busca un producto válido usando una estrategia de fallback en cascada.
+ * Garantiza que siempre devolvemos un producto para mostrar en el Hero.
+ */
+function findProductWithFallback(aiData) {
+    const products = AppStore.getProducts();
+    const idBuscado = aiData.id_elegido;
+    const nombreBuscado = aiData.recomendacion;
+    
+    // Métricas de depuración iniciales
+    console.log(`[DEBUG] Buscando producto... ID: ${idBuscado} | Nombre: "${nombreBuscado}" | Total en Store: ${products.length}`);
+
+    // 1. Intento Exacto por ID
+    let found = products.find(p => p.id == idBuscado);
+    if (found) {
+        if (!found.activo) {
+            console.warn(`[WARN] El producto ID ${idBuscado} existe pero NO está activo. Buscando alternativa...`);
+        } else {
+            return { product: found, method: 'ID_EXACTO' };
+        }
+    }
+
+    // 2. Intento por Nombre (Match Exacto o Scoring Mejorado)
+    if (nombreBuscado) {
+        const busquedaNorm = normalizarTexto(nombreBuscado);
+        
+        // A) Nombre exacto normalizado
+        found = products.find(p => p.activo && normalizarTexto(p.nombre) === busquedaNorm);
+        if (found) return { product: found, method: 'NOMBRE_EXACTO' };
+
+        // B) Scoring de similitud (usando la lógica existente de calcularPuntajeMatch)
+        // Filtramos solo activos antes de hacer el scoring costoso
+        const candidatos = products
+            .filter(p => p.activo)
+            .map(p => ({
+                producto: p,
+                score: calcularPuntajeMatch(busquedaNorm, normalizarTexto(p.nombre))
+            }))
+            .sort((a, b) => b.score - a.score);
+
+        // Umbral de confianza (>= 8 puntos)
+        if (candidatos.length > 0 && candidatos[0].score >= 8) {
+            return { product: candidatos[0].producto, method: 'SCORING_NOMBRE' };
+        }
+    }
+
+    // 3. Intento por Categoría (Fallback Contextual)
+    // Intentamos inferir la categoría o usamos 'cocteles' como base segura
+    const categoriaTarget = aiData.categoria || 'cocteles';
+    const porCategoria = products.filter(p => p.categoria === categoriaTarget && p.activo && p.stock > 0);
+    
+    if (porCategoria.length > 0) {
+        // Devolvemos uno aleatorio de la categoría para variar
+        const randomCat = porCategoria[Math.floor(Math.random() * porCategoria.length)];
+        return { product: randomCat, method: `FALLBACK_CATEGORIA (${categoriaTarget})` };
+    }
+
+    // 4. Fallback Final: Producto Destacado ("La Vieja Confiable")
+    const destacados = products.filter(p => p.destacado && p.activo);
+    if (destacados.length > 0) {
+        // Preferimos el primero o uno random de los destacados
+        return { product: destacados[0], method: 'FALLBACK_DESTACADO' };
+    }
+
+    // 5. Último recurso (Emergencia): El primer producto activo que encontremos
+    return { product: products.find(p => p.activo) || null, method: 'EMERGENCIA_TOTAL' };
+}
+/**
+ * Renderiza el Hero Section con validaciones y manejo de errores.
+ */
 function renderHeroHTML(aiData, context) {
     const container = document.getElementById('hero-ai-container');
     if (!container) return;
 
-    // Buscamos el producto real en el Store para obtener su imagen y nombre correctos
-    const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
-    const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
-    const nombreProducto = productoReal ? productoReal.nombre : "Especialidad";
+    // --- BÚSQUEDA ROBUSTA ---
+    const resultado = findProductWithFallback(aiData);
+    const productoReal = resultado.product;
 
-    // 2. GENERACIÓN DE TEXTO NOIR (Copywriter.js)
-    // Si tenemos el Copywriter cargado, le pedimos una frase creativa.
-    // Si no, usamos el texto genérico que viene de la base de datos (fallback).
+    // Validación Crítica: Si tras todos los fallbacks no hay producto (BD vacía o error masivo)
+    if (!productoReal) {
+        console.error("[CRITICAL] Imposible encontrar un producto válido para mostrar.");
+        container.innerHTML = `
+            <div class="hero-content">
+                <span class="ai-badge">📍 Sancti Spíritus: ${context.temperatura}°C</span>
+                <h2 class="noir-title">El bar está abierto. Explora nuestro menú.</h2>
+            </div>`;
+        return;
+    }
+
+    // Registro de Métricas de Depuración
+    console.log(`[METRICS] Estrategia: ${resultado.method} | Final: ${productoReal.nombre} (ID: ${productoReal.id})`);
+
+    // Preparación de datos visuales
+    const imagenFinal = productoReal.imagen_url || 'img/logo.png';
+    const nombreProducto = productoReal.nombre;
+
+    // --- GENERACIÓN DE COPY NOIR ---
     let mensajeNoir = aiData.copy_venta;
     
-    if (typeof NoirCopywriter !== 'undefined') {
-        // Aquí ocurre la magia: Cruzamos el clima con el producto
+    // Si caímos en un fallback (no es el ID exacto que pidió la IA),
+    // regeneramos el texto para que coincida con el nuevo producto.
+    if (resultado.method !== 'ID_EXACTO' && typeof NoirCopywriter !== 'undefined') {
+        mensajeNoir = NoirCopywriter.getNoirMessage(context, nombreProducto);
+    } 
+    // Opcional: Si el texto original venía vacío, lo generamos
+    else if (!mensajeNoir && typeof NoirCopywriter !== 'undefined') {
         mensajeNoir = NoirCopywriter.getNoirMessage(context, nombreProducto);
     }
 
-    // Renderizamos el HTML final
-    // Nota: El 'ai-badge' ahora solo muestra la temperatura real, porque el "mensaje" emocional va en el título.
+    // Renderizado HTML
     container.innerHTML = `
         <div class="hero-content">
             <span class="ai-badge">📍 Sancti Spíritus: ${context.temperatura}°C</span>
             <h2 class="noir-title">${mensajeNoir}</h2>
             
-            <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-neon-action">
+            <button onclick="abrirDetalle(${productoReal.id})" class="btn-neon-action">
                 Revelar Secreto <i class="fas fa-arrow-right"></i>
             </button>
             
         </div>
         <div class="hero-image-glow">
-            <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
+            <img src="${imagenFinal}" alt="${nombreProducto}" onerror="this.src='img/logo.png'">
         </div>
     `;
 }
-
 async function askPairing(nombrePlato, btnElement) {
     // 1. Referencias al modal de carga
     const modalMatch = document.getElementById('modal-match');
