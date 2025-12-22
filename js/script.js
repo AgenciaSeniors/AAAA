@@ -61,11 +61,21 @@ const AppStore = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Funciones básicas inmediatas
     checkWelcome(); 
-    cargarMenu();
     updateConnectionStatus();
     registrarServiceWorker();
+
+    // 2. IMPORTANTE: Esperamos a que el menú cargue datos antes de llamar a la IA
+    // Esto evita que el Sommelier busque productos que aún no existen en memoria.
+    try {
+        await cargarMenu(); 
+    } catch (e) {
+        console.warn("El menú tardó en cargar, pero continuamos...");
+    }
+
+    // 3. Ahora que (seguramente) tenemos productos, activamos el Sommelier
     loadDynamicHero();
 });
 // 1. Detectar Contexto del Usuario
