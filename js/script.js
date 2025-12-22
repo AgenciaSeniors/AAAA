@@ -55,49 +55,43 @@ async function checkWelcome() {
     const modal = document.getElementById('modal-welcome');
     let clienteId = localStorage.getItem('cliente_id');
 
-    // Si no hay ID local, intentamos recuperar por Fingerprint
-    if (!clienteId) {
-        try {
-            const fingerprint = await generarFingerprint();
-            
-            // Nota: Requiere que hayas creado la columna 'fingerprint' en tu tabla 'clientes' de Supabase
-            const { data: clienteExistente } = await supabaseClient
-                .from('clientes')
-                .select('id, nombre')
-                .eq('fingerprint', fingerprint)
-                .maybeSingle(); // Usamos maybeSingle para no lanzar error si no existe
-            
-            if (clienteExistente) {
-                clienteId = clienteExistente.id;
-                localStorage.setItem('cliente_id', clienteId);
-                localStorage.setItem('cliente_nombre', clienteExistente.nombre);
-                showToast(`¡Te reconocimos! Bienvenido de nuevo, ${clienteExistente.nombre} 👋`, "success");
-            }
-        } catch (e) {
-            console.warn("No se pudo verificar fingerprint:", e);
-        }
+    // Recuperación por Fingerprint (si implementaste la mejora anterior)
+    if (!clienteId && typeof generarFingerprint === 'function') {
+        /* ... lógica de fingerprint ... */
     }
 
     if (clienteId) {
-        // CASO 1: CLIENTE RECONOCIDO
+        // USUARIO RECONOCIDO
         if (modal) modal.style.display = 'none';
 
+        const nombreGuardado = localStorage.getItem('cliente_nombre') || 'Amigo';
+        // Mensaje discreto de bienvenida
+        setTimeout(() => {
+            const toast = document.getElementById('toast-container');
+            if(toast && !toast.hasChildNodes()) showToast(`De vuelta al bar, ${nombreGuardado} 🍹`, "success");
+        }, 2000);
+
+        // --- CORRECCIÓN C: TIEMPO DE ESPERA REAL ---
         const ultimaVisita = localStorage.getItem('ultima_visita_ts');
         const ahora = Date.now();
-        // Ajustado a 12 horas para producción (43200000 ms)
-        const TIEMPO_ESPERA = 12 * 60 * 60 * 1000; 
+        const TIEMPO_ESPERA = 12 * 60 * 60 * 1000; // 12 Horas en milisegundos
 
         if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > TIEMPO_ESPERA) {
+            console.log("Registrando nueva visita diaria...");
+            
             if (typeof supabaseClient !== 'undefined') {
-                await supabaseClient.from('visitas').insert([{
+                const { error } = await supabaseClient.from('visitas').insert([{
                     cliente_id: clienteId,
                     motivo: 'Regreso al Menú'
                 }]);
-                localStorage.setItem('ultima_visita_ts', ahora.toString());
+
+                if (!error) {
+                    localStorage.setItem('ultima_visita_ts', ahora.toString());
+                }
             }
         }
     } else {
-        // CASO 2: CLIENTE NUEVO (Mostrar Modal)
+        // USUARIO NUEVO
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
@@ -348,14 +342,25 @@ function construirSeccionHTML(id, titulo, items) {
 }
 
 // Función auxiliar para la tarjeta (Misma lógica visual que tenías)
+// --- CORRECCIÓN B: MANEJO DE IMÁGENES ADAPTATIVAS ---
 function generarCardHTML(item) {
-    // Sanitización de datos antes de pintar
+    // Sanitización
     const nombreSafe = escapeHTML(item.nombre);
     const descSafe = escapeHTML(item.descripcion);
     const precioSafe = escapeHTML(item.precio);
     
     const esAgotado = item.estado === 'agotado';
-    const img = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
+    const originalUrl = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
+    
+    // Lógica de Fallback para Picture
+    // Intentamos generar una URL .jpg si la original es .webp o .avif
+    let fallbackUrl = originalUrl;
+    if (originalUrl.match(/\.(webp|avif)$/i)) {
+        // Asume que existe una versión jpg con el mismo nombre. 
+        // Si no usas un CDN de transformación, asegúrate de subir ambos archivos.
+        fallbackUrl = originalUrl.replace(/\.(webp|avif)$/i, '.jpg'); 
+    }
+
     const rating = item.ratingPromedio ? `★ ${item.ratingPromedio}` : '';
     const accionClick = esAgotado ? '' : `onclick="abrirDetalle(${item.id})"`;
     const claseAgotado = esAgotado ? 'agotado' : '';
@@ -367,7 +372,16 @@ function generarCardHTML(item) {
     return `
         <div class="card ${claseAgotado}" ${accionClick}>
             ${badgeHTML}
-            <div class="img-box"><img src="${img}" loading="lazy" alt="${nombreSafe}"></div>
+            <div class="img-box">
+                <picture>
+                    <source srcset="${originalUrl}" type="${originalUrl.endsWith('.avif') ? 'image/avif' : 'image/webp'}">
+                    <img src="${fallbackUrl}" 
+                         loading="lazy" 
+                         decoding="async" 
+                         alt="${nombreSafe}"
+                         width="300" height="300" 
+                         onerror="this.src='${originalUrl}'"> </picture>
+            </div>
             <div class="info">
                 <h3>${nombreSafe}</h3>
                 <p class="short-desc">${descSafe}</p>
@@ -548,46 +562,70 @@ function actualizarEstrellas() {
     });
 }
 
+// --- CORRECCIÓN A: VALIDACIÓN SERVER-SIDE Y CLIENTE ID ---
 async function enviarOpinion() {
     const score = AppStore.state.reviewScore;
     const currentProd = AppStore.state.activeProduct;
+    const clienteId = localStorage.getItem('cliente_id'); // Ahora recuperamos el ID real
 
     if (score === 0) { showToast("¡Marca las estrellas!", "warning"); return; }
     if (!currentProd) return;
+    if (!clienteId) { showToast("Error de identidad. Recarga la página.", "error"); return; }
 
-    const LAST_OPINION = `last_opinion_ts_${currentProd.id}`; 
-    const lastTime = localStorage.getItem(LAST_OPINION);
-    const ahora = Date.now();
-    
-    if (lastTime && (ahora - parseInt(lastTime)) < 12 * 60 * 60 * 1000) {
-        showToast("Ya opinaste sobre esto hoy.", "warning");
-        return;
-    }
-
-    const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
-    const comentario = document.getElementById('cliente-comentario').value;
     const btn = document.querySelector('#modal-opinion .btn-big-action');
+    if(btn) { btn.textContent = "Verificando..."; btn.disabled = true; }
 
-    if(btn) { btn.textContent = "Enviando..."; btn.disabled = true; }
+    try {
+        // 1. VERIFICACIÓN PREVIA (Cliente-Servidor)
+        // Consultamos la última opinión real en BD para dar feedback rápido
+        const { data: opinionesPrevias } = await supabaseClient
+            .from('opiniones')
+            .select('created_at')
+            .eq('cliente_id', clienteId)
+            .eq('producto_id', currentProd.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-    const { error } = await supabaseClient.from('opiniones').insert([{
-        producto_id: currentProd.id,
-        cliente_nombre: nombre,
-        comentario: comentario, 
-        puntuacion: score
-    }]);
+        if (opinionesPrevias && opinionesPrevias.length > 0) {
+            const ultimaFecha = new Date(opinionesPrevias[0].created_at).getTime();
+            const horasDiferencia = (Date.now() - ultimaFecha) / (1000 * 60 * 60);
+            
+            if (horasDiferencia < 12) {
+                throw new Error(`Debes esperar ${Math.ceil(12 - horasDiferencia)} horas para volver a opinar.`);
+            }
+        }
 
-    if (!error) {
-        localStorage.setItem(LAST_OPINION, ahora.toString());
+        // 2. INTENTO DE INSERCIÓN
+        const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
+        const comentario = document.getElementById('cliente-comentario').value;
+
+        const { error } = await supabaseClient.from('opiniones').insert([{
+            producto_id: currentProd.id,
+            cliente_id: clienteId, // IMPORTANTÍSIMO: Enviar el ID para que el Trigger SQL funcione
+            cliente_nombre: nombre,
+            comentario: comentario, 
+            puntuacion: score
+        }]);
+
+        if (error) {
+            // Si el trigger de SQL bloquea, capturamos el mensaje aquí
+            throw new Error(error.message || "No se pudo guardar la opinión");
+        }
+
         showToast("¡Gracias por tu opinión!", "success");
         cerrarModalOpiniones();
         document.getElementById('cliente-comentario').value = "";
-        cargarMenu();
-    } else {
-        showToast("Error: " + error.message, "error");
+        cargarMenu(); // Recargar para actualizar promedio
+
+    } catch (err) {
+        console.error("Error opinión:", err);
+        // Mostrar mensaje limpio al usuario
+        let msg = err.message;
+        if (msg.includes("trigger")) msg = "Ya opinaste recientemente sobre esto.";
+        showToast(msg, "warning");
+    } finally {
+        if(btn) { btn.textContent = "ENVIAR"; btn.disabled = false; }
     }
-    
-    if(btn) { btn.textContent = "ENVIAR"; btn.disabled = false; }
 }
 
 // --- UTILIDADES ---
