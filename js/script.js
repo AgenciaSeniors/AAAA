@@ -991,16 +991,17 @@ function updateAndShowMatch(data, platoBase) {
 
     modal.classList.add('active');
 }
+// Sugerencia de corrección para askPairing
 async function askPairing(nombrePlato) {
     const modal = document.getElementById('modal-match');
     const loader = document.getElementById('match-loading');
     const content = document.getElementById('match-content');
     
-    // IMPORTANTE: Limpiar datos antiguos inmediatamente para evitar el bug
+    // SOLUCIÓN AL BUG 2: Limpiar datos antiguos ANTES de mostrar el modal
     document.getElementById('match-plato-base').textContent = "...";
     document.getElementById('match-producto-nombre').textContent = "Buscando...";
-    document.getElementById('match-justificacion').textContent = "";
     document.getElementById('match-img').src = "";
+    document.getElementById('match-justificacion').textContent = "";
 
     if(modal && loader && content) {
         content.style.display = 'none'; 
@@ -1020,19 +1021,15 @@ async function askPairing(nombrePlato) {
         
         const result = await response.json();
         
-        // Simular retraso para que se vea la animación de escaneo
-        await new Promise(r => setTimeout(r, 1000)); 
+        // SOLUCIÓN AL BUG 1: Eliminar o reducir el setTimeout artificial
+        // await new Promise(r => setTimeout(r, 100)); 
 
         if (result.success) {
             updateAndShowMatch(result.data, nombrePlato);
-        } else {
-            throw new Error("Sin match");
         }
-
     } catch (e) {
-        console.error(e);
-        showToast("El Sommelier está ocupado, intenta luego.", "error");
-        if(modal) modal.classList.remove('active');
+        showToast("Error en el escáner", "error");
+        modal.classList.remove('active');
     }
 }
 
@@ -1065,47 +1062,6 @@ function updateAndShowMatch(data, platoBase) {
     // Cambiar de cargador a contenido
     loader.style.display = 'none';
     content.style.display = 'block';
-}async function askPairing(nombrePlato) {
-    const modal = document.getElementById('modal-match');
-    const loader = document.getElementById('match-loading');
-    const content = document.getElementById('match-content');
-    
-    // 1. ABRIR MODAL EN ESTADO "ESCANEO"
-    if(modal && loader && content) {
-        content.style.display = 'none'; // Ocultar resultado anterior
-        loader.style.display = 'block'; // Mostrar escáner
-        modal.classList.add('active');  // Abrir modal
-    } else {
-        showToast("Inicializando escáner..."); // Fallback si el HTML no está listo
-    }
-
-    try {
-        // 2. LLAMADA A LA IA
-        const response = await fetch(CONFIG.URL_SCRIPT, {
-            method: "POST",
-            body: JSON.stringify({
-                action: "pairing",
-                producto: nombrePlato,
-                token: "DLV_SECURE_TOKEN_2025_X9"
-            })
-        });
-        
-        const result = await response.json();
-        
-        // 3. SIMULAR UN PEQUEÑO RETRASO SI LA RESPUESTA FUE MUY RÁPIDA (Para lucir la animación)
-        await new Promise(r => setTimeout(r, 800)); 
-
-        if (result.success) {
-            updateAndShowMatch(result.data, nombrePlato);
-        } else {
-            throw new Error("Sin match");
-        }
-
-    } catch (e) {
-        console.error(e);
-        showToast("El Sommelier está ocupado, intenta luego.", "error");
-        if(modal) modal.classList.remove('active');
-    }
 }
 
 function updateAndShowMatch(data, platoBase) {
