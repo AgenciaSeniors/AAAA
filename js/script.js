@@ -515,49 +515,37 @@ function actualizarBotonesActivos(categoriaActiva) {
 // --- DETALLES Y OPINIONES (Refactorizado) ---
 
 function abrirDetalle(id, mensajeMaridaje = null) {
-    // 1. Buscamos y activamos el producto usando solo el ID
+    // Usamos el Store para activar el producto
     const p = AppStore.setActiveProduct(id); 
 
+    // SI EL PRODUCTO NO EXISTE, MOSTRAMOS UN AVISO Y NO ROMPEMOS EL CÓDIGO
     if (!p) {
-        console.error("Producto no encontrado:", id);
+        console.warn("La IA recomendó un ID que no existe en el menú:", id);
+        showToast("Esa recomendación no está disponible hoy.", "info");
         return;
     }
 
-    // 2. Llenar los campos básicos
+    // Si existe, rellenamos el modal (tu lógica actual...)
     const imgEl = document.getElementById('det-img');
     if(imgEl) imgEl.src = p.imagen_url || 'img/logo.png';
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
     setText('det-precio', `$${p.precio}`);
-    setText('det-rating-big', p.ratingPromedio ? `★ ${p.ratingPromedio}` : '★ --');
-
-    // 3. Nota del Sommelier (Match Directo)
+    
+    // Mostrar nota del sommelier si existe
     const notaSommelier = document.getElementById('nota-sommelier');
     if (mensajeMaridaje && notaSommelier) {
-        notaSommelier.innerHTML = `
-            <div class="ai-pairing-note">
-                <small>🍷 NOTA DEL SOMMELIER:</small>
-                <p>"${mensajeMaridaje}"</p>
-            </div>
-        `;
+        notaSommelier.innerHTML = `<div class="ai-pairing-note"><small>🍷 NOTA DEL SOMMELIER:</small><p>"${mensajeMaridaje}"</p></div>`;
         notaSommelier.style.display = 'block';
-    } else if (notaSommelier) {
+    } else if(notaSommelier) {
         notaSommelier.style.display = 'none';
     }
 
-    // 4. Curiosidad
-    const box = document.getElementById('box-curiosidad');
-    if (p.curiosidad && p.curiosidad.length > 5) {
-        if(box) box.style.display = "block";
-        setText('det-curiosidad', p.curiosidad);
-    } else {
-        if(box) box.style.display = "none";
-    }
-    
-    // 5. Mostrar modal
     const modal = document.getElementById('modal-detalle');
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('active'), 10);
+    if(modal) {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('active'), 10);
+    }
 }
 
 // Función exclusiva para manipular el DOM (Pura UI)
@@ -1106,44 +1094,4 @@ function renderHeroHTML(aiData, context) {
             <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
         </div>
     `;
-}
-// Sugerencia de corrección para askPairing
-async function askPairing(nombrePlato, btnElement) {
-    // 1. Feedback visual en el botón para que el usuario sepa que algo pasa
-    const originalText = btnElement ? btnElement.innerHTML : "🍷 Match";
-    if (btnElement) {
-        btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-        btnElement.disabled = true;
-    }
-
-    try {
-        const response = await fetch(CONFIG.URL_SCRIPT, {
-            method: "POST",
-            body: JSON.stringify({
-                action: "pairing",
-                producto: nombrePlato,
-                token: "DLV_SECURE_TOKEN_2025_X9"
-            })
-        });
-        
-        const result = await response.json();
-
-        if (result.success && result.data.id_elegido) {
-            // 2. IR DIRECTO AL PRODUCTO
-            // Pasamos el mensaje de la IA para que el detalle sepa que viene de un match
-            abrirDetalle(result.data.id_elegido, result.data.copy_venta);
-        } else {
-            throw new Error("Sin match");
-        }
-
-    } catch (e) {
-        console.error(e);
-        showToast("El Sommelier está ocupado ahora mismo.", "error");
-    } finally {
-        // Restaurar botón
-        if (btnElement) {
-            btnElement.innerHTML = originalText;
-            btnElement.disabled = false;
-        }
-    }
 }
