@@ -515,20 +515,24 @@ function actualizarBotonesActivos(categoriaActiva) {
 // --- DETALLES Y OPINIONES (Refactorizado) ---
 
 function abrirDetalle(id, mensajeMaridaje = null) {
-    const prod = AppStore.getProducts().find(p => p.id === id);
-    if (!prod) return;
+    // 1. Buscamos y activamos el producto usando solo el ID
+    const p = AppStore.setActiveProduct(id); 
 
-    AppStore.setActiveProduct(prod);
-    const p = AppStore.state.activeProduct;
+    if (!p) {
+        console.error("Producto no encontrado:", id);
+        return;
+    }
 
-    // ... (Tu lógica existente de rellenar nombre, precio, imagen, etc.) ...
+    // 2. Llenar los campos básicos
+    const imgEl = document.getElementById('det-img');
+    if(imgEl) imgEl.src = p.imagen_url || 'img/logo.png';
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
     setText('det-precio', `$${p.precio}`);
-    //
+    setText('det-rating-big', p.ratingPromedio ? `★ ${p.ratingPromedio}` : '★ --');
 
-    // --- NUEVA LÓGICA DE NOTA DEL SOMMELIER ---
-    const notaSommelier = document.getElementById('nota-sommelier'); // Crea este div en tu HTML
+    // 3. Nota del Sommelier (Match Directo)
+    const notaSommelier = document.getElementById('nota-sommelier');
     if (mensajeMaridaje && notaSommelier) {
         notaSommelier.innerHTML = `
             <div class="ai-pairing-note">
@@ -541,11 +545,19 @@ function abrirDetalle(id, mensajeMaridaje = null) {
         notaSommelier.style.display = 'none';
     }
 
-    // Abrir modal
+    // 4. Curiosidad
+    const box = document.getElementById('box-curiosidad');
+    if (p.curiosidad && p.curiosidad.length > 5) {
+        if(box) box.style.display = "block";
+        setText('det-curiosidad', p.curiosidad);
+    } else {
+        if(box) box.style.display = "none";
+    }
+    
+    // 5. Mostrar modal
     const modal = document.getElementById('modal-detalle');
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('active'), 10);
-    //
 }
 
 // Función exclusiva para manipular el DOM (Pura UI)
