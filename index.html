@@ -184,7 +184,7 @@
         
         <button id="match-btn-action" class="btn-modal-action">VER PRODUCTO</button>
     </div>
-</div><div id="modal-match" class="modal-overlay" onclick="if(event.target == this) this.classList.remove('active')">
+<div id="modal-match" class="modal-overlay" onclick="if(event.target == this) this.classList.remove('active')">
     <div class="modal-card pairing-card">
         <button class="btn-close-modal" onclick="document.getElementById('modal-match').classList.remove('active')">✕</button>
         
@@ -197,7 +197,7 @@
             <p class="match-subtitle" style="margin-top:15px;">El Sommelier está buscando el contraste ideal...</p>
         </div>
 
-        <div id="match-content" class="match-content-hidden">
+        <div id="match-content" style="display: none;">
             <h3 class="modal-title-elegant">🤝 Match Detectado</h3>
             <p class="match-subtitle">Para tu <span id="match-plato-base" style="color:var(--neon-cyan)"></span>:</p>
             
@@ -206,7 +206,7 @@
                     <img id="match-img" src="" alt="Sugerencia" onerror="this.src='img/logo.png'">
                 </div>
                 <div class="match-info">
-                    <h4 id="match-producto-nombre">Nombre</h4>
+                    <h4 id="match-producto-nombre">Cargando...</h4>
                     <p id="match-justificacion" class="pairing-reason">...</p>
                 </div>
             </div>

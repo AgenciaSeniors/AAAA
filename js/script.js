@@ -1001,6 +1001,80 @@ async function askPairing(nombrePlato) {
     const loader = document.getElementById('match-loading');
     const content = document.getElementById('match-content');
     
+    // IMPORTANTE: Limpiar datos antiguos inmediatamente para evitar el bug
+    document.getElementById('match-plato-base').textContent = "...";
+    document.getElementById('match-producto-nombre').textContent = "Buscando...";
+    document.getElementById('match-justificacion').textContent = "";
+    document.getElementById('match-img').src = "";
+
+    if(modal && loader && content) {
+        content.style.display = 'none'; 
+        loader.style.display = 'block'; 
+        modal.classList.add('active');  
+    }
+
+    try {
+        const response = await fetch(CONFIG.URL_SCRIPT, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "pairing",
+                producto: nombrePlato,
+                token: "DLV_SECURE_TOKEN_2025_X9"
+            })
+        });
+        
+        const result = await response.json();
+        
+        // Simular retraso para que se vea la animación de escaneo
+        await new Promise(r => setTimeout(r, 1000)); 
+
+        if (result.success) {
+            updateAndShowMatch(result.data, nombrePlato);
+        } else {
+            throw new Error("Sin match");
+        }
+
+    } catch (e) {
+        console.error(e);
+        showToast("El Sommelier está ocupado, intenta luego.", "error");
+        if(modal) modal.classList.remove('active');
+    }
+}
+
+function updateAndShowMatch(data, platoBase) {
+    const modal = document.getElementById('modal-match');
+    const loader = document.getElementById('match-loading');
+    const content = document.getElementById('match-content');
+    
+    const productoReal = AppStore.getProducts().find(p => p.id == data.id_elegido);
+    if (!productoReal) return;
+
+    // Inyectar nuevos datos
+    document.getElementById('match-plato-base').textContent = platoBase;
+    document.getElementById('match-img').src = productoReal.imagen_url || 'img/logo.png';
+    document.getElementById('match-producto-nombre').textContent = productoReal.nombre;
+    document.getElementById('match-justificacion').textContent = `"${data.copy_venta}"`;
+    
+    const btn = document.getElementById('match-btn-action');
+    btn.onclick = () => {
+        modal.classList.remove('active');
+        abrirDetalle(productoReal.id);
+    };
+
+    // Lógica de color según categoría
+    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin'].includes(productoReal.categoria);
+    const card = modal.querySelector('.modal-card');
+    card.classList.remove('neon-cold', 'neon-warm');
+    card.classList.add(esBebida ? 'neon-cold' : 'neon-warm');
+
+    // Cambiar de cargador a contenido
+    loader.style.display = 'none';
+    content.style.display = 'block';
+}async function askPairing(nombrePlato) {
+    const modal = document.getElementById('modal-match');
+    const loader = document.getElementById('match-loading');
+    const content = document.getElementById('match-content');
+    
     // 1. ABRIR MODAL EN ESTADO "ESCANEO"
     if(modal && loader && content) {
         content.style.display = 'none'; // Ocultar resultado anterior
