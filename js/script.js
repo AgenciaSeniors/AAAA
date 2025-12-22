@@ -1097,11 +1097,17 @@ function renderHeroHTML(aiData, context) {
 }
 
 async function askPairing(nombrePlato, btnElement) {
-    const originalText = btnElement ? btnElement.innerHTML : "🍷 Match";
-    if (btnElement) {
-        btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-        btnElement.disabled = true;
+    // 1. Referencias al modal de carga
+    const modalMatch = document.getElementById('modal-match');
+    
+    // 2. Mostrar el escáner inmediatamente
+    if (modalMatch) {
+        modalMatch.style.display = 'flex';
+        setTimeout(() => modalMatch.classList.add('active'), 10);
     }
+
+    // 3. Feedback opcional en el botón
+    if (btnElement) btnElement.disabled = true;
 
     try {
         const response = await fetch(CONFIG.URL_SCRIPT, {
@@ -1115,18 +1121,28 @@ async function askPairing(nombrePlato, btnElement) {
         
         const result = await response.json();
 
+        // 4. Cuando llega la información, cerramos el escáner y abrimos el detalle
         if (result.success && result.data.id_elegido) {
-            // Ir directo al detalle del producto recomendado
+            // Cerramos el modal de carga
+            if (modalMatch) {
+                modalMatch.classList.remove('active');
+                setTimeout(() => modalMatch.style.display = 'none', 300);
+            }
+            
+            // Abrimos directamente el producto recomendado con su nota
             abrirDetalle(result.data.id_elegido, result.data.copy_venta);
         } else {
-            showToast("No encontré un maridaje perfecto ahora.", "info");
+            throw new Error("Sin match");
         }
+
     } catch (e) {
-        showToast("Error de conexión con el Sommelier.", "error");
-    } finally {
-        if (btnElement) {
-            btnElement.innerHTML = originalText;
-            btnElement.disabled = false;
+        console.error(e);
+        showToast("El Sommelier está ocupado ahora mismo.", "error");
+        if (modalMatch) {
+            modalMatch.classList.remove('active');
+            setTimeout(() => modalMatch.style.display = 'none', 300);
         }
+    } finally {
+        if (btnElement) btnElement.disabled = false;
     }
 }

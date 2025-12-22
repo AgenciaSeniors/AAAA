@@ -699,3 +699,40 @@ body {
         transform: translateY(0);
     }
 }
+.scanner-wrapper {
+    text-align: center;
+    padding: 20px;
+}
+
+.neon-scanner-box {
+    width: 100%;
+    height: 150px;
+    border: 1px solid var(--neon-cyan);
+    position: relative;
+    overflow: hidden;
+    background: rgba(0, 255, 255, 0.05);
+    margin: 20px 0;
+}
+
+.scan-line {
+    width: 100%;
+    height: 2px;
+    background: var(--neon-cyan);
+    position: absolute;
+    box-shadow: 0 0 15px var(--neon-cyan);
+    animation: scanMove 2s infinite ease-in-out;
+}
+
+@keyframes scanMove {
+    0% { top: 0; }
+    50% { top: 100%; }
+    100% { top: 0; }
+}
+
+.blink-text {
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0.5; }
+}

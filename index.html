@@ -157,6 +157,21 @@
         </div>
     </div>
 
+    <div id="modal-match" class="modal-overlay">
+        <div class="modal-card pairing-card">
+            <button class="btn-close-modal" onclick="document.getElementById('modal-match').classList.remove('active')">✕</button>
+            
+            <div id="match-loading" class="scanner-wrapper">
+                <h3 class="modal-title-elegant blink-text">Analizando Sabores...</h3>
+                <div class="neon-scanner-box">
+                    <div class="scan-line"></div>
+                    <div class="scan-grid"></div>
+                </div>
+                <p class="match-subtitle" style="margin-top:15px;">El Sommelier está buscando el contraste ideal...</p>
+            </div>
+        </div>
+    </div>
+
     <script src="js/copywriter.js"></script>
     <script src="js/atmosphere.js"></script> 
     <script src="js/script.js"></script>
