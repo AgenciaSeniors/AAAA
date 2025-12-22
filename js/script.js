@@ -345,31 +345,27 @@ function construirSeccionHTML(id, titulo, items) {
 // Función auxiliar para la tarjeta (Misma lógica visual que tenías)
 function generarCardHTML(item) {
     const esAgotado = item.estado === 'agotado';
-    const img = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
+    const img = item.imagen_url || 'img/logo.png';
     const rating = item.ratingPromedio ? `★ ${item.ratingPromedio}` : '';
-    // Corregimos las comillas para evitar errores
     const accionClick = esAgotado ? '' : `onclick="abrirDetalle(${item.id})"`;
     const claseAgotado = esAgotado ? 'agotado' : '';
     
-    // 1. BADGES (Social Proof)
+    // BADGES DE IA Y URGENCIA
     let badgeHTML = '';
     if (esAgotado) {
-        badgeHTML = `<span class="badge-agotado" style="color:var(--neon-red); border:1px solid var(--neon-red);">AGOTADO</span>`;
+        badgeHTML = `<span class="badge-agotado">AGOTADO</span>`;
     } else if (item.destacado) {
         badgeHTML = `<span class="badge-destacado">🔥 HOT</span>`;
     } else if (item.stock < 5 && item.stock > 0) {
-        // Nuevo badge de urgencia
-        badgeHTML = `<span class="badge-urgent">¡Quedan pocos!</span>`;
+        badgeHTML = `<span class="badge-urgent">¡Últimos ${item.stock}!</span>`;
     }
 
-    // 2. BOTÓN MATCH (Solo para comida, no bebidas)
-    // Asumimos que las categorías de bebida son 'cocteles', 'cervezas', 'licores', 'bebidas_sin'
-    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin'].includes(item.categoria);
-    const btnMatch = (!esBebida && !esAgotado) 
+    // BOTÓN DE MARIDAJE (Solo para comida)
+    const categoriasComida = ['tapas', 'italiana', 'fuertes', 'otros'];
+    const esComida = categoriasComida.includes(item.categoria);
+    const btnMatch = (esComida && !esAgotado) 
         ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}')">🍷 Match</button>` 
         : '';
-
-    // Notar el event.stopPropagation() para que al dar click en Match no abra el detalle del producto
 
     return `
         <div class="card ${claseAgotado}" ${accionClick}>
@@ -377,7 +373,6 @@ function generarCardHTML(item) {
             <div class="img-box"><img src="${img}" loading="lazy" alt="${item.nombre}"></div>
             <div class="info">
                 <h3>${item.nombre}</h3>
-                <p class="short-desc">${item.descripcion || ''}</p>
                 <div class="card-footer">
                      <span class="price">$${item.precio}</span>
                      <div class="actions-right">
@@ -879,30 +874,31 @@ async function loadDynamicHero() {
     const context = await getUserContext();
     const container = document.getElementById('hero-ai-container');
 
-    // Efecto "Thinking" (Esqueleto de carga)
+    if (!container) return; // Seguridad
+
     container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando el clima...</div>';
     container.classList.remove('hidden');
 
     try {
-        const response = await fetch("https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec", {
+        // CORRECCIÓN: URL COMPLETA
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
+        
+        const response = await fetch(scriptUrl, {
             method: "POST",
             body: JSON.stringify({
                 action: "hero",
                 contexto: context,
-                token: "DLV_SECURE_TOKEN_2025_X9"
+                token: "DLV_SECURE_TOKEN_2025_X9" // Asegura que el token coincida con tu backend
             })
         });
         
         const result = await response.json();
         if(result.success) {
-            const prod = result.data;
-            // Buscar la imagen del producto en tu array local de productos si ya lo tienes cargado
-            // O usar la info que devuelve la IA
-            renderHeroHTML(prod, context.temperatura);
+            renderHeroHTML(result.data, context.temperatura);
         }
     } catch (e) {
-        console.error("Fallo el Sommelier", e);
-        container.classList.add('hidden'); // Si falla, ocultamos discretamente
+        console.error("Fallo el Sommelier:", e);
+        container.classList.add('hidden');
     }
 }
 
@@ -949,22 +945,23 @@ async function askPairing(nombrePlato) {
 }
 
 function showPairingModal(data, plato) {
-    // Usamos Swal (SweetAlert) o tu propio modal
-    // Aquí asumo un modal simple de JS
+    const container = document.getElementById('modal-container');
+    if (!container) return;
+
     const modalHTML = `
         <div class="pairing-modal">
             <h3>🤝 Maridaje Perfecto</h3>
             <p>Para tu <strong>${plato}</strong>:</p>
             <div class="pairing-result">
-                <img src="img/${data.id_elegido}.webp" width="50" onerror="this.src='img/logo.png'">
+                <img src="img/${data.id_elegido}.webp" width="60" onerror="this.src='img/logo.png'">
                 <div>
-                    <h4>${data.id_elegido}</h4> <p class="pairing-reason">"${data.copy_venta}"</p>
+                    <h4>${data.id_elegido}</h4> 
+                    <p class="pairing-reason">"${data.copy_venta}"</p>
                 </div>
             </div>
-            <button onclick="addToCart('${data.id_elegido}')">Añadir al pedido</button>
+            <button class="btn-primary" onclick="addToCart('${data.id_elegido}')">Añadir al pedido</button>
         </div>
     `;
-    // Inyectar esto en tu contenedor de modales del DOM
-    document.getElementById('modal-container').innerHTML = modalHTML;
-    document.getElementById('modal-container').classList.add('active');
+    container.innerHTML = modalHTML;
+    container.classList.add('active');
 }
