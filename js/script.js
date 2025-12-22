@@ -963,17 +963,6 @@ function renderHeroHTML(aiData, context) {
         <div class="hero-image-glow">
             <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
         </div>
-    `;container.innerHTML = `
-        <div class="hero-content">
-            <span class="ai-badge">📍 Sancti Spíritus: ${context.temperatura}°C</span>
-            <h2 class="noir-title">${mensajeNoir}</h2>
-            <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-primary">
-                Descubrir <i class="fas fa-arrow-right"></i>
-            </button>
-        </div>
-        <div class="hero-image-glow">
-            <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
-        </div>
     `;
 }
 function updateAndShowMatch(data, platoBase) {
