@@ -970,7 +970,51 @@ function renderHeroHTML(aiData, temp) {
         </div>
     `;
 }
+async function askPairing(nombrePlato) {
+    showToast(`Buscando el maridaje ideal...`);
+    try {
+        const response = await fetch(CONFIG.URL_SCRIPT, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "pairing",
+                producto: nombrePlato,
+                token: "DLV_SECURE_TOKEN_2025_X9"
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            updateAndShowMatch(result.data, nombrePlato);
+        }
+    } catch (e) {
+        showToast("Sommelier temporalmente fuera de servicio.");
+    }
+}
+function updateAndShowMatch(data, platoBase) {
+    const modal = document.getElementById('modal-match');
+    const productoReal = AppStore.getProducts().find(p => p.id == data.id_elegido);
+    
+    if (!productoReal || !modal) return;
 
+    // Actualización de elementos específicos (Sin innerHTML pesado)
+    document.getElementById('match-plato-base').textContent = platoBase;
+    document.getElementById('match-img').src = productoReal.imagen_url;
+    document.getElementById('match-producto-nombre').textContent = productoReal.nombre;
+    document.getElementById('match-justificacion').textContent = `"${data.copy_venta}"`;
+    
+    // Configurar acción del botón
+    const btn = document.getElementById('match-btn-action');
+    btn.onclick = () => {
+        modal.classList.remove('active');
+        abrirDetalle(productoReal.id);
+    };
+
+    // Aplicar color Neon dinámico según categoría
+    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin'].includes(productoReal.categoria);
+    const card = modal.querySelector('.modal-card');
+    card.className = `modal-card pairing-card ${esBebida ? 'neon-cold' : 'neon-warm'}`;
+
+    modal.classList.add('active');
+}
 async function askPairing(nombrePlato) {
     // 1. Mostrar Feedback visual inmediato
     showToast(`Buscando la mejor bebida para tu ${nombrePlato}...`);
