@@ -897,72 +897,65 @@ async function loadDynamicHero() {
 
     if (!container) return; 
 
-    container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando el clima real...</div>';
+    // 1. ACTIVACIÓN VISUAL INMEDIATA (Atmosphere.js)
+    // Cambiamos las luces y el clima antes de que cargue el texto para dar sensación de velocidad.
+    if (typeof AtmosphereController !== 'undefined') {
+        AtmosphereController.setAtmosphere(context);
+    }
+
+    container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando la atmósfera...</div>';
     container.classList.remove('hidden');
 
     try {
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
+        const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
         
         const response = await fetch(scriptUrl, {
             method: "POST",
             body: JSON.stringify({
                 action: "hero",
-                contexto: context, // Aquí enviamos la temp real
+                contexto: context, 
                 token: "DLV_SECURE_TOKEN_2025_X9"
             })
         });
         
         const result = await response.json();
         if(result.success) {
-            renderHeroHTML(result.data, context.temperatura);
+            // Pasamos el contexto completo (temp, hora, clima) a la función de renderizado
+            renderHeroHTML(result.data, context);
         }
     } catch (e) {
         console.error("Fallo el Sommelier:", e);
+        // Si falla, ocultamos el contenedor o mostramos un fallback elegante
         container.classList.add('hidden');
     }
 }
-function renderHeroHTML(aiData, temp) {
+function renderHeroHTML(aiData, context) {
     const container = document.getElementById('hero-ai-container');
     if (!container) return;
 
+    // Buscamos el producto real en el Store para obtener su imagen y nombre correctos
     const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
     const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
-    const categoria = productoReal ? productoReal.categoria : '';
+    const nombreProducto = productoReal ? productoReal.nombre : "Especialidad";
 
-    // Lógica de color: Bebidas (Frío) vs Comida (Cálido)
-    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin'].includes(categoria);
-    const claseColor = esBebida ? 'neon-cold' : 'neon-warm';
-    const mensajeClima = temp > 29 ? `¡Hace calor! (${temp}°C) ☀️` : `Noche fresca (${temp}°C) 🌙`;
+    // 2. GENERACIÓN DE TEXTO NOIR (Copywriter.js)
+    // Si tenemos el Copywriter cargado, le pedimos una frase creativa.
+    // Si no, usamos el texto genérico que viene de la base de datos (fallback).
+    let mensajeNoir = aiData.copy_venta;
     
-    // Limpiamos clases previas y aplicamos la nueva
-    container.className = `hero-ai ${claseColor}`;
-    
+    if (typeof NoirCopywriter !== 'undefined') {
+        // Aquí ocurre la magia: Cruzamos el clima con el producto
+        mensajeNoir = NoirCopywriter.getNoirMessage(context, nombreProducto);
+    }
+
+    // Renderizamos el HTML final
+    // Nota: El 'ai-badge' ahora solo muestra la temperatura real, porque el "mensaje" emocional va en el título.
     container.innerHTML = `
         <div class="hero-content">
-            <span class="ai-badge">${mensajeClima}</span>
-            <h2 style="margin: 10px 0; font-size: 1.4rem;">${aiData.copy_venta}</h2>
+            <span class="ai-badge">📍 Sancti Spíritus: ${context.temperatura}°C</span>
+            <h2 class="noir-title">${mensajeNoir}</h2>
             <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-primary">
-                Ver recomendación <i class="fas fa-arrow-right"></i>
-            </button>
-        </div>
-        <div class="hero-image-glow">
-            <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
-        </div>
-    `;
-}function renderHeroHTML(aiData, temp) {
-    const container = document.getElementById('hero-ai-container');
-    const mensajeClima = temp > 28 ? "Ideal para este calor 🔥" : "Perfecto para la noche 🌙";
-    
-    // Buscamos el producto real en el Store para obtener su imagen_url correcta
-    const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
-    const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
-    
-    container.innerHTML = `
-        <div class="hero-content">
-            <span class="ai-badge">${mensajeClima}</span>
-            <h2>${aiData.copy_venta}</h2>
-            <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-primary">
-                Ver detalle <i class="fas fa-arrow-right"></i>
+                Descubrir <i class="fas fa-arrow-right"></i>
             </button>
         </div>
         <div class="hero-image-glow">

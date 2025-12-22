@@ -1,0 +1,72 @@
+/* css/atmosphere.css - Efectos Atmosféricos y Paletas */
+
+/* --- 1. PALETAS DE COLORES DINÁMICAS (Variables CSS) --- */
+:root {
+    --transition-speed: 1.5s; /* Cambio suave entre climas */
+}
+
+/* MODO CALOR (Heat): Rojos, Naranjas y Amarillos quemados */
+body.mode-heat {
+    --neon-cyan: #ff2a00;       /* Rojo Neón Intenso */
+    --neon-magenta: #ffae00;    /* Naranja Fuego */
+    --glass-bg: rgba(50, 10, 0, 0.85); /* Fondo rojizo oscuro */
+}
+
+/* MODO LLUVIA (Rain): Azules profundos, Cian y Púrpura eléctrico */
+body.mode-rain {
+    --neon-cyan: #00f2ff;       /* Cian Eléctrico */
+    --neon-magenta: #bc13fe;    /* Púrpura Blade Runner */
+    --glass-bg: rgba(0, 10, 20, 0.9); /* Fondo azulado oscuro */
+}
+
+/* MODO NOCHE (Night): Minimalista, Negros profundos y Verde/Plata */
+body.mode-night {
+    --neon-cyan: #00ff88;       /* Verde Matrix/Tóxico */
+    --neon-magenta: #ffffff;    /* Blanco Puro */
+    --glass-bg: rgba(0, 0, 0, 0.95); /* Negro casi total */
+}
+
+/* --- 2. CAPA DE LLUVIA (Cyberpunk Rain) --- */
+#rain-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; /* Detrás del contenido pero sobre el fondo */
+    pointer-events: none; /* Dejar pasar los clics */
+    background: url('https://raw.githubusercontent.com/yagoestevez/fcc-portfolio/master/src/Images/rain.png'); /* Textura ligera de lluvia */
+    animation: rain-fall 0.8s linear infinite;
+    opacity: 0;
+    transition: opacity 2s ease;
+    display: none; /* Oculto por defecto */
+}
+
+body.mode-rain #rain-overlay {
+    display: block;
+    opacity: 0.6;
+}
+
+@keyframes rain-fall {
+    from { background-position: 0% 0%; }
+    to { background-position: 10% 100%; }
+}
+
+/* --- 3. EFECTO DE CALOR (Heat Haze) --- */
+/* Aplicaremos esto al Hero Image para que parezca que vibra por el calor */
+body.mode-heat .hero-bg {
+    animation: heat-haze 8s infinite ease-in-out;
+    filter: contrast(1.2) brightness(1.1) sepia(0.3);
+}
+
+@keyframes heat-haze {
+    0% { transform: scale(1.1); opacity: 0.8; }
+    50% { transform: scale(1.12); opacity: 0.7; }
+    100% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* --- 4. TRANSICIONES GLOBALES --- */
+/* Hacemos que los cambios de color no sean bruscos */
+body, .btn-primary, .card, h2, h3, span {
+    transition: color var(--transition-speed), 
+                background-color var(--transition-speed), 
+                border-color var(--transition-speed), 
+                box-shadow var(--transition-speed);
+}
