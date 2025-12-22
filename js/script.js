@@ -76,36 +76,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 // 1. Detectar Contexto del Usuario
-async function getUserContext() {
-    const ahora = new Date();
-    const hora = ahora.getHours() + ":" + ahora.getMinutes();
-    
-    // Configuración de OpenWeather (Reemplaza con tu API KEY)
-    const API_KEY = "3bc237701499f9b6b03de6f10e1e65d6"; 
-    const LAT = "21.9297"; // Latitud de Sancti Spíritus
-    const LON = "-79.4440"; // Longitud de Sancti Spíritus
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
-
-    let temperatura = 28; // Valor por defecto (promedio en Cuba)
-    let climaDesc = "despejado";
-
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.main) {
-            temperatura = Math.round(data.main.temp);
-            climaDesc = data.weather[0].description;
-            console.log(`🌤️ Clima real detectado: ${temperatura}°C, ${climaDesc}`);
-        }
-    } catch (e) {
-        console.warn("No se pudo obtener el clima real, usando estimación horaria.");
-        // Fallback: Si es de día asumimos calor, si es de noche algo más fresco
-        const esDeDia = ahora.getHours() > 8 && ahora.getHours() < 19;
-        temperatura = esDeDia ? 32 : 24;
+function getUserContext() {
+  return new Promise((resolve) => {
+    // 1. Verificamos si ya tenemos datos reales en memoria (populados por atmosphere.js)
+    // Asumimos que window.weatherData es donde se guarda la respuesta de la API
+    if (window.weatherData && window.weatherData.temp && !window.weatherData.isFallback) {
+      resolve(window.weatherData);
+      return;
     }
 
-    return { hora, temperatura, descripcion: climaDesc };
+    console.log("Esperando datos del clima...");
+
+    // 2. Configurar el Timeout de seguridad (5 segundos)
+    const timeoutId = setTimeout(() => {
+      console.warn("Timeout clima agotado. Usando datos locales/históricos.");
+      
+      // Intentar recuperar del localStorage si existe
+      const cached = localStorage.getItem('lastKnownWeather');
+      if (cached) {
+        resolve(JSON.parse(cached));
+      } else {
+        // Fallback final conservador (Día agradable, sin lluvia)
+        resolve({ temp: 24, isRaining: false, isFallback: true }); 
+      }
+    }, 5000);
+
+    // 3. Polling: Verificar cada 500ms si llegaron los datos
+    const intervalId = setInterval(() => {
+      if (window.weatherData && window.weatherData.temp && !window.weatherData.isFallback) {
+        clearTimeout(timeoutId);
+        clearInterval(intervalId);
+        console.log("Datos del clima recibidos a tiempo.");
+        resolve(window.weatherData);
+      }
+    }, 500);
+  });
 }
+
+/**
+ * Carga el mensaje del Hero section de forma asíncrona.
+ * Gestiona la UI de carga y errores.
+ */
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
 async function checkWelcome() {
     const clienteId = localStorage.getItem('cliente_id');
@@ -1108,42 +1119,46 @@ function mostrarResultadoShaker() {
 }
 
 async function loadDynamicHero() {
-    const context = await getUserContext();
-    const container = document.getElementById('hero-ai-container');
+  const heroSubtitle = document.getElementById('hero-subtitle'); // Ajusta el ID según tu HTML
+  
+  if (!heroSubtitle) return;
 
-    if (!container) return; 
+  // 1. Indicador Visual de Carga
+  const textoOriginal = heroSubtitle.textContent;
+  heroSubtitle.textContent = "Consultando al sommelier...";
+  heroSubtitle.style.opacity = "0.7";
 
-    // 1. ACTIVACIÓN VISUAL INMEDIATA (Atmosphere.js)
-    // Cambiamos las luces y el clima antes de que cargue el texto para dar sensación de velocidad.
-    if (typeof AtmosphereController !== 'undefined') {
-        AtmosphereController.setAtmosphere(context);
-    }
+  try {
+    // 2. Esperar a que getUserContext resuelva (Datos reales o Fallback tras timeout)
+    const weatherCtx = await getUserContext();
 
-    container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando la atmósfera...</div>';
-    container.classList.remove('hidden');
+    // Obtener hora actual para el sommelier
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
 
-    try {
-        const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
-        
-        const response = await fetch(scriptUrl, {
-            method: "POST",
-            body: JSON.stringify({
-                action: "hero",
-                contexto: context, 
-                token: "DLV_SECURE_TOKEN_2025_X9"
-            })
-        });
-        
-        const result = await response.json();
-        if(result.success) {
-            // Pasamos el contexto completo (temp, hora, clima) a la función de renderizado
-            renderHeroHTML(result.data, context);
-        }
-    } catch (e) {
-        console.error("Fallo el Sommelier:", e);
-        // Si falla, ocultamos el contenedor o mostramos un fallback elegante
-        container.classList.add('hidden');
-    }
+    // 3. Obtener el mensaje usando la lógica corregida del turno anterior
+    const mensaje = getNoirMessage(weatherCtx, currentHour, currentMinute);
+
+    // 4. Actualizar UI con transición suave
+    heroSubtitle.style.opacity = "0"; // Fade out
+    
+    setTimeout(() => {
+      heroSubtitle.textContent = mensaje;
+      heroSubtitle.style.opacity = "1"; // Fade in
+      
+      // Guardar en localStorage para futuros fallbacks
+      if (!weatherCtx.isFallback) {
+        localStorage.setItem('lastKnownWeather', JSON.stringify(weatherCtx));
+      }
+    }, 300);
+
+  } catch (error) {
+    console.error("Error crítico en loadDynamicHero:", error);
+    // 5. Manejo de error: Restaurar texto original o poner uno genérico seguro
+    heroSubtitle.textContent = "Un clásico nunca falla.";
+    heroSubtitle.style.opacity = "1";
+  }
 }
 function renderHeroHTML(aiData, context) {
     const container = document.getElementById('hero-ai-container');
