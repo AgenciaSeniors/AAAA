@@ -923,6 +923,34 @@ async function loadDynamicHero() {
 }
 function renderHeroHTML(aiData, temp) {
     const container = document.getElementById('hero-ai-container');
+    if (!container) return;
+
+    const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
+    const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
+    const categoria = productoReal ? productoReal.categoria : '';
+
+    // Lógica de color: Bebidas (Frío) vs Comida (Cálido)
+    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin'].includes(categoria);
+    const claseColor = esBebida ? 'neon-cold' : 'neon-warm';
+    const mensajeClima = temp > 29 ? `¡Hace calor! (${temp}°C) ☀️` : `Noche fresca (${temp}°C) 🌙`;
+    
+    // Limpiamos clases previas y aplicamos la nueva
+    container.className = `hero-ai ${claseColor}`;
+    
+    container.innerHTML = `
+        <div class="hero-content">
+            <span class="ai-badge">${mensajeClima}</span>
+            <h2 style="margin: 10px 0; font-size: 1.4rem;">${aiData.copy_venta}</h2>
+            <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-primary">
+                Ver recomendación <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+        <div class="hero-image-glow">
+            <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
+        </div>
+    `;
+}function renderHeroHTML(aiData, temp) {
+    const container = document.getElementById('hero-ai-container');
     const mensajeClima = temp > 28 ? "Ideal para este calor 🔥" : "Perfecto para la noche 🌙";
     
     // Buscamos el producto real en el Store para obtener su imagen_url correcta
@@ -968,6 +996,31 @@ async function askPairing(nombrePlato) {
 }
 
 function showPairingModal(data, plato) {
+    const container = document.getElementById('modal-container');
+    if (!container) return;
+
+    const productoReal = AppStore.getProducts().find(p => p.id == data.id_elegido);
+    const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
+    
+    // Para maridaje usamos siempre magenta para resaltar el "match"
+    const modalHTML = `
+        <div class="pairing-modal neon-warm">
+            <button class="btn-close-modal" onclick="document.getElementById('modal-container').classList.remove('active')">✕</button>
+            <h3 style="color: var(--neon-magenta);">🤝 Match Perfecto</h3>
+            <p>Para tu <strong>${plato}</strong>:</p>
+            <div class="pairing-result">
+                <img src="${imagenFinal}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; border:2px solid var(--neon-magenta);" onerror="this.src='img/logo.png'">
+                <div>
+                    <h4 style="color: white;">Recomendación IA</h4> 
+                    <p class="pairing-reason" style="font-style: italic; font-size: 0.9rem;">"${data.copy_venta}"</p>
+                </div>
+            </div>
+            <button class="btn-modal-action" onclick="abrirDetalle(${data.id_elegido})">Ver Producto</button>
+        </div>
+    `;
+    container.innerHTML = modalHTML;
+    container.classList.add('active');
+}function showPairingModal(data, plato) {
     const container = document.getElementById('modal-container');
     if (!container) return;
 

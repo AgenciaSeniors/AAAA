@@ -554,3 +554,38 @@ body {
     border: 2px solid var(--neon-magenta);
     object-fit: cover;
 }
+/* --- BORDES DINÁMICOS --- */
+/* Estilo base para el contenedor Hero */
+.hero-ai {
+    transition: all 0.5s ease;
+    border-width: 2px;
+    border-style: solid;
+}
+
+/* Color Frío (Bebidas) */
+.neon-cold {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+.neon-cold img { box-shadow: 0 0 20px var(--neon-cyan); }
+
+/* Color Cálido/Fuerte (Comidas) */
+.neon-warm {
+    border-color: var(--neon-magenta);
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+}
+.neon-warm img { box-shadow: 0 0 20px var(--neon-magenta); }
+
+/* Ajuste de tamaño para que la foto no sea gigante */
+.hero-image-glow img {
+    max-width: 150px;
+    height: auto;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+    .hero-ai { flex-direction: column-reverse; text-align: center; }
+    .hero-image-glow img { max-width: 120px; }
+}
