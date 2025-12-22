@@ -408,7 +408,7 @@ function generarCardHTML(item) {
     const categoriasComida = ['tapas', 'italiana', 'fuertes', 'otros'];
     const esComida = categoriasComida.includes(item.categoria);
     const btnMatch = (esComida && !esAgotado) 
-        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}')">🍷 Match</button>` 
+        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}', this)">🍷 Match</button>` 
         : '';
 
     return `
@@ -1095,10 +1095,17 @@ function renderHeroHTML(aiData, context) {
         </div>
     `;
 }
-async function askPairing(nombreProducto) {
-    showToast(`Buscando el maridaje ideal para "${nombreProducto}"...`, "info");
+async function askPairing(nombreProducto, btn) {
+    // 1. Guardar el contenido original para restaurarlo luego
+    const originalHTML = btn.innerHTML;
+    
+    // 2. Estado de carga visual en el botón
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Buscando...`;
+    btn.classList.add('loading');
 
-    // Usamos la URL configurada o el fallback
+    showToast(`Buscando maridaje para "${nombreProducto}"...`, "info");
+
     const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
 
     try {
@@ -1106,23 +1113,26 @@ async function askPairing(nombreProducto) {
             method: 'POST',
             body: JSON.stringify({ 
                 action: "pairing",
-                producto: nombreProducto, // Nombre del plato que se envía a la IA
-                token: "DLV_SECURE_TOKEN_2025_X9" // Debe coincidir con el del servidor
+                producto: nombreProducto,
+                token: "DLV_SECURE_TOKEN_2025_X9" 
             })
         });
 
         const res = await response.json();
         
         if (res.success && res.data) {
-            // El backend devuelve 'id_elegido' (la bebida) y 'copy_venta' (el por qué)
-            // Abrimos el detalle de la bebida recomendada pasando la explicación
             abrirDetalle(res.data.id_elegido, res.data.copy_venta);
         } else {
-            throw new Error("No se pudo obtener una recomendación");
+            throw new Error("Respuesta inválida");
         }
 
     } catch (error) {
         console.error("Error en Match:", error);
-        showToast("El Sommelier está ocupado. Intenta de nuevo.", "error");
+        showToast("No pudimos conectar con el Sommelier.", "error");
+    } finally {
+        // 3. Restaurar el botón a su estado original
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        btn.classList.remove('loading');
     }
 }
