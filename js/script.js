@@ -14,7 +14,7 @@ const AppStore = {
             shakeTimer: null
         }
     },
-    
+
     setProducts(list) { this.state.products = list; },
     getProducts() { return this.state.products; },
     
@@ -33,51 +33,40 @@ const AppStore = {
         this.state.shaker.shakeCount = 0;
     }
 };
-// Función para sanitizar HTML y prevenir XSS
-function escapeHTML(str) {
-    if (!str) return '';
-    return str.toString().replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[tag]));
-}
 
-async function generarFingerprint() {
-    const msg = navigator.userAgent + navigator.language + screen.colorDepth + screen.width + (new Date()).getTimezoneOffset();
-    const encoder = new TextEncoder();
-    const data = encoder.encode(msg);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+document.addEventListener('DOMContentLoaded', () => {
+    checkWelcome(); 
+    cargarMenu();
+    updateConnectionStatus();
+    registrarServiceWorker();
+});
 
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
+// --- LÓGICA DE VISITAS Y BIENVENIDA (MODO PRUEBA: 10 SEGUNDOS) ---
 async function checkWelcome() {
+    const clienteId = localStorage.getItem('cliente_id');
     const modal = document.getElementById('modal-welcome');
-    let clienteId = localStorage.getItem('cliente_id');
-
-    // Recuperación por Fingerprint (si implementaste la mejora anterior)
-    if (!clienteId && typeof generarFingerprint === 'function') {
-        /* ... lógica de fingerprint ... */
-    }
 
     if (clienteId) {
-        // USUARIO RECONOCIDO
+        // CASO 1: CLIENTE QUE REGRESA
         if (modal) modal.style.display = 'none';
 
         const nombreGuardado = localStorage.getItem('cliente_nombre') || 'Amigo';
-        // Mensaje discreto de bienvenida
+        
+        // Mensaje de bienvenida visual
         setTimeout(() => {
-            const toast = document.getElementById('toast-container');
-            if(toast && !toast.hasChildNodes()) showToast(`De vuelta al bar, ${nombreGuardado} 🍹`, "success");
-        }, 2000);
+            showToast(`¡Qué bueno verte de nuevo, ${nombreGuardado}! 🍹`, "success");
+        }, 1500);
 
-        // --- CORRECCIÓN C: TIEMPO DE ESPERA REAL ---
+        // Lógica de registro en base de datos (MODIFICADO PARA PRUEBAS)
         const ultimaVisita = localStorage.getItem('ultima_visita_ts');
         const ahora = Date.now();
-        const TIEMPO_ESPERA = 12 * 60 * 60 * 1000; // 12 Horas en milisegundos
+        
+        // CAMBIO AQUÍ: 10 segundos en lugar de 12 horas
+        const TIEMPO_ESPERA = 10 * 1000; // 10 segundos * 1000 ms
 
         if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > TIEMPO_ESPERA) {
-            console.log("Registrando nueva visita diaria...");
+            console.log("Registrando visita recurrente (Prueba 10s)...");
             
             if (typeof supabaseClient !== 'undefined') {
                 const { error } = await supabaseClient.from('visitas').insert([{
@@ -91,7 +80,7 @@ async function checkWelcome() {
             }
         }
     } else {
-        // USUARIO NUEVO
+        // CASO 2: CLIENTE NUEVO
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
@@ -342,25 +331,9 @@ function construirSeccionHTML(id, titulo, items) {
 }
 
 // Función auxiliar para la tarjeta (Misma lógica visual que tenías)
-// --- CORRECCIÓN B: MANEJO DE IMÁGENES ADAPTATIVAS ---
 function generarCardHTML(item) {
-    // Sanitización
-    const nombreSafe = escapeHTML(item.nombre);
-    const descSafe = escapeHTML(item.descripcion);
-    const precioSafe = escapeHTML(item.precio);
-    
     const esAgotado = item.estado === 'agotado';
-    const originalUrl = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
-    
-    // Lógica de Fallback para Picture
-    // Intentamos generar una URL .jpg si la original es .webp o .avif
-    let fallbackUrl = originalUrl;
-    if (originalUrl.match(/\.(webp|avif)$/i)) {
-        // Asume que existe una versión jpg con el mismo nombre. 
-        // Si no usas un CDN de transformación, asegúrate de subir ambos archivos.
-        fallbackUrl = originalUrl.replace(/\.(webp|avif)$/i, '.jpg'); 
-    }
-
+    const img = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
     const rating = item.ratingPromedio ? `★ ${item.ratingPromedio}` : '';
     const accionClick = esAgotado ? '' : `onclick="abrirDetalle(${item.id})"`;
     const claseAgotado = esAgotado ? 'agotado' : '';
@@ -372,21 +345,12 @@ function generarCardHTML(item) {
     return `
         <div class="card ${claseAgotado}" ${accionClick}>
             ${badgeHTML}
-            <div class="img-box">
-                <picture>
-                    <source srcset="${originalUrl}" type="${originalUrl.endsWith('.avif') ? 'image/avif' : 'image/webp'}">
-                    <img src="${fallbackUrl}" 
-                         loading="lazy" 
-                         decoding="async" 
-                         alt="${nombreSafe}"
-                         width="300" height="300" 
-                         onerror="this.src='${originalUrl}'"> </picture>
-            </div>
+            <div class="img-box"><img src="${img}" loading="lazy" alt="${item.nombre}"></div>
             <div class="info">
-                <h3>${nombreSafe}</h3>
-                <p class="short-desc">${descSafe}</p>
+                <h3>${item.nombre}</h3>
+                <p class="short-desc">${item.descripcion || ''}</p>
                 <div class="card-footer">
-                     <span class="price">$${precioSafe}</span>
+                     <span class="price">$${item.precio}</span>
                      <span class="rating-pill">${rating}</span>
                 </div>
             </div>
@@ -493,7 +457,6 @@ function abrirDetalle(id) {
     const imgEl = document.getElementById('det-img');
     if(imgEl) imgEl.src = p.imagen_url || '';
     
-    // Usamos textContent para seguridad (evita inyección HTML)
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
     setText('det-precio', `$${p.precio}`);
@@ -502,8 +465,6 @@ function abrirDetalle(id) {
     const box = document.getElementById('box-curiosidad');
     if (p.curiosidad && p.curiosidad.length > 5) {
         if(box) box.style.display = "block";
-        // Si la curiosidad viene de la IA y es texto plano, setText está bien.
-        // Si necesitas formato, usa: document.getElementById('det-curiosidad').innerHTML = escapeHTML(p.curiosidad);
         setText('det-curiosidad', p.curiosidad);
     } else {
         if(box) box.style.display = "none";
@@ -562,70 +523,46 @@ function actualizarEstrellas() {
     });
 }
 
-// --- CORRECCIÓN A: VALIDACIÓN SERVER-SIDE Y CLIENTE ID ---
 async function enviarOpinion() {
     const score = AppStore.state.reviewScore;
     const currentProd = AppStore.state.activeProduct;
-    const clienteId = localStorage.getItem('cliente_id'); // Ahora recuperamos el ID real
 
     if (score === 0) { showToast("¡Marca las estrellas!", "warning"); return; }
     if (!currentProd) return;
-    if (!clienteId) { showToast("Error de identidad. Recarga la página.", "error"); return; }
 
+    const LAST_OPINION = `last_opinion_ts_${currentProd.id}`; 
+    const lastTime = localStorage.getItem(LAST_OPINION);
+    const ahora = Date.now();
+    
+    if (lastTime && (ahora - parseInt(lastTime)) < 12 * 60 * 60 * 1000) {
+        showToast("Ya opinaste sobre esto hoy.", "warning");
+        return;
+    }
+
+    const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
+    const comentario = document.getElementById('cliente-comentario').value;
     const btn = document.querySelector('#modal-opinion .btn-big-action');
-    if(btn) { btn.textContent = "Verificando..."; btn.disabled = true; }
 
-    try {
-        // 1. VERIFICACIÓN PREVIA (Cliente-Servidor)
-        // Consultamos la última opinión real en BD para dar feedback rápido
-        const { data: opinionesPrevias } = await supabaseClient
-            .from('opiniones')
-            .select('created_at')
-            .eq('cliente_id', clienteId)
-            .eq('producto_id', currentProd.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
+    if(btn) { btn.textContent = "Enviando..."; btn.disabled = true; }
 
-        if (opinionesPrevias && opinionesPrevias.length > 0) {
-            const ultimaFecha = new Date(opinionesPrevias[0].created_at).getTime();
-            const horasDiferencia = (Date.now() - ultimaFecha) / (1000 * 60 * 60);
-            
-            if (horasDiferencia < 12) {
-                throw new Error(`Debes esperar ${Math.ceil(12 - horasDiferencia)} horas para volver a opinar.`);
-            }
-        }
+    const { error } = await supabaseClient.from('opiniones').insert([{
+        producto_id: currentProd.id,
+        cliente_nombre: nombre,
+        comentario: comentario, 
+        puntuacion: score
+    }]);
 
-        // 2. INTENTO DE INSERCIÓN
-        const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
-        const comentario = document.getElementById('cliente-comentario').value;
-
-        const { error } = await supabaseClient.from('opiniones').insert([{
-            producto_id: currentProd.id,
-            cliente_id: clienteId, // IMPORTANTÍSIMO: Enviar el ID para que el Trigger SQL funcione
-            cliente_nombre: nombre,
-            comentario: comentario, 
-            puntuacion: score
-        }]);
-
-        if (error) {
-            // Si el trigger de SQL bloquea, capturamos el mensaje aquí
-            throw new Error(error.message || "No se pudo guardar la opinión");
-        }
-
+    if (!error) {
+        localStorage.setItem(LAST_OPINION, ahora.toString());
         showToast("¡Gracias por tu opinión!", "success");
         cerrarModalOpiniones();
         document.getElementById('cliente-comentario').value = "";
-        cargarMenu(); // Recargar para actualizar promedio
-
-    } catch (err) {
-        console.error("Error opinión:", err);
-        // Mostrar mensaje limpio al usuario
-        let msg = err.message;
-        if (msg.includes("trigger")) msg = "Ya opinaste recientemente sobre esto.";
-        showToast(msg, "warning");
-    } finally {
-        if(btn) { btn.textContent = "ENVIAR"; btn.disabled = false; }
+        cargarMenu();
+    } else {
+        showToast("Error: " + error.message, "error");
     }
+    
+    if(btn) { btn.textContent = "ENVIAR"; btn.disabled = false; }
 }
 
 // --- UTILIDADES ---
@@ -843,16 +780,13 @@ async function procesarMezcla() {
     status.textContent = "Preparando tu recomendación...";
     visual.classList.add('shaking');
 
-    const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "";
+    // Usamos CONFIG si está disponible
+    const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
 
     try {
         const response = await fetch(scriptUrl, {
             method: 'POST',
-            body: JSON.stringify({ 
-                sabor: shaker.selected.join(', '),
-                // Enviamos el token seguro
-                token: (typeof CONFIG !== 'undefined') ? CONFIG.API_TOKEN : ''
-            }),
+            body: JSON.stringify({ sabor: shaker.selected.join(', ') }),
             headers: { "Content-Type": "text/plain" }
         });
 
@@ -862,12 +796,12 @@ async function procesarMezcla() {
             mostrarResultadoShaker(data.recomendacion);
             status.textContent = "¡Listo!";
         } else {
-            throw new Error("Respuesta inválida o no autorizada");
+            throw new Error("Respuesta inválida");
         }
 
     } catch (error) {
         console.error("Error silencioso:", error);
-        // Fallback local en caso de error o ataque
+        // Fallback
         const destacados = AppStore.getProducts().filter(p => p.destacado && p.estado !== 'agotado');
         const pool = destacados.length > 0 ? destacados : AppStore.getProducts();
         
