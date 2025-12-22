@@ -514,19 +514,38 @@ function actualizarBotonesActivos(categoriaActiva) {
 
 // --- DETALLES Y OPINIONES (Refactorizado) ---
 
-function abrirDetalle(id) {
-    // 1. Fase de DATOS: Delegamos todo al Store
-    const producto = AppStore.setActiveProduct(id);
+function abrirDetalle(id, mensajeMaridaje = null) {
+    const prod = AppStore.getProducts().find(p => p.id === id);
+    if (!prod) return;
 
-    // Si el ID no existe en el Store, abortamos antes de tocar el DOM
-    if (!producto) {
-        console.error("Intento de abrir producto inexistente ID:", id);
-        showToast("Producto no disponible", "error");
-        return;
+    AppStore.setActiveProduct(prod);
+    const p = AppStore.state.activeProduct;
+
+    // ... (Tu lógica existente de rellenar nombre, precio, imagen, etc.) ...
+    setText('det-titulo', p.nombre);
+    setText('det-desc', p.descripcion);
+    setText('det-precio', `$${p.precio}`);
+    //
+
+    // --- NUEVA LÓGICA DE NOTA DEL SOMMELIER ---
+    const notaSommelier = document.getElementById('nota-sommelier'); // Crea este div en tu HTML
+    if (mensajeMaridaje && notaSommelier) {
+        notaSommelier.innerHTML = `
+            <div class="ai-pairing-note">
+                <small>🍷 NOTA DEL SOMMELIER:</small>
+                <p>"${mensajeMaridaje}"</p>
+            </div>
+        `;
+        notaSommelier.style.display = 'block';
+    } else if (notaSommelier) {
+        notaSommelier.style.display = 'none';
     }
 
-    // 2. Fase de RENDERIZADO: Llamamos a una función pura de UI
-    renderizarModalDetalle(producto);
+    // Abrir modal
+    const modal = document.getElementById('modal-detalle');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    //
 }
 
 // Función exclusiva para manipular el DOM (Pura UI)
@@ -1103,22 +1122,12 @@ function updateAndShowMatch(data, platoBase) {
     modal.classList.add('active');
 }
 // Sugerencia de corrección para askPairing
-// Sugerencia de corrección para askPairing
-async function askPairing(nombrePlato) {
-    const modal = document.getElementById('modal-match');
-    const loader = document.getElementById('match-loading');
-    const content = document.getElementById('match-content');
-    
-    // SOLUCIÓN AL BUG 2: Limpiar datos antiguos ANTES de mostrar el modal
-    document.getElementById('match-plato-base').textContent = "...";
-    document.getElementById('match-producto-nombre').textContent = "Buscando...";
-    document.getElementById('match-img').src = "";
-    document.getElementById('match-justificacion').textContent = "";
-
-    if(modal && loader && content) {
-        content.style.display = 'none'; 
-        loader.style.display = 'block'; 
-        modal.classList.add('active');  
+async function askPairing(nombrePlato, btnElement) {
+    // 1. Feedback visual en el botón para que el usuario sepa que algo pasa
+    const originalText = btnElement ? btnElement.innerHTML : "🍷 Match";
+    if (btnElement) {
+        btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+        btnElement.disabled = true;
     }
 
     try {
@@ -1132,16 +1141,24 @@ async function askPairing(nombrePlato) {
         });
         
         const result = await response.json();
-        
-        // SOLUCIÓN AL BUG 1: Eliminar o reducir el setTimeout artificial
-        // await new Promise(r => setTimeout(r, 100)); 
 
-        if (result.success) {
-            updateAndShowMatch(result.data, nombrePlato);
+        if (result.success && result.data.id_elegido) {
+            // 2. IR DIRECTO AL PRODUCTO
+            // Pasamos el mensaje de la IA para que el detalle sepa que viene de un match
+            abrirDetalle(result.data.id_elegido, result.data.copy_venta);
+        } else {
+            throw new Error("Sin match");
         }
+
     } catch (e) {
-        showToast("Error en el escáner", "error");
-        modal.classList.remove('active');
+        console.error(e);
+        showToast("El Sommelier está ocupado ahora mismo.", "error");
+    } finally {
+        // Restaurar botón
+        if (btnElement) {
+            btnElement.innerHTML = originalText;
+            btnElement.disabled = false;
+        }
     }
 }
 function showPairingModal(data, plato) {
