@@ -40,7 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateConnectionStatus();
     registrarServiceWorker();
 });
+// 1. Detectar Contexto del Usuario
+async function getUserContext() {
+    const ahora = new Date();
+    const hora = ahora.getHours() + ":" + ahora.getMinutes();
+    
+    // Simulación de clima (Para producción usarías una API como OpenWeather)
+    // Aquí asumimos calor si es de día en Cuba, fresco si es de noche
+    const esDeDia = ahora.getHours() > 8 && ahora.getHours() < 19;
+    const temperatura = esDeDia ? 32 : 24; 
 
+    return { hora, temperatura };
+}
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
 // --- LÓGICA DE VISITAS Y BIENVENIDA (MODO PRUEBA: 10 SEGUNDOS) ---
 async function checkWelcome() {
@@ -841,4 +852,98 @@ function mostrarResultadoShaker(nombreRecibido) {
 
     if (elegido) abrirDetalle(elegido.id);
     AppStore.state.shaker.isProcessing = false;
+}
+
+async function loadDynamicHero() {
+    const context = await getUserContext();
+    const container = document.getElementById('hero-ai-container');
+
+    // Efecto "Thinking" (Esqueleto de carga)
+    container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando el clima...</div>';
+    container.classList.remove('hidden');
+
+    try {
+        const response = await fetch("TU_URL_DE_GOOGLE_APPS_SCRIPT", {
+            method: "POST",
+            body: JSON.stringify({
+                action: "hero",
+                contexto: context,
+                token: "DLV_SECURE_TOKEN_2025_X9"
+            })
+        });
+        
+        const result = await response.json();
+        if(result.success) {
+            const prod = result.data;
+            // Buscar la imagen del producto en tu array local de productos si ya lo tienes cargado
+            // O usar la info que devuelve la IA
+            renderHeroHTML(prod, context.temperatura);
+        }
+    } catch (e) {
+        console.error("Fallo el Sommelier", e);
+        container.classList.add('hidden'); // Si falla, ocultamos discretamente
+    }
+}
+
+function renderHeroHTML(aiData, temp) {
+    const container = document.getElementById('hero-ai-container');
+    const mensajeClima = temp > 28 ? "Para este calor 🔥" : "Para disfrutar la noche 🌙";
+    
+    container.innerHTML = `
+        <div class="hero-content">
+            <span class="ai-badge">${mensajeClima}</span>
+            <h2>${aiData.copy_venta}</h2>
+            <button onclick="addToCart('${aiData.id_elegido}')" class="btn-primary">
+                Pedir ahora <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+        <div class="hero-image-glow">
+            <img src="img/${aiData.id_elegido}.webp" alt="Recomendación" onerror="this.src='img/logo.png'">
+        </div>
+    `;
+}
+
+async function askPairing(nombrePlato) {
+    // 1. Mostrar Feedback visual inmediato
+    showToast(`Buscando la mejor bebida para tu ${nombrePlato}...`);
+
+    try {
+        const response = await fetch("TU_URL_DE_GOOGLE_APPS_SCRIPT", {
+            method: "POST",
+            body: JSON.stringify({
+                action: "pairing",
+                producto: nombrePlato,
+                token: "DLV_SECURE_TOKEN_2025_X9"
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showPairingModal(result.data, nombrePlato);
+        }
+    } catch (e) {
+        showToast("El sommelier está ocupado.");
+    }
+}
+
+function showPairingModal(data, plato) {
+    // Usamos Swal (SweetAlert) o tu propio modal
+    // Aquí asumo un modal simple de JS
+    const modalHTML = `
+        <div class="pairing-modal">
+            <h3>🤝 Maridaje Perfecto</h3>
+            <p>Para tu <strong>${plato}</strong>:</p>
+            <div class="pairing-result">
+                <img src="img/${data.id_elegido}.webp" width="50">
+                <div>
+                    <h4>${data.id_elegido}</h4> <p class="pairing-reason">"${data.copy_venta}"</p>
+                </div>
+            </div>
+            <button onclick="addToCart('${data.id_elegido}')">Añadir al pedido</button>
+        </div>
+    `;
+    // Inyectar esto en tu contenedor de modales del DOM
+    document.getElementById('modal-container').innerHTML = modalHTML;
+    document.getElementById('modal-container').classList.add('active');
 }
