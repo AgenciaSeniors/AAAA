@@ -41,8 +41,7 @@ const AppStore = {
     // Selección de producto segura
     setActiveProduct(productId) { 
         // Buscamos siempre en el array maestro para evitar errores si el filtro cambia
-        // CORRECCIÓN: Usamos '==' en lugar de '===' para que funcione si el ID llega como texto
-        const found = this.state.products.find(p => p.id == productId);
+        const found = this.state.products.find(p => p.id === productId);
         this.state.activeProduct = found || null;
         this.state.reviewScore = 0;
         return this.state.activeProduct;
@@ -61,62 +60,44 @@ const AppStore = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     checkWelcome(); 
+    cargarMenu();
     updateConnectionStatus();
     registrarServiceWorker();
-
-    // 1. ESPERAMOS a que el menú cargue datos primero
-    await cargarMenu(); 
-
-    // 2. Una vez cargado el menú, activamos el Sommelier
     loadDynamicHero();
 });
-
-
-
 // 1. Detectar Contexto del Usuario
-function getUserContext() {
-  return new Promise((resolve) => {
-    // 1. Verificamos si ya tenemos datos reales en memoria (populados por atmosphere.js)
-    // Asumimos que window.weatherData es donde se guarda la respuesta de la API
-    if (window.weatherData && window.weatherData.temp && !window.weatherData.isFallback) {
-      resolve(window.weatherData);
-      return;
+async function getUserContext() {
+    const ahora = new Date();
+    const hora = ahora.getHours() + ":" + ahora.getMinutes();
+    
+    // Configuración de OpenWeather (Reemplaza con tu API KEY)
+    const API_KEY = "3bc237701499f9b6b03de6f10e1e65d6"; 
+    const LAT = "21.9297"; // Latitud de Sancti Spíritus
+    const LON = "-79.4440"; // Longitud de Sancti Spíritus
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
+
+    let temperatura = 28; // Valor por defecto (promedio en Cuba)
+    let climaDesc = "despejado";
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.main) {
+            temperatura = Math.round(data.main.temp);
+            climaDesc = data.weather[0].description;
+            console.log(`🌤️ Clima real detectado: ${temperatura}°C, ${climaDesc}`);
+        }
+    } catch (e) {
+        console.warn("No se pudo obtener el clima real, usando estimación horaria.");
+        // Fallback: Si es de día asumimos calor, si es de noche algo más fresco
+        const esDeDia = ahora.getHours() > 8 && ahora.getHours() < 19;
+        temperatura = esDeDia ? 32 : 24;
     }
 
-    console.log("Esperando datos del clima...");
-
-    // 2. Configurar el Timeout de seguridad (5 segundos)
-    const timeoutId = setTimeout(() => {
-      console.warn("Timeout clima agotado. Usando datos locales/históricos.");
-      
-      // Intentar recuperar del localStorage si existe
-      const cached = localStorage.getItem('lastKnownWeather');
-      if (cached) {
-        resolve(JSON.parse(cached));
-      } else {
-        // Fallback final conservador (Día agradable, sin lluvia)
-        resolve({ temp: 24, isRaining: false, isFallback: true }); 
-      }
-    }, 5000);
-
-    // 3. Polling: Verificar cada 500ms si llegaron los datos
-    const intervalId = setInterval(() => {
-      if (window.weatherData && window.weatherData.temp && !window.weatherData.isFallback) {
-        clearTimeout(timeoutId);
-        clearInterval(intervalId);
-        console.log("Datos del clima recibidos a tiempo.");
-        resolve(window.weatherData);
-      }
-    }, 500);
-  });
+    return { hora, temperatura, descripcion: climaDesc };
 }
-
-/**
- * Carga el mensaje del Hero section de forma asíncrona.
- * Gestiona la UI de carga y errores.
- */
 // --- LÓGICA DE VISITAS Y BIENVENIDA ---
 async function checkWelcome() {
     const clienteId = localStorage.getItem('cliente_id');
@@ -427,7 +408,7 @@ function generarCardHTML(item) {
     const categoriasComida = ['tapas', 'italiana', 'fuertes', 'otros'];
     const esComida = categoriasComida.includes(item.categoria);
     const btnMatch = (esComida && !esAgotado) 
-        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}', this)">🍷 Match</button>` 
+        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}')">🍷 Match</button>` 
         : '';
 
     return `
@@ -722,20 +703,14 @@ window.addEventListener('online', () => { updateConnectionStatus(); showToast("C
 window.addEventListener('offline', () => { updateConnectionStatus(); showToast("Modo Offline", "warning"); });
 
 function normalizarTexto(texto) {
-  if (!texto) return "";
-  return texto.toString()
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar acentos
-    .replace(/[-_]/g, " ") // FIX: Convertir guiones y guiones bajos a espacio
-    .replace(/[^a-z0-9\s]/g, "") // Eliminar caracteres especiales restantes
-    .replace(/\s+/g, " ") // FIX: Colapsar múltiples espacios a uno
-    .trim();
+    if (!texto) return "";
+    return texto.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Quita acentos
+        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "") // Quita signos de puntuación
+        .trim();
 }
 
-
-/**
- * 2. y 3. Lógica de búsqueda principal en el Shaker
- */
 function registrarServiceWorker() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
@@ -993,297 +968,130 @@ async function procesarMezcla() {
     }
 }
 
+function mostrarResultadoShaker(nombreIA, idOpcional) {
+    const productos = AppStore.getProducts();
+    let elegido = null;
 
-function calcularPuntajeMatch(busquedaNorm, candidatoNorm) {
-  const tokensBusqueda = busquedaNorm.split(" ");
-  const tokensCandidato = candidatoNorm.split(" ");
-  let puntaje = 0;
-  const PALABRAS_SIGNIFICATIVAS = ["ron", "gin", "te", "tea", "mix", "red", "bm", "7"];
-
-  tokensBusqueda.forEach(tokenB => {
-    if (!tokenB) return;
-    let mejorMatchToken = 0;
-    tokensCandidato.forEach(tokenC => {
-      if (tokenB === tokenC) {
-        let puntos = 10;
-        if (PALABRAS_SIGNIFICATIVAS.includes(tokenB)) puntos += 5; 
-        mejorMatchToken = Math.max(mejorMatchToken, puntos);
-      } else if (tokenC.includes(tokenB) || tokenB.includes(tokenC)) {
-        mejorMatchToken = Math.max(mejorMatchToken, 4);
-      }
-    });
-    if (mejorMatchToken > 0) puntaje += mejorMatchToken;
-  });
-
-  const factorLongitud = 1 - (Math.abs(tokensCandidato.length - tokensBusqueda.length) * 0.05);
-  return puntaje * (factorLongitud > 0.5 ? factorLongitud : 0.5);
-}
-
-/**
- * 2. y 3. Lógica de búsqueda principal en el Shaker
- */
-function mostrarResultadoShaker() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  // Asumimos que la celda de búsqueda es B1, ajusta según tu hoja
-  const nombreBusqueda = sheet.getRange("B1").getValue(); 
-  
-  if (!nombreBusqueda) {
-    Browser.msgBox("Por favor ingresa un nombre para buscar.");
-    return;
-  }
-
-  // Obtenemos la base de datos de productos (asumiendo hoja "Productos")
-  const sheetProductos = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Productos");
-  // Ajusta el rango según tus columnas reales. Aquí asumo col A: Nombre, col B: Precio
-  const datos = sheetProductos.getRange(2, 1, sheetProductos.getLastRow() - 1, 2).getValues();
-  
-  const busquedaNorm = normalizarTexto(nombreBusqueda);
-  let mejorCandidato = null;
-  let resultados = [];
-
-  // --- ESTRATEGIA 1: BÚSQUEDA EXACTA ---
-  // Primero intentamos encontrar el producto tal cual (normalizado)
-  const matchExacto = datos.find(fila => normalizarTexto(fila[0]) === busquedaNorm);
-
-  if (matchExacto) {
-    mejorCandidato = {
-      nombre: matchExacto[0],
-      precio: matchExacto[1],
-      score: 100,
-      tipo: "Exacto"
-    };
-  } else {
-    // --- ESTRATEGIA 2: SISTEMA DE SCORING ---
-    // Si no hay exacto, calculamos score para todos
-    resultados = datos.map(fila => {
-      const nombreProd = fila[0];
-      const prodNorm = normalizarTexto(nombreProd);
-      const score = calcularPuntajeMatch(busquedaNorm, prodNorm);
-      
-      return {
-        nombre: nombreProd,
-        precio: fila[1],
-        score: score,
-        tipo: "Similitud"
-      };
-    });
-
-    // Ordenamos por score descendente
-    resultados.sort((a, b) => b.score - a.score);
-    
-    // Definimos un umbral mínimo para considerar un resultado válido
-    const UMBRAL_ACEPTABLE = 8; 
-    
-    if (resultados.length > 0 && resultados[0].score >= UMBRAL_ACEPTABLE) {
-      mejorCandidato = resultados[0];
+    // ESTRATEGIA 1: Búsqueda Directa por ID (Infalible)
+    if (idOpcional) {
+        elegido = productos.find(p => p.id == idOpcional);
     }
-  }
 
-  // --- RESULTADO FINAL ---
-  const celdaResultado = sheet.getRange("B5"); // Celda donde muestras el resultado
-  
-  if (mejorCandidato) {
-    // Si el score es muy alto o fue exacto, mostramos directo
-    if (mejorCandidato.score > 25 || mejorCandidato.tipo === "Exacto") {
-      celdaResultado.setValue(`Encontrado: ${mejorCandidato.nombre} - $${mejorCandidato.precio}`);
-    } else {
-      // Si el score es "meh" (empate o bajo pero pasable), sugerimos
-      // Tomamos el top 3 para sugerencias
-      const sugerencias = resultados.slice(0, 3).map(r => r.nombre).join(" | ");
-      celdaResultado.setValue(`¿Quisiste decir?: ${sugerencias}`);
-    }
-  } else {
-    celdaResultado.setValue("No se encontraron coincidencias cercanas.");
-  }
-}
+    // ESTRATEGIA 2: Búsqueda Inteligente por Texto (Si falla el ID)
+    if (!elegido && nombreIA) {
+        const textoIA = normalizarTexto(nombreIA);
+        
+        // A. Intento exacto
+        elegido = productos.find(p => normalizarTexto(p.nombre) === textoIA);
+        
+        // B. Intento por palabras clave (Scoring)
+        if (!elegido) {
+            const palabrasIA = textoIA.split(' ').filter(w => w.length > 3);
+            let mejorPuntuacion = 0;
 
-async function loadDynamicHero() {
-  const heroSubtitle = document.getElementById('hero-subtitle'); // Ajusta el ID según tu HTML
-  
-  if (!heroSubtitle) return;
+            productos.forEach(prod => {
+                // Buscamos en nombre, descripción y categoría
+                const textoBD = normalizarTexto(`${prod.nombre} ${prod.descripcion} ${prod.categoria}`);
+                let puntos = 0;
+                palabrasIA.forEach(palabra => {
+                    if (textoBD.includes(palabra)) puntos++;
+                });
 
-  // 1. Indicador Visual de Carga
-  const textoOriginal = heroSubtitle.textContent;
-  heroSubtitle.textContent = "Consultando al sommelier...";
-  heroSubtitle.style.opacity = "0.7";
-
-  try {
-    // 2. Esperar a que getUserContext resuelva (Datos reales o Fallback tras timeout)
-    const weatherCtx = await getUserContext();
-
-    // Obtener hora actual para el sommelier
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-
-    // 3. Obtener el mensaje usando la lógica corregida del turno anterior
-    const mensaje = getNoirMessage(weatherCtx, currentHour, currentMinute);
-
-    // 4. Actualizar UI con transición suave
-    heroSubtitle.style.opacity = "0"; // Fade out
-    
-    setTimeout(() => {
-      heroSubtitle.textContent = mensaje;
-      heroSubtitle.style.opacity = "1"; // Fade in
-      
-      // Guardar en localStorage para futuros fallbacks
-      if (!weatherCtx.isFallback) {
-        localStorage.setItem('lastKnownWeather', JSON.stringify(weatherCtx));
-      }
-    }, 300);
-
-  } catch (error) {
-    console.error("Error crítico en loadDynamicHero:", error);
-    // 5. Manejo de error: Restaurar texto original o poner uno genérico seguro
-    heroSubtitle.textContent = "Un clásico nunca falla.";
-    heroSubtitle.style.opacity = "1";
-  }
-}
-/**
- * Busca un producto válido usando una estrategia de fallback en cascada.
- * Garantiza que siempre devolvemos un producto para mostrar en el Hero.
- */
-function findProductWithFallback(aiData) {
-    const products = AppStore.getProducts();
-    const idBuscado = aiData.id_elegido;
-    const nombreBuscado = aiData.recomendacion;
-    
-    // 1. ID Exacto
-    let found = products.find(p => p.id == idBuscado);
-    if (found && found.activo) return { product: found, method: 'ID_EXACTO' };
-
-    // 2. Nombre / Scoring
-    if (nombreBuscado) {
-        const busquedaNorm = normalizarTexto(nombreBuscado);
-        found = products.find(p => p.activo && normalizarTexto(p.nombre) === busquedaNorm);
-        if (found) return { product: found, method: 'NOMBRE_EXACTO' };
-
-        const candidatos = products
-            .filter(p => p.activo)
-            .map(p => ({ producto: p, score: calcularPuntajeMatch(busquedaNorm, normalizarTexto(p.nombre)) }))
-            .sort((a, b) => b.score - a.score);
-
-        if (candidatos.length > 0 && candidatos[0].score >= 8) {
-            return { product: candidatos[0].producto, method: 'SCORING_NOMBRE' };
+                if (puntos > mejorPuntuacion) {
+                    mejorPuntuacion = puntos;
+                    elegido = prod;
+                }
+            });
         }
     }
 
-    // 3. Categoría
-    const categoriaTarget = aiData.categoria || 'cocteles';
-    const porCategoria = products.filter(p => p.categoria === categoriaTarget && p.activo);
-    if (porCategoria.length > 0) return { product: porCategoria[0], method: 'FALLBACK_CATEGORIA' };
+    cerrarShaker();
 
-    // 4. Default
-    return { product: products.find(p => p.activo) || null, method: 'EMERGENCIA' };
+    if (elegido) {
+        showToast(`✨ Combinación perfecta: ${elegido.nombre}`);
+        abrirDetalle(elegido.id);
+    } else {
+        // Fallback final por si todo falla (muy raro con la lógica nueva)
+        showToast("¡Sorpresa! Prueba nuestra recomendación", "info");
+        const random = productos[Math.floor(Math.random() * productos.length)];
+        if(random) abrirDetalle(random.id);
+    }
+
+    // Asegurar que el flag de proceso se apague
+    AppStore.state.shaker.isProcessing = false;
 }
-/**
- * Renderiza el Hero Section con validaciones y manejo de errores.
- */
-function renderHeroHTML(aiData, context) {
+
+async function loadDynamicHero() {
+    const context = await getUserContext();
     const container = document.getElementById('hero-ai-container');
-    if (!container) return;
 
-    // --- BÚSQUEDA ROBUSTA ---
-    const resultado = findProductWithFallback(aiData);
-    const productoReal = resultado.product;
+    if (!container) return; 
 
-    // Validación Crítica: Si tras todos los fallbacks no hay producto (BD vacía o error masivo)
-    if (!productoReal) {
-        console.error("[CRITICAL] Imposible encontrar un producto válido para mostrar.");
-        container.innerHTML = `
-            <div class="hero-content">
-                <span class="ai-badge">📍 Sancti Spíritus: ${context.temperatura}°C</span>
-                <h2 class="noir-title">El bar está abierto. Explora nuestro menú.</h2>
-            </div>`;
-        return;
+    // 1. ACTIVACIÓN VISUAL INMEDIATA (Atmosphere.js)
+    // Cambiamos las luces y el clima antes de que cargue el texto para dar sensación de velocidad.
+    if (typeof AtmosphereController !== 'undefined') {
+        AtmosphereController.setAtmosphere(context);
     }
 
-    // Registro de Métricas de Depuración
-    console.log(`[METRICS] Estrategia: ${resultado.method} | Final: ${productoReal.nombre} (ID: ${productoReal.id})`);
-
-    // Preparación de datos visuales
-    const imagenFinal = productoReal.imagen_url || 'img/logo.png';
-    const nombreProducto = productoReal.nombre;
-
-    // --- GENERACIÓN DE COPY NOIR ---
-    let mensajeNoir = aiData.copy_venta;
-    
-    // Si caímos en un fallback (no es el ID exacto que pidió la IA),
-    // regeneramos el texto para que coincida con el nuevo producto.
-    if (resultado.method !== 'ID_EXACTO' && typeof NoirCopywriter !== 'undefined') {
-        mensajeNoir = NoirCopywriter.getNoirMessage(context, nombreProducto);
-    } 
-    // Opcional: Si el texto original venía vacío, lo generamos
-    else if (!mensajeNoir && typeof NoirCopywriter !== 'undefined') {
-        mensajeNoir = NoirCopywriter.getNoirMessage(context, nombreProducto);
-    }
-
-    // Renderizado HTML
-    container.innerHTML = `
-        <div class="hero-content">
-            <span class="ai-badge">📍 Sancti Spíritus: ${context.temperatura}°C</span>
-            <h2 class="noir-title">${mensajeNoir}</h2>
-            
-            <button onclick="abrirDetalle(${productoReal.id})" class="btn-neon-action">
-                Revelar Secreto <i class="fas fa-arrow-right"></i>
-            </button>
-            
-        </div>
-        <div class="hero-image-glow">
-            <img src="${imagenFinal}" alt="${nombreProducto}" onerror="this.src='img/logo.png'">
-        </div>
-    `;
-}
-async function askPairing(nombrePlato, btnElement) {
-    // 1. Referencias al modal de carga
-    const modalMatch = document.getElementById('modal-match');
-    
-    // 2. Mostrar el escáner inmediatamente
-    if (modalMatch) {
-        modalMatch.style.display = 'flex';
-        setTimeout(() => modalMatch.classList.add('active'), 10);
-    }
-
-    // 3. Feedback opcional en el botón
-    if (btnElement) btnElement.disabled = true;
+    container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando la atmósfera...</div>';
+    container.classList.remove('hidden');
 
     try {
-        // CORRECCIÓN: Fallback de seguridad si CONFIG no ha cargado
         const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec";
-
+        
         const response = await fetch(scriptUrl, {
             method: "POST",
             body: JSON.stringify({
-                action: "pairing",
-                producto: nombrePlato,
+                action: "hero",
+                contexto: context, 
                 token: "DLV_SECURE_TOKEN_2025_X9"
             })
         });
         
         const result = await response.json();
-
-        // 4. Cuando llega la información, cerramos el escáner y abrimos el detalle
-        if (result.success && result.data.id_elegido) {
-            // Cerramos el modal de carga
-            if (modalMatch) {
-                modalMatch.classList.remove('active');
-                setTimeout(() => modalMatch.style.display = 'none', 300);
-            }
-            
-            // Abrimos directamente el producto recomendado con su nota
-            abrirDetalle(result.data.id_elegido, result.data.copy_venta);
-        } else {
-            throw new Error("Sin match");
+        if(result.success) {
+            // Pasamos el contexto completo (temp, hora, clima) a la función de renderizado
+            renderHeroHTML(result.data, context);
         }
-
     } catch (e) {
-        console.error(e);
-        showToast("El Sommelier está ocupado ahora mismo.", "error");
-        if (modalMatch) {
-            modalMatch.classList.remove('active');
-            setTimeout(() => modalMatch.style.display = 'none', 300);
-        }
-    } finally {
-        if (btnElement) btnElement.disabled = false;
+        console.error("Fallo el Sommelier:", e);
+        // Si falla, ocultamos el contenedor o mostramos un fallback elegante
+        container.classList.add('hidden');
     }
+}
+function renderHeroHTML(aiData, context) {
+    const container = document.getElementById('hero-ai-container');
+    if (!container) return;
+
+    // Buscamos el producto real en el Store para obtener su imagen y nombre correctos
+    const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
+    const imagenFinal = productoReal ? productoReal.imagen_url : 'img/logo.png';
+    const nombreProducto = productoReal ? productoReal.nombre : "Especialidad";
+
+    // 2. GENERACIÓN DE TEXTO NOIR (Copywriter.js)
+    // Si tenemos el Copywriter cargado, le pedimos una frase creativa.
+    // Si no, usamos el texto genérico que viene de la base de datos (fallback).
+    let mensajeNoir = aiData.copy_venta;
+    
+    if (typeof NoirCopywriter !== 'undefined') {
+        // Aquí ocurre la magia: Cruzamos el clima con el producto
+        mensajeNoir = NoirCopywriter.getNoirMessage(context, nombreProducto);
+    }
+
+    // Renderizamos el HTML final
+    // Nota: El 'ai-badge' ahora solo muestra la temperatura real, porque el "mensaje" emocional va en el título.
+    container.innerHTML = `
+        <div class="hero-content">
+            <span class="ai-badge">📍 Sancti Spíritus: ${context.temperatura}°C</span>
+            <h2 class="noir-title">${mensajeNoir}</h2>
+            
+            <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-neon-action">
+                Revelar Secreto <i class="fas fa-arrow-right"></i>
+            </button>
+            
+        </div>
+        <div class="hero-image-glow">
+            <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
+        </div>
+    `;
 }

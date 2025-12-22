@@ -35,7 +35,7 @@
     <div id="toast-container"></div>
 
     <header class="hero-optimizado">
-        <img src="img/fondo.avif" class="hero-bg" alt="Ambiente" loading="lazy">
+        <img src="img/fondo.avif"class="hero-bg" alt="Ambiente" loading="lazy">
         <div class="overlay">
             <div class="logo-area">
                 <div class="logo-container">
@@ -56,51 +56,54 @@
 
     <div class="filters-container">
         <nav class="filters">
-            <button class="filter-btn active" onclick="filtrar('todos', this)">Todos</button>
-            <button class="filter-btn" onclick="filtrar('cocteles', this)">Cócteles</button>
-            <button class="filter-btn" onclick="filtrar('cervezas', this)">Cervezas</button>
-            <button class="filter-btn" onclick="filtrar('licores', this)">Licores</button>
-            <button class="filter-btn" onclick="filtrar('tapas', this)">Picar</button>
-            <button class="filter-btn" onclick="filtrar('italiana', this)">Pizzas</button>
-            <button class="filter-btn" onclick="filtrar('fuertes', this)">Platos</button>
-            <button class="filter-btn" onclick="filtrar('bebidas_sin', this)">S/ Alcohol</button>
-        </nav>
+    <button class="filter-btn active" onclick="filtrar('todos', this)">Todos</button>
+    <button class="filter-btn" onclick="filtrar('cocteles', this)">Cócteles</button>
+    <button class="filter-btn" onclick="filtrar('cervezas', this)">Cervezas</button>
+    <button class="filter-btn" onclick="filtrar('licores', this)">Licores</button>
+    <button class="filter-btn" onclick="filtrar('tapas', this)">Picar</button>
+    <button class="filter-btn" onclick="filtrar('italiana', this)">Pizzas</button>
+    <button class="filter-btn" onclick="filtrar('fuertes', this)">Platos</button>
+    <button class="filter-btn" onclick="filtrar('bebidas_sin', this)">S/ Alcohol</button>
+</nav>
     </div>
-
-    <section id="hero-ai-container" class="hero-ai hidden"></section>
-
+    <section id="hero-ai-container" class="hero-ai hidden">
+    </section>
     <main class="container">
         <h3 class="section-title">Nuestra Carta</h3>
         <div id="menu-grid" class="menu-grid"></div>
     </main>
 
     <footer style="text-align:center; padding: 30px 20px; color: #333; font-size: 0.8rem;">
-        <p style="margin-bottom: 8px;">D' La Vida Bar © 2025</p>
-        <p style="font-size: 0.7rem; color: #555;">
-            Digital Experience by 
-            <a href="https://agenciaseniors.github.io/agencia/" target="_blank" rel="noopener" 
-               style="color: var(--neon-cyan); text-decoration: none; font-weight: 600; transition: 0.3s;">
-               AGENCY SENIORS
-            </a>
-        </p>
-        <div style="margin-top: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
-            <span id="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #ccc;"></span>
-            <span id="connection-status">Comprobando...</span>
-        </div>
-        <a href="login.html" style="color: #444; text-decoration:none; margin-top:20px; display:inline-block; font-size: 0.7rem; border: 1px solid #333; padding: 4px 10px; border-radius: 4px;">
-            🔒 Acceso Staff
+    <p style="margin-bottom: 8px;">D' La Vida Bar © 2025</p>
+    
+    <p style="font-size: 0.7rem; color: #555;">
+        Digital Experience by 
+        <a href="https://agenciaseniors.github.io/agencia/" target="_blank" rel="noopener" 
+           style="color: var(--neon-cyan); text-decoration: none; font-weight: 600; transition: 0.3s;">
+           AGENCY SENIORS
         </a>
-    </footer>
+    </p>
+
+    <div style="margin-top: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <span id="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #ccc;"></span>
+        <span id="connection-status">Comprobando...</span>
+    </div>
+
+    <a href="login.html" style="color: #444; text-decoration:none; margin-top:20px; display:inline-block; font-size: 0.7rem; border: 1px solid #333; padding: 4px 10px; border-radius: 4px;">
+        🔒 Acceso Staff
+    </a>
+</footer>
 
     <div id="modal-detalle" class="modal-overlay" onclick="if(event.target == this) cerrarDetalle()">
         <div class="modal-card">
-            <button class="btn-close-modal" onclick="cerrarDetalle()" type="button" aria-label="Cerrar detalles">✕</button>
+            <button class="btn-close-modal" onclick="cerrarDetalle()" type="button" aria-label="Cerrar detalles">
+                    ✕
+                </button>
             <div class="modal-image-wrapper">
                 <img id="det-img" src="" alt="Producto" loading="lazy">
             </div>
             <div class="modal-body-content">
                 <div id="nota-sommelier" style="display:none; margin-bottom: 15px;"></div>
-                
                 <h2 id="det-titulo" class="modal-title-elegant">Nombre</h2>
                 <span id="det-precio" class="modal-price-tag">$0.00</span>
                 <p id="det-desc" class="modal-description">...</p>
@@ -121,59 +124,81 @@
 
     <div id="modal-opinion" class="modal-overlay" onclick="if(event.target == this) cerrarModalOpiniones()">
         <div class="modal-card" style="padding: 30px;">
-            <button class="close-btn-float" style="top:10px; right:10px; background:none; border:none; color:white; font-size:2rem; cursor:pointer;" onclick="cerrarModalOpiniones()" type="button" aria-label="Cerrar opinión">×</button>
+            <button class="close-btn-float" style="top:10px; right:10px; background:none; border:none; color:white; font-size:2rem; cursor:pointer;" onclick="cerrarModalOpiniones()" type="button" aria-label="Cerrar opinión">
+    ×
+</button>
             <h3 class="modal-title-elegant" style="text-align:center; margin-bottom:20px; font-size:2rem; color:var(--neon-magenta);">Tu Opinión</h3>
+            
             <div class="stars" id="stars-container" style="font-size:3rem; color:#333; cursor:pointer; margin-bottom:25px; text-align:center;">
                 <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
             </div>
+            
             <input type="text" id="cliente-nombre" placeholder="Tu Nombre" class="input-stylish" style="margin-bottom:15px;">
             <textarea id="cliente-comentario" rows="3" placeholder="Comentario..." class="input-stylish" style="margin-bottom:20px;"></textarea>
+            
             <button class="btn-big-action" onclick="enviarOpinion()">ENVIAR</button>
         </div>
     </div>
-
     <button class="fab-ia" onclick="abrirShaker()" style="background: linear-gradient(135deg, #ff0055, #ff5500); color:white;">
-        <span class="material-icons">local_bar</span>
-        <span class="fab-text">Mixer IA</span>
-    </button>
+    <span class="material-icons">local_bar</span>
+    <span class="fab-text">Mixer IA</span>
+</button>
 
-    <div id="modal-shaker" class="modal-overlay">
-        <div class="modal-content shaker-card">
-            <button class="btn-close-modal" onclick="cerrarShaker()">
-                <span class="material-icons">close</span>
-            </button>
-            <h3 class="shaker-title">El Mixer Mágico 🍸</h3>
-            <p class="shaker-subtitle">Elige 3 "esencias" y agita tu móvil (o pulsa el botón).</p>
-            <div class="essences-grid" id="essences-grid"></div>
-            <div class="shaker-container">
-                <div id="shaker-img" class="shaker-visual">
-                    <span class="material-icons" style="font-size: 4rem; color:#ccc;">sports_bar</span>
-                </div>
-                <div id="shaker-status" class="shaker-status">Añade ingredientes...</div>
+<div id="modal-shaker" class="modal-overlay">
+    <div class="modal-content shaker-card">
+        <button class="btn-close-modal" onclick="cerrarShaker()">
+            <span class="material-icons">close</span>
+        </button>
+
+        <h3 class="shaker-title">El Mixer Mágico 🍸</h3>
+        <p class="shaker-subtitle">Elige 3 "esencias" y agita tu móvil (o pulsa el botón).</p>
+
+        <div class="essences-grid" id="essences-grid">
             </div>
-            <button id="btn-mix-manual" class="btn-big-action" onclick="procesarMezcla()" disabled>
-                ¡MEZCLAR AHORA! 🌪️
-            </button>
-        </div>
-    </div>
 
-    <div id="modal-match" class="modal-overlay">
-        <div class="modal-card pairing-card">
-            <button class="btn-close-modal" onclick="document.getElementById('modal-match').classList.remove('active')">✕</button>
+        <div class="shaker-container">
+            <div id="shaker-img" class="shaker-visual">
+                <span class="material-icons" style="font-size: 4rem; color:#ccc;">sports_bar</span>
+            </div>
+            <div id="shaker-status" class="shaker-status">Añade ingredientes...</div>
+        </div>
+
+        <button id="btn-mix-manual" class="btn-big-action" onclick="procesarMezcla()" disabled>
+            ¡MEZCLAR AHORA! 🌪️
+        </button>
+    </div>
+</div>
+    <div class="modal-card pairing-card">
+        <button class="btn-close-modal" onclick="document.getElementById('modal-match').classList.remove('active')">✕</button>
+        
+        <div id="match-loading" class="scanner-wrapper">
+            <h3 class="modal-title-elegant blink-text">Analizando Sabores...</h3>
+            <div class="neon-scanner-box">
+                <div class="scan-line"></div>
+                <div class="scan-grid"></div>
+            </div>
+            <p class="match-subtitle" style="margin-top:15px;">El Sommelier está buscando el contraste ideal...</p>
+        </div>
+
+        <div id="match-content" style="display: none;">
+            <h3 class="modal-title-elegant">🤝 Match Detectado</h3>
+            <p class="match-subtitle">Para tu <span id="match-plato-base" style="color:var(--neon-cyan)"></span>:</p>
             
-            <div id="match-loading" class="scanner-wrapper">
-                <h3 class="modal-title-elegant blink-text">Analizando Sabores...</h3>
-                <div class="neon-scanner-box">
-                    <div class="scan-line"></div>
-                    <div class="scan-grid"></div>
+            <div class="pairing-result">
+                <div class="match-image-wrapper">
+                    <img id="match-img" src="" alt="Sugerencia" onerror="this.src='img/logo.png'">
                 </div>
-                <p class="match-subtitle" style="margin-top:15px;">El Sommelier está buscando el contraste ideal...</p>
+                <div class="match-info">
+                    <h4 id="match-producto-nombre">Cargando...</h4>
+                    <p id="match-justificacion" class="pairing-reason">...</p>
+                </div>
             </div>
+            <button id="match-btn-action" class="btn-modal-action">VER DETALLES</button>
         </div>
     </div>
-
+</div>
     <script src="js/copywriter.js"></script>
     <script src="js/atmosphere.js"></script> 
-    <script src="js/script.js"></script>
+    <script src="js/script.js"></script> 
 </body>
 </html>
