@@ -1,109 +1,141 @@
-// js/copywriter.js - El Redactor Noir
-
+/**
+ * DICCIONARIO DE COPYS (NoirCopywriter)
+ * Contiene todas las variantes de texto según el "mood" detectado.
+ */
 const NoirCopywriter = {
-    // --- DICCIONARIO DE ESTADOS (Plantillas de Texto) ---
-    // {{PRODUCTO}} será reemplazado por el nombre de la recomendación
-    phrases: {
-        // ESCENARIO 1: CALOR EXTREMO (+30°C)
-        heat: [
-            "El asfalto arde afuera, pero aquí el hielo es ley. Tu salvación: {{PRODUCTO}}.",
-            "El sol no tiene piedad hoy. Refúgiate en la sombra con un {{PRODUCTO}}.",
-            "Combate el fuego con frío. Nuestra sugerencia: {{PRODUCTO}}.",
-            "La ciudad es un horno. Escápate con un {{PRODUCTO}} bien helado.",
-            "Sudor y ruido afuera. Aire y sabor adentro. Prueba: {{PRODUCTO}}."
-        ],
+  // Fallback por seguridad
+  "standard": [
+    "Un clásico nunca falla.",
+    "El momento pide algo atemporal.",
+    "Déjate llevar por la intuición."
+  ],
 
-        // ESCENARIO 2: LLUVIA O TORMENTA
-        rain: [
-            "La ciudad llora neón. Es momento de un {{PRODUCTO}}.",
-            "Que llueva lo que quiera. Tú estás a salvo con tu {{PRODUCTO}}.",
-            "El sonido de la lluvia pide algo fuerte. ¿Quizás un {{PRODUCTO}}?",
-            "Gris afuera, vibrante adentro. Dale color a la tarde con: {{PRODUCTO}}.",
-            "Tormenta eléctrica y un buen trago. El match perfecto es {{PRODUCTO}}."
-        ],
+  // NIVEL 1: Lluvia (Prioridad Alta)
+  "rainy": [
+    "Día gris, copa llena. El refugio perfecto.",
+    "Llueve fuera. Aquí dentro, el clima lo pones tú.",
+    "El sonido de la lluvia pide un trago con carácter."
+  ],
+  "rainy_hot": [ // Nuevo: Lluvia tropical
+    "Lluvia y calor: trópico puro. Necesitas hielo.",
+    "Humedad alta y gotas cayendo. Algo refrescante es vital.",
+    "El cielo cae caliente. Enfríalo con un buen mix."
+  ],
 
-        // ESCENARIO 3: NOCHE (Después de las 8 PM)
-        night: [
-            "La noche es joven y cómplice. Empieza con {{PRODUCTO}}.",
-            "Las sombras se alargan, la sed despierta. Sacia tu instinto con {{PRODUCTO}}.",
-            "Bajo la luz de neón, todo sabe mejor. Especialmente el {{PRODUCTO}}.",
-            "Secretos, música y un {{PRODUCTO}}. La receta de una gran noche.",
-            "Sancti Spíritus duerme, nosotros despertamos. Tu combustible: {{PRODUCTO}}."
-        ],
+  // NIVEL 2: Horarios Específicos
+  "late_night": [ // 00:00 - 05:00
+    "La noche es joven para los valientes.",
+    "Madrugada. Los mejores secretos se cuentan ahora.",
+    "Silencio y un buen trago. No hace falta más."
+  ],
+  "morning": [ // 05:00 - 08:00
+    "El sol apenas sale. ¿Un café o empezamos fuerte?",
+    "Mañana fresca. El día promete.",
+    "Despierta. El mundo ya giró bastante sin ti."
+  ],
+  "sunset": [ // 17:00 - 20:00 (Ventana extendida)
+    "La hora dorada. Ni día, ni noche: el limbo perfecto.",
+    "Cae el sol. Es el momento de cambiar el ritmo.",
+    "Sunset vibes. El aperitivo es obligatorio."
+  ],
+  "night_party": [ // 20:00 - 23:59
+    "La ciudad despierta ahora. ¿Estás listo?",
+    "Noche cerrada. Música, luces y tu bebida favorita.",
+    "Es de noche. Todo está permitido."
+  ],
 
-        // ESCENARIO 4: TARDE / ATARDECER (Golden Hour)
-        sunset: [
-            "El sol cae, el ánimo sube. Celebra el atardecer con {{PRODUCTO}}.",
-            "La hora dorada merece un sabor dorado. Recomendamos: {{PRODUCTO}}.",
-            "Antes de que caiga la noche, refréscate con {{PRODUCTO}}."
-        ],
-
-        // ESCENARIO 5: FRESCO / TEMPLADO (Raro, pero posible)
-        cool: [
-            "Una brisa fresca y un trago en mano. Nada supera al {{PRODUCTO}}.",
-            "Noche clara, mente clara. Disfruta un {{PRODUCTO}}."
-        ],
-        
-        // DEFAULT (Por si falla el clima)
-        default: [
-            "Una elección clásica para alguien con estilo: {{PRODUCTO}}.",
-            "El Sommelier ha hablado. Tu destino es un {{PRODUCTO}}.",
-            "Simple. Elegante. Delicioso. Tienes que probar el {{PRODUCTO}}."
-        ]
-    },
-
-    // --- LÓGICA DE SELECCIÓN ---
-    getNoirMessage(context, productName) {
-        if (!context || !productName) return "El misterio aguarda.";
-
-        // Convertimos a número para asegurar comparaciones correctas
-        const temp = parseFloat(context.temperatura); 
-        const desc = (context.descripcion || "").toLowerCase();
-        const hora = parseInt(context.hora.split(':')[0]); // Hora militar (0-23)
-        
-        let mood = 'default';
-
-        // 1. PRIORIDAD ABSOLUTA: Lluvia o Tormenta
-        // (La lluvia mata cualquier otro mood)
-        if (desc.includes('lluvi') || desc.includes('llovizna') || desc.includes('tormenta')) {
-            mood = 'rain';
-        }
-        
-        // 2. PRIORIDAD URGENTE: Calor Extremo (Corrige el sesgo)
-        // Si hace más de 33°C, no importa si es de noche; el calor es el protagonista.
-        else if (temp >= 33) {
-            mood = 'heat';
-        }
-        
-        // 3. PRIORIDAD TEMPORAL: Atardecer (Golden Hour)
-        // Momento específico (18:00 - 19:59) que merece su propio copy antes que la "noche" genérica
-        else if (hora >= 18 && hora < 20) {
-            mood = 'sunset';
-        }
-
-        // 4. PRIORIDAD AMBIENTAL: Noche
-        // Si no es lluvia, ni calor extremo, ni atardecer... entonces es Noche Noir.
-        else if (hora >= 20 || hora <= 4) {
-            mood = 'night';
-        }
-        
-        // 5. PRIORIDAD DIURNA: Calor Estándar
-        // Si es de día y hace calor normal (pero no extremo)
-        else if (temp >= 28) {
-            mood = 'heat';
-        }
-        
-        // 6. PRIORIDAD CLIMÁTICA: Fresco
-        // Raro en Cuba, pero posible
-        else if (temp < 24) {
-            mood = 'cool';
-        }
-
-        // Selección aleatoria dentro del mood detectado
-        const options = this.phrases[mood] || this.phrases['default'];
-        const template = options[Math.floor(Math.random() * options.length)];
-
-        // Inyectar producto y devolver con formato HTML
-        return template.replace('{{PRODUCTO}}', `<span class="highlight-product">${productName}</span>`);
-    }
+  // NIVEL 3: Temperaturas Diurnas (08:00 - 17:00)
+  "hot_day": [ // >= 28°C
+    "El calor aprieta. La hidratación es un arte.",
+    "Sol implacable. Mereces algo helado.",
+    "Temperaturas altas exigen medidas refrescantes."
+  ],
+  "pleasant_day": [ // 24°C - 27.9°C (Gap cerrado)
+    "Clima perfecto. Ni frío ni calor, solo disfrute.",
+    "Un día impecable. Cualquier elección será la correcta.",
+    "Temperatura ideal. El equilibrio en su máxima expresión."
+  ],
+  "cold_day": [ // < 24°C
+    "El aire muerde un poco. Calienta el espíritu.",
+    "Día fresco. Un trago con cuerpo viene bien.",
+    "Abrígate o bebe algo fuerte. Tú eliges."
+  ]
 };
+
+/**
+ * LÓGICA DEL SOMMELIER (getNoirMessage)
+ * Determina el mood basado en clima y hora, y devuelve un copy aleatorio.
+ * * @param {Object} weatherData - Objeto con { temp: number, isRaining: boolean }
+ * @param {number} currentHour - Hora actual (0-23)
+ * @param {number} currentMinute - Minuto actual (0-59)
+ */
+function getNoirMessage(weatherData, currentHour, currentMinute) {
+  // 1. Logging de entrada para depuración
+  console.log(`[DEBUG] Sommelier Input -> Hora: ${currentHour}:${currentMinute} | Temp: ${weatherData.temp}°C | Lluvia: ${weatherData.isRaining}`);
+
+  const temp = weatherData.temp;
+  const isRaining = weatherData.isRaining;
+  
+  // Normalizamos el tiempo a "minutos del día" para comparar rangos precisos
+  // Ejemplo: 17:30 = (17 * 60) + 30 = 1050 minutos
+  const minutesOfDay = (currentHour * 60) + currentMinute;
+  
+  let selectedMood = "standard";
+
+  // --- ARBOL DE DECISIÓN ---
+
+  // 1. LA LLUVIA MANDA (Prioridad absoluta)
+  if (isRaining) {
+    // Sub-condición: ¿Lluvia fría o tropical?
+    if (temp >= 28) {
+      selectedMood = "rainy_hot";
+    } else {
+      selectedMood = "rainy";
+    }
+  } 
+  
+  // 2. MOMENTOS DEL DÍA (Si no llueve)
+  
+  // Madrugada (00:00 a 04:59)
+  else if (currentHour < 5) {
+    selectedMood = "late_night";
+  }
+  // Mañana (05:00 a 07:59)
+  else if (currentHour >= 5 && currentHour < 8) {
+    selectedMood = "morning";
+  }
+  // Sunset Extendido (17:00 a 19:59)
+  // 17:00 = 1020 min, 20:00 = 1200 min
+  else if (minutesOfDay >= 1020 && minutesOfDay < 1200) {
+    selectedMood = "sunset";
+  }
+  // Noche Fiesta (20:00 en adelante)
+  else if (currentHour >= 20) {
+    selectedMood = "night_party";
+  }
+  
+  // 3. CLIMA DIURNO (08:00 a 16:59)
+  // Solo llegamos aquí si no llueve y no estamos en los horarios especiales de arriba
+  else {
+    if (temp >= 28) {
+      selectedMood = "hot_day";
+    } 
+    // Gap corregido: Días agradables
+    else if (temp >= 24 && temp < 28) {
+      selectedMood = "pleasant_day";
+    } 
+    else {
+      // Menos de 24°C
+      selectedMood = "cold_day";
+    }
+  }
+
+  // 2. Logging de decisión final
+  console.log(`[DEBUG] Mood Calculado: ${selectedMood}`);
+
+  // Selección aleatoria del mensaje dentro del mood
+  const messages = NoirCopywriter[selectedMood] || NoirCopywriter["standard"];
+  const finalMessage = messages[Math.floor(Math.random() * messages.length)];
+  
+  return finalMessage;
+}

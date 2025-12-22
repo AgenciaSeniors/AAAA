@@ -711,14 +711,20 @@ window.addEventListener('online', () => { updateConnectionStatus(); showToast("C
 window.addEventListener('offline', () => { updateConnectionStatus(); showToast("Modo Offline", "warning"); });
 
 function normalizarTexto(texto) {
-    if (!texto) return "";
-    return texto.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Quita acentos
-        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "") // Quita signos de puntuación
-        .trim();
+  if (!texto) return "";
+  
+  return texto.toString()
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Separa y elimina solo los acentos
+    .replace(/[^a-z0-9\s]/g, "") // Mantiene letras, números y espacios. Elimina resto.
+    .replace(/\s+/g, " ") // Colapsa espacios múltiples a uno solo
+    .trim();
 }
 
+
+/**
+ * 2. y 3. Lógica de búsqueda principal en el Shaker
+ */
 function registrarServiceWorker() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
@@ -976,57 +982,129 @@ async function procesarMezcla() {
     }
 }
 
-function mostrarResultadoShaker(nombreIA, idOpcional) {
-    const productos = AppStore.getProducts();
-    let elegido = null;
 
-    // ESTRATEGIA 1: Búsqueda Directa por ID (Infalible)
-    if (idOpcional) {
-        elegido = productos.find(p => p.id == idOpcional);
-    }
+function calcularPuntajeMatch(busquedaNorm, candidatoNorm) {
+  const tokensBusqueda = busquedaNorm.split(" ");
+  const tokensCandidato = candidatoNorm.split(" ");
+  
+  let puntaje = 0;
+  let coincidencias = 0;
 
-    // ESTRATEGIA 2: Búsqueda Inteligente por Texto (Si falla el ID)
-    if (!elegido && nombreIA) {
-        const textoIA = normalizarTexto(nombreIA);
-        
-        // A. Intento exacto
-        elegido = productos.find(p => normalizarTexto(p.nombre) === textoIA);
-        
-        // B. Intento por palabras clave (Scoring)
-        if (!elegido) {
-            const palabrasIA = textoIA.split(' ').filter(w => w.length > 3);
-            let mejorPuntuacion = 0;
+  // Palabras cortas pero significativas que merecen puntaje si hay match exacto
+  const PALABRAS_SIGNIFICATIVAS = ["ron", "gin", "te", "tea", "mix", "red", "bm", "7"];
 
-            productos.forEach(prod => {
-                // Buscamos en nombre, descripción y categoría
-                const textoBD = normalizarTexto(`${prod.nombre} ${prod.descripcion} ${prod.categoria}`);
-                let puntos = 0;
-                palabrasIA.forEach(palabra => {
-                    if (textoBD.includes(palabra)) puntos++;
-                });
+  tokensBusqueda.forEach(tokenB => {
+    // Ignoramos tokens vacíos, pero YA NO filtramos por longitud <= 3 indiscriminadamente
+    if (!tokenB) return;
 
-                if (puntos > mejorPuntuacion) {
-                    mejorPuntuacion = puntos;
-                    elegido = prod;
-                }
-            });
+    let mejorMatchToken = 0;
+
+    tokensCandidato.forEach(tokenC => {
+      // 1. Coincidencia Exacta
+      if (tokenB === tokenC) {
+        let puntos = 10; // Base alta
+        // Bonus si es una palabra corta significativa (compensación por longitud)
+        if (PALABRAS_SIGNIFICATIVAS.includes(tokenB)) {
+          puntos += 5; 
         }
+        mejorMatchToken = Math.max(mejorMatchToken, puntos);
+      } 
+      // 2. Coincidencia Parcial (el token de búsqueda está dentro del candidato)
+      // Ej: "Havana" dentro de "HavanaClub" o viceversa
+      else if (tokenC.includes(tokenB) || tokenB.includes(tokenC)) {
+        mejorMatchToken = Math.max(mejorMatchToken, 4); // Puntaje menor por parcial
+      }
+    });
+
+    if (mejorMatchToken > 0) {
+      puntaje += mejorMatchToken;
+      coincidencias++;
     }
+  });
 
-    cerrarShaker();
+  // Factor de ajuste: Penalizar si el candidato es excesivamente largo comparado con la búsqueda
+  // para evitar falsos positivos en descripciones muy largas.
+  const factorLongitud = 1 - (Math.abs(tokensCandidato.length - tokensBusqueda.length) * 0.05);
+  
+  return puntaje * (factorLongitud > 0.5 ? factorLongitud : 0.5);
+}
 
-    if (elegido) {
-        showToast(`✨ Combinación perfecta: ${elegido.nombre}`);
-        abrirDetalle(elegido.id);
+/**
+ * 2. y 3. Lógica de búsqueda principal en el Shaker
+ */
+function mostrarResultadoShaker() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  // Asumimos que la celda de búsqueda es B1, ajusta según tu hoja
+  const nombreBusqueda = sheet.getRange("B1").getValue(); 
+  
+  if (!nombreBusqueda) {
+    Browser.msgBox("Por favor ingresa un nombre para buscar.");
+    return;
+  }
+
+  // Obtenemos la base de datos de productos (asumiendo hoja "Productos")
+  const sheetProductos = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Productos");
+  // Ajusta el rango según tus columnas reales. Aquí asumo col A: Nombre, col B: Precio
+  const datos = sheetProductos.getRange(2, 1, sheetProductos.getLastRow() - 1, 2).getValues();
+  
+  const busquedaNorm = normalizarTexto(nombreBusqueda);
+  let mejorCandidato = null;
+  let resultados = [];
+
+  // --- ESTRATEGIA 1: BÚSQUEDA EXACTA ---
+  // Primero intentamos encontrar el producto tal cual (normalizado)
+  const matchExacto = datos.find(fila => normalizarTexto(fila[0]) === busquedaNorm);
+
+  if (matchExacto) {
+    mejorCandidato = {
+      nombre: matchExacto[0],
+      precio: matchExacto[1],
+      score: 100,
+      tipo: "Exacto"
+    };
+  } else {
+    // --- ESTRATEGIA 2: SISTEMA DE SCORING ---
+    // Si no hay exacto, calculamos score para todos
+    resultados = datos.map(fila => {
+      const nombreProd = fila[0];
+      const prodNorm = normalizarTexto(nombreProd);
+      const score = calcularPuntajeMatch(busquedaNorm, prodNorm);
+      
+      return {
+        nombre: nombreProd,
+        precio: fila[1],
+        score: score,
+        tipo: "Similitud"
+      };
+    });
+
+    // Ordenamos por score descendente
+    resultados.sort((a, b) => b.score - a.score);
+    
+    // Definimos un umbral mínimo para considerar un resultado válido
+    const UMBRAL_ACEPTABLE = 8; 
+    
+    if (resultados.length > 0 && resultados[0].score >= UMBRAL_ACEPTABLE) {
+      mejorCandidato = resultados[0];
+    }
+  }
+
+  // --- RESULTADO FINAL ---
+  const celdaResultado = sheet.getRange("B5"); // Celda donde muestras el resultado
+  
+  if (mejorCandidato) {
+    // Si el score es muy alto o fue exacto, mostramos directo
+    if (mejorCandidato.score > 25 || mejorCandidato.tipo === "Exacto") {
+      celdaResultado.setValue(`Encontrado: ${mejorCandidato.nombre} - $${mejorCandidato.precio}`);
     } else {
-        // Fallback final por si todo falla (muy raro con la lógica nueva)
-        showToast("¡Sorpresa! Prueba nuestra recomendación", "info");
-        const random = productos[Math.floor(Math.random() * productos.length)];
-        if(random) abrirDetalle(random.id);
+      // Si el score es "meh" (empate o bajo pero pasable), sugerimos
+      // Tomamos el top 3 para sugerencias
+      const sugerencias = resultados.slice(0, 3).map(r => r.nombre).join(" | ");
+      celdaResultado.setValue(`¿Quisiste decir?: ${sugerencias}`);
     }
-
-    // Asegurar que el flag de proceso se apague
-    AppStore.state.shaker.isProcessing = false;
+  } else {
+    celdaResultado.setValue("No se encontraron coincidencias cercanas.");
+  }
 }
 
 async function loadDynamicHero() {
