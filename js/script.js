@@ -941,23 +941,6 @@ function renderHeroHTML(aiData, temp) {
             <img src="${imagenFinal}" alt="Sugerencia IA" onerror="this.src='img/logo.png'">
         </div>
     `;
-}function renderHeroHTML(aiData, temp) {
-    const container = document.getElementById('hero-ai-container');
-    // Personalizamos el mensaje según la temperatura real obtenida
-    const mensajeClima = temp > 29 ? `¡Hace calor! (${temp}°C) ☀️` : `Noche fresca (${temp}°C) 🌙`;
-    
-    container.innerHTML = `
-        <div class="hero-content">
-            <span class="ai-badge">${mensajeClima}</span>
-            <h2 style="margin: 10px 0;">${aiData.copy_venta}</h2>
-            <button onclick="abrirDetalle(${aiData.id_elegido})" class="btn-primary">
-                Ver recomendación <i class="fas fa-arrow-right"></i>
-            </button>
-        </div>
-        <div class="hero-image-glow">
-            <img src="img/${aiData.id_elegido}.webp" alt="Sugerencia" onerror="this.src='img/logo.png'">
-        </div>
-    `;
 }
 
 async function askPairing(nombrePlato) {
@@ -999,27 +982,6 @@ function showPairingModal(data, plato) {
                 <img src="${imagenFinal}" width="60" onerror="this.src='img/logo.png'">
                 <div>
                     <h4>Sugerencia</h4> 
-                    <p class="pairing-reason">"${data.copy_venta}"</p>
-                </div>
-            </div>
-            <button class="btn-modal-action" onclick="abrirDetalle(${data.id_elegido})">Ver Producto</button>
-        </div>
-    `;
-    container.innerHTML = modalHTML;
-    container.classList.add('active');
-}function showPairingModal(data, plato) {
-    // Usamos el contenedor que añadiremos al index.html
-    const container = document.getElementById('modal-container');
-    if (!container) return;
-
-    const modalHTML = `
-        <div class="pairing-modal">
-            <h3>🤝 Match Perfecto</h3>
-            <p>Para tu <strong>${plato}</strong>:</p>
-            <div class="pairing-result">
-                <img src="img/${data.id_elegido}.webp" width="60" onerror="this.src='img/logo.png'">
-                <div>
-                    <h4>Recomendación IA</h4> 
                     <p class="pairing-reason">"${data.copy_venta}"</p>
                 </div>
             </div>
