@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarMenu();
     updateConnectionStatus();
     registrarServiceWorker();
+    loadDynamicHero();
 });
 // 1. Detectar Contexto del Usuario
 async function getUserContext() {
@@ -346,12 +347,29 @@ function generarCardHTML(item) {
     const esAgotado = item.estado === 'agotado';
     const img = item.imagen_url || 'https://via.placeholder.com/300x300?text=Sin+Imagen';
     const rating = item.ratingPromedio ? `★ ${item.ratingPromedio}` : '';
+    // Corregimos las comillas para evitar errores
     const accionClick = esAgotado ? '' : `onclick="abrirDetalle(${item.id})"`;
     const claseAgotado = esAgotado ? 'agotado' : '';
     
+    // 1. BADGES (Social Proof)
     let badgeHTML = '';
-    if (esAgotado) badgeHTML = `<span class="badge-agotado" style="color:var(--neon-red); border:1px solid var(--neon-red);">AGOTADO</span>`;
-    else if (item.destacado) badgeHTML = `<span class="badge-destacado">🔥 HOT</span>`;
+    if (esAgotado) {
+        badgeHTML = `<span class="badge-agotado" style="color:var(--neon-red); border:1px solid var(--neon-red);">AGOTADO</span>`;
+    } else if (item.destacado) {
+        badgeHTML = `<span class="badge-destacado">🔥 HOT</span>`;
+    } else if (item.stock < 5 && item.stock > 0) {
+        // Nuevo badge de urgencia
+        badgeHTML = `<span class="badge-urgent">¡Quedan pocos!</span>`;
+    }
+
+    // 2. BOTÓN MATCH (Solo para comida, no bebidas)
+    // Asumimos que las categorías de bebida son 'cocteles', 'cervezas', 'licores', 'bebidas_sin'
+    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin'].includes(item.categoria);
+    const btnMatch = (!esBebida && !esAgotado) 
+        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}')">🍷 Match</button>` 
+        : '';
+
+    // Notar el event.stopPropagation() para que al dar click en Match no abra el detalle del producto
 
     return `
         <div class="card ${claseAgotado}" ${accionClick}>
@@ -362,7 +380,10 @@ function generarCardHTML(item) {
                 <p class="short-desc">${item.descripcion || ''}</p>
                 <div class="card-footer">
                      <span class="price">$${item.precio}</span>
-                     <span class="rating-pill">${rating}</span>
+                     <div class="actions-right">
+                        ${btnMatch}
+                        <span class="rating-pill">${rating}</span>
+                     </div>
                 </div>
             </div>
         </div>
@@ -863,7 +884,7 @@ async function loadDynamicHero() {
     container.classList.remove('hidden');
 
     try {
-        const response = await fetch("TU_URL_DE_GOOGLE_APPS_SCRIPT", {
+        const response = await fetch("AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC", {
             method: "POST",
             body: JSON.stringify({
                 action: "hero",
@@ -908,7 +929,7 @@ async function askPairing(nombrePlato) {
     showToast(`Buscando la mejor bebida para tu ${nombrePlato}...`);
 
     try {
-        const response = await fetch("TU_URL_DE_GOOGLE_APPS_SCRIPT", {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec", {
             method: "POST",
             body: JSON.stringify({
                 action: "pairing",
@@ -935,7 +956,7 @@ function showPairingModal(data, plato) {
             <h3>🤝 Maridaje Perfecto</h3>
             <p>Para tu <strong>${plato}</strong>:</p>
             <div class="pairing-result">
-                <img src="img/${data.id_elegido}.webp" width="50">
+                <img src="img/${data.id_elegido}.webp" width="50" onerror="this.src='img/logo.png'>
                 <div>
                     <h4>${data.id_elegido}</h4> <p class="pairing-reason">"${data.copy_venta}"</p>
                 </div>
