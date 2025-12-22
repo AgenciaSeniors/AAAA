@@ -52,6 +52,17 @@ function escapeHTML(str) {
 async function checkAuth() {
     if (typeof supabaseClient === 'undefined') return;
     const { data: { session } } = await supabaseClient.auth.getSession();
+    
+    if (!session) {
+        window.location.href = "login.html";
+    } else {
+        // CORRECCIÓN: Añadir la clase para que el body sea visible
+        document.body.classList.add('auth-verified');
+        cargarAdmin();
+    }
+}async function checkAuth() {
+    if (typeof supabaseClient === 'undefined') return;
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) window.location.href = "login.html";
     else cargarAdmin();
 }
@@ -314,6 +325,34 @@ async function restaurarProducto(id) {
 }
 
 async function generarCuriosidadIA() {
+    const nameInput = document.getElementById('nombre');
+    const curiosityInput = document.getElementById('curiosidad');
+    const btn = document.getElementById('btn-ia');
+
+    if (!nameInput.value.trim()) return showToast("Escribe el nombre del producto", "warning");
+
+    const originalText = btn.textContent;
+    btn.textContent = "🔮 ..."; btn.disabled = true;
+
+    try {
+        const response = await fetch(CONFIG.URL_SCRIPT, {
+            method: 'POST', // Cambiado a POST
+            body: JSON.stringify({
+                action: "shaker", // O una acción específica de curiosidad si la creaste
+                sabor: nameInput.value,
+                token: "DLV_SECURE_TOKEN_2025_X9" // Añadimos el token de seguridad
+            })
+        });
+        const res = await response.json();
+        if (res.success) {
+            curiosityInput.value = res.data.recomendacion || res.data.justificacion;
+        }
+    } catch (error) {
+        showToast("Error conectando con la IA", "error");
+    } finally {
+        btn.textContent = originalText; btn.disabled = false;
+    }
+}async function generarCuriosidadIA() {
     const nameInput = document.getElementById('nombre');
     const curiosityInput = document.getElementById('curiosidad');
     const btn = document.getElementById('btn-ia');
