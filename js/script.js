@@ -517,7 +517,6 @@ function actualizarBotonesActivos(categoriaActiva) {
 
 // --- DETALLES Y OPINIONES (Refactorizado) ---
 
-// Reemplaza tu función abrirDetalle por esta:
 function abrirDetalle(id, mensajeMaridaje = null) {
     const p = AppStore.setActiveProduct(id); 
 
