@@ -56,15 +56,10 @@ async function checkAuth() {
     if (!session) {
         window.location.href = "login.html";
     } else {
-        // CORRECCIÓN: Añadir la clase para que el body sea visible
-        document.body.classList.add('auth-verified');
+        // Esta línea es la que hace visible el panel
+        document.body.classList.add('auth-verified'); 
         cargarAdmin();
     }
-}async function checkAuth() {
-    if (typeof supabaseClient === 'undefined') return;
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) window.location.href = "login.html";
-    else cargarAdmin();
 }
 
 async function cargarAdmin() {
@@ -329,62 +324,30 @@ async function generarCuriosidadIA() {
     const curiosityInput = document.getElementById('curiosidad');
     const btn = document.getElementById('btn-ia');
 
-    if (!nameInput.value.trim()) return showToast("Escribe el nombre del producto", "warning");
+    if (!nameInput || !nameInput.value.trim()) {
+        showToast("Escribe el nombre del producto", "warning");
+        return;
+    }
 
-    const originalText = btn.textContent;
     btn.textContent = "🔮 ..."; btn.disabled = true;
 
     try {
         const response = await fetch(CONFIG.URL_SCRIPT, {
-            method: 'POST', // Cambiado a POST
+            method: 'POST',
             body: JSON.stringify({
-                action: "shaker", // O una acción específica de curiosidad si la creaste
+                action: "shaker", // O la acción que maneje textos en tu Apps Script
                 sabor: nameInput.value,
-                token: "DLV_SECURE_TOKEN_2025_X9" // Añadimos el token de seguridad
+                token: "DLV_SECURE_TOKEN_2025_X9"
             })
         });
         const res = await response.json();
         if (res.success) {
-            curiosityInput.value = res.data.recomendacion || res.data.justificacion;
+            curiosityInput.value = (res.data.recomendacion || res.data.justificacion).replace(/^"|"$/g, '');
         }
     } catch (error) {
-        showToast("Error conectando con la IA", "error");
+        showToast("Error con la IA", "error");
     } finally {
-        btn.textContent = originalText; btn.disabled = false;
-    }
-}async function generarCuriosidadIA() {
-    const nameInput = document.getElementById('nombre');
-    const curiosityInput = document.getElementById('curiosidad');
-    const btn = document.getElementById('btn-ia');
-
-    if (!nameInput || !nameInput.value.trim()) {
-        showToast("Escribe primero el nombre del producto.", "warning");
-        if(nameInput) nameInput.focus();
-        return;
-    }
-
-    const originalText = btn.textContent;
-    btn.textContent = "🔮 ..."; btn.disabled = true;
-
-    try {
-        const scriptUrl = (typeof CONFIG !== 'undefined') ? CONFIG.URL_SCRIPT : "";
-        if (!scriptUrl) throw new Error("URL de script no configurada");
-
-        const nombreCodificado = encodeURIComponent(nameInput.value);
-        const response = await fetch(`${scriptUrl}?action=getCuriosity&productName=${nombreCodificado}&v=${Date.now()}`);
-        const data = await response.json();
-
-        if (data.success) {
-            curiosityInput.value = data.texto.replace(/^"|"$/g, '');
-            showToast("Curiosidad generada", "success");
-        } else {
-            showToast("La IA no respondió correctamente", "warning");
-        }
-    } catch (error) {
-        console.error("Error IA:", error);
-        showToast("Error conectando con la IA", "error");
-    } finally {
-        btn.textContent = originalText; btn.disabled = false;
+        btn.textContent = "Generar"; btn.disabled = false;
     }
 }
 
