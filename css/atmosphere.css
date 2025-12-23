@@ -189,3 +189,44 @@ body, .btn-primary, .card, h2, h3, span {
         box-shadow: 0 0 15px var(--neon-cyan), inset 0 0 5px var(--neon-cyan);
     }
 }
+
+/* --- MEJORAS DE ATMÓSFERA Y UX --- */
+
+/* 1. Jerarquía Visual para Platos Estrella */
+.item-estrella {
+    border: 1px solid #D4AF37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+    animation: pulseNeon 3s infinite alternate;
+    position: relative;
+}
+
+@keyframes pulseNeon {
+    from { box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
+    to { box-shadow: 0 0 25px rgba(212, 175, 55, 0.6); }
+}
+
+/* 2. Skeleton Screen (Carga percibida instantánea) */
+.skeleton {
+    background: #1a1a1a;
+    background-image: linear-gradient(90deg, #1a1a1a 0px, #222 40px, #1a1a1a 80px);
+    background-size: 600px;
+    animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+    0% { background-position: -468px 0; }
+    100% { background-position: 468px 0; }
+}
+
+/* 3. Contraste de Accesibilidad Nocturna */
+.plato-descripcion, .info-secundaria {
+    color: #ccc !important; /* Mayor legibilidad que el gris oscuro #888 */
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.plato-titulo {
+    color: #fff;
+    font-family: 'Playfair Display', serif;
+    letter-spacing: 1px;
+}
