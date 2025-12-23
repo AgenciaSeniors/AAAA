@@ -425,18 +425,6 @@ body {
     min-height: 20px;
 }
 
-/* Hero Dinámico */
-.hero-ai {
-    background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%); /* Cambiar según clima vía JS si quieres */
-    color: white;
-    padding: 20px;
-    border-radius: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
 
 .ai-badge {
     background: rgba(255,255,255,0.2);
@@ -499,18 +487,6 @@ body {
     100% { transform: scale(1); }
 }
 
-/* --- HERO AI RESPONSIVE --- */
-.hero-ai {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 20px;
-    background: rgba(10, 10, 10, 0.8);
-    border-radius: 15px;
-    border: 1px solid var(--neon-cyan);
-    margin: 20px 10px;
-}
 
 /* Limitamos el tamaño de la foto y mantenemos proporción */
 .hero-image-glow img {
@@ -553,13 +529,6 @@ body {
     border-radius: 50%; /* Imagen redonda tipo avatar */
     border: 2px solid var(--neon-magenta);
     object-fit: cover;
-}
-/* --- BORDES DINÁMICOS --- */
-/* Estilo base para el contenedor Hero */
-.hero-ai {
-    transition: all 0.5s ease;
-    border-width: 2px;
-    border-style: solid;
 }
 
 /* Color Frío (Bebidas) */
@@ -751,4 +720,128 @@ body {
     animation: spin 1s linear infinite;
     display: inline-block;
     margin-right: 5px;
+}
+
+.hero-ai {
+    padding: 20px 10px;
+    display: flex;
+    justify-content: center;
+    transition: all 0.5s ease;
+}
+
+/* Tarjeta de Cristal (La caja principal) */
+.hero-glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 28px;
+    padding: 35px;
+    max-width: 850px;
+    width: 100%;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+}
+
+/* Barra superior de info (Clima y Ubicación) */
+.hero-status-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 12px;
+}
+
+/* Layout dividido para que no se apriete */
+.hero-main-layout {
+    display: grid;
+    grid-template-columns: 1.3fr 0.7fr;
+    gap: 30px;
+    align-items: center;
+}
+
+/* Título Noir Gigante */
+.noir-title-massive {
+    font-family: 'Yellowtail', cursive;
+    font-size: 2.6rem;
+    line-height: 1.2;
+    color: #fff;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    margin-bottom: 15px;
+}
+
+.hero-hint {
+    color: #999;
+    margin-bottom: 25px;
+    font-size: 0.9rem;
+    font-family: var(--font-body);
+}
+
+.hero-hint strong {
+    color: var(--neon-green);
+    font-weight: 700;
+}
+
+/* Botón Estilo Píldora Neón */
+.btn-neon-pill {
+    background: transparent;
+    border: 2px solid var(--neon-magenta);
+    color: var(--neon-magenta);
+    padding: 10px 25px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-neon-pill:hover {
+    background: var(--neon-magenta);
+    color: white;
+    box-shadow: 0 0 20px var(--neon-magenta);
+}
+
+/* Imagen con efecto de flotación */
+.floating-img {
+    width: 100%;
+    max-width: 180px;
+    height: auto;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    animation: floatingHero 3s ease-in-out infinite;
+    border-radius: 15px;
+}
+
+@keyframes floatingHero {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+}
+
+/* --- RESPONSIVE PARA MÓVILES --- */
+@media (max-width: 768px) {
+    .hero-glass-card { padding: 25px 20px; }
+    
+    .hero-main-layout {
+        grid-template-columns: 1fr; /* Una sola columna en móvil */
+        text-align: center;
+        gap: 20px;
+    }
+    
+    .hero-visual-side {
+        order: -1; /* La foto pasa arriba del texto */
+    }
+
+    .noir-title-massive { font-size: 2rem; }
+    
+    .hero-status-bar {
+        flex-direction: column;
+        gap: 5px;
+        align-items: center;
+    }
 }

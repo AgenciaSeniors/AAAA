@@ -1063,38 +1063,39 @@ function renderHeroHTML(aiData, context) {
     const container = document.getElementById('hero-ai-container');
     if (!container) return;
 
-    // Buscamos el producto comparando IDs con == (para ignorar si es string o number)
     const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
-    
-    if (!productoReal) {
-        container.classList.add('hidden');
-        return;
-    }
+    if (!productoReal) return container.classList.add('hidden');
 
     const imagenFinal = productoReal.imagen_url || 'img/logo.png';
-    const nombreProducto = productoReal.nombre;
-
-    // Obtener mensaje emocional del Sommelier (Copywriter)
-    let mensajeNoir = aiData.copy_venta; // Fallback de la IA
+    let mensajeNoir = aiData.copy_venta;
     
     if (typeof getNoirMessage === 'function') {
         const ahora = new Date();
-        // getNoirMessage ya recibirá context.temp y context.isRaining correctamente
         mensajeNoir = getNoirMessage(context, ahora.getHours(), ahora.getMinutes());
     }
 
     container.innerHTML = `
-        <div class="hero-content">
-            <span class="ai-badge">📍 Sancti Spíritus: ${context.temp}°C</span>
-            <h2 class="noir-title">${mensajeNoir}</h2>
-            <p class="hero-suggestion">Hoy te sugerimos: <strong>${nombreProducto}</strong></p>
-            
-            <button onclick="abrirDetalle(${productoReal.id})" class="btn-neon-action">
-                Revelar Secreto <i class="fas fa-arrow-right"></i>
-            </button>
-        </div>
-        <div class="hero-image-glow">
-            <img src="${imagenFinal}" alt="${nombreProducto}" onerror="this.src='img/logo.png'">
+        <div class="hero-glass-card">
+            <div class="hero-status-bar">
+                <span class="location-tag">📍 Sancti Spíritus</span>
+                <span class="temp-tag">${context.temp}°C • ${context.descripcion}</span>
+            </div>
+
+            <div class="hero-main-layout">
+                <div class="hero-text-side">
+                    <h2 class="noir-title-massive">${mensajeNoir}</h2>
+                    <p class="hero-hint">El Sommelier recomienda: <span class="highlight">${productoReal.nombre}</span></p>
+                    <button onclick="abrirDetalle(${productoReal.id})" class="btn-neon-pill">
+                        REVELAR SECRETO <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                
+                <div class="hero-visual-side">
+                    <div class="image-glow-container">
+                        <img src="${imagenFinal}" alt="${productoReal.nombre}" class="floating-img">
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 }
@@ -1157,3 +1158,4 @@ function cerrarMatch() {
     modal.classList.remove('active');
     setTimeout(() => modal.style.display = 'none', 300);
 }
+
