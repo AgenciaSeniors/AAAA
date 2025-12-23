@@ -517,25 +517,25 @@ function actualizarBotonesActivos(categoriaActiva) {
 
 // --- DETALLES Y OPINIONES (Refactorizado) ---
 
+// Reemplaza tu función abrirDetalle por esta:
 function abrirDetalle(id, mensajeMaridaje = null) {
-    // Usamos el Store para activar el producto
     const p = AppStore.setActiveProduct(id); 
 
-    // SI EL PRODUCTO NO EXISTE, MOSTRAMOS UN AVISO Y NO ROMPEMOS EL CÓDIGO
     if (!p) {
-        console.warn("La IA recomendó un ID que no existe en el menú:", id);
+        console.warn("Producto no encontrado:", id);
         showToast("Esa recomendación no está disponible hoy.", "info");
         return;
     }
 
-    // Si existe, rellenamos el modal (tu lógica actual...)
+    // 1. Llenar datos básicos
     const imgEl = document.getElementById('det-img');
     if(imgEl) imgEl.src = p.imagen_url || 'img/logo.png';
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
     setText('det-precio', `$${p.precio}`);
-    
-    // Mostrar nota del sommelier si existe
+    setText('det-rating-big', p.ratingPromedio ? `★ ${p.ratingPromedio}` : '★ --');
+
+    // 2. Lógica de la NOTA DEL SOMMELIER (Maridaje)
     const notaSommelier = document.getElementById('nota-sommelier');
     if (mensajeMaridaje && notaSommelier) {
         notaSommelier.innerHTML = `<div class="ai-pairing-note"><small>🍷 NOTA DEL SOMMELIER:</small><p>"${mensajeMaridaje}"</p></div>`;
@@ -543,6 +543,18 @@ function abrirDetalle(id, mensajeMaridaje = null) {
     } else if(notaSommelier) {
         notaSommelier.style.display = 'none';
     }
+
+    // --- AQUÍ ESTABA EL FALLO: LÓGICA DE CURIOSIDAD ---
+    const boxCuriosidad = document.getElementById('box-curiosidad');
+    const textoCuriosidad = document.getElementById('det-curiosidad');
+
+    if (p.curiosidad && p.curiosidad.trim().length > 5) {
+        if(boxCuriosidad) boxCuriosidad.style.display = "block";
+        if(textoCuriosidad) textoCuriosidad.textContent = p.curiosidad;
+    } else {
+        if(boxCuriosidad) boxCuriosidad.style.display = "none";
+    }
+    // ------------------------------------------------
 
     const modal = document.getElementById('modal-detalle');
     if(modal) {
