@@ -1,4 +1,8 @@
+let ultimaCargaMetricas = 0;
 async function cargarMetricasVisitas() {
+    const AHORA_MS = Date.now();
+    // Si se cargó hace menos de 1 minuto, no molestar a la DB
+    if (AHORA_MS - ultimaCargaMetricas < 60000) return;
     console.log("🚀 Cargando métricas optimizadas...");
 
     // Cálculo de fechas locales (usando la corrección "cubana" que vimos antes)

@@ -254,61 +254,58 @@ function cerrarWelcome() {
 
 // --- PRECARGA ---
 function precargarImagenes(productos) {
-    if (!productos || productos.length === 0) return;
-    const ejecutarPrecarga = window.requestIdleCallback || ((cb) => setTimeout(cb, 1000));
-    ejecutarPrecarga(() => {
+    if (!productos) return;
+    // Usar window.onload para esperar a que lo principal esté listo
+    window.addEventListener('load', () => {
         productos.forEach(prod => {
             if (prod.imagen_url) {
                 const img = new Image();
                 img.src = prod.imagen_url;
             }
         });
-        console.log(`📡 Iniciando precarga de ${productos.length} imágenes.`);
     });
 }
 
 // --- MENÚ Y PRODUCTOS ---
+// js/script.js -> Modifica cargarMenu
 async function cargarMenu() {
     const grid = document.getElementById('menu-grid');
     
-    // Cache First
+    // 1. Mostrar Cache inmediatamente (Velocidad instantánea)
     const menuCache = localStorage.getItem('menu_cache');
     if (menuCache) {
-        AppStore.setProducts(JSON.parse(menuCache));
-        renderizarMenu(AppStore.getProducts());
-    } else {
-        if(grid) grid.innerHTML = '<p style="text-align:center; color:#888; padding:40px;">Cargando carta...</p>';
+        const cachedData = JSON.parse(menuCache);
+        AppStore.setProducts(cachedData);
+        renderizarMenu(cachedData); 
+        console.log("⚡ Menú cargado desde cache local");
     }
 
     try {
-        if (typeof supabaseClient === 'undefined') throw new Error("Supabase no definido");
-
-        let { data: productos, error } = await supabaseClient
+        // 2. Traer solo lo necesario (Selecciona columnas específicas)
+        const { data: productos, error } = await supabaseClient
             .from('productos')
-            .select(`*, opiniones(puntuacion)`)
-            .eq('activo', true)
-            .order('destacado', { ascending: false })
-            .order('id', { ascending: false });
+            .select(`id, nombre, precio, imagen_url, categoria, destacado, estado, descripcion, curiosidad, stock, opiniones(puntuacion)`)
+            .eq('activo', true);
 
         if (error) throw error;
 
+        // Procesar ratings...
         const productosProcesados = productos.map(prod => {
-            const opiniones = prod.opiniones || [];
-            const total = opiniones.length;
-            const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
+            const total = prod.opiniones?.length || 0;
+            const suma = prod.opiniones?.reduce((acc, curr) => acc + curr.puntuacion, 0) || 0;
             prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
             return prod;
         });
 
-        localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
-        AppStore.setProducts(productosProcesados);
-        
-        renderizarMenu(productosProcesados);
-        precargarImagenes(productosProcesados);
-
+        // 3. Solo actualizar si los datos cambiaron
+        if (JSON.stringify(productosProcesados) !== menuCache) {
+            localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
+            AppStore.setProducts(productosProcesados);
+            renderizarMenu(productosProcesados);
+            console.log("🔄 Menú actualizado desde servidor");
+        }
     } catch (err) {
-        console.warn("Offline o error:", err);
-        if(!menuCache && grid) grid.innerHTML = '<div style="text-align:center; padding:30px;">📡 Sin conexión. Intenta recargar.</div>';
+        console.error("Error cargando menú:", err);
     }
 }
 
@@ -1023,40 +1020,39 @@ function mostrarResultadoShaker(nombreIA, idOpcional) {
     AppStore.state.shaker.isProcessing = false;
 }
 
+// js/script.js -> Reemplaza loadDynamicHero por una versión local
 async function loadDynamicHero() {
     const container = document.getElementById('hero-ai-container');
-    if (!container) return; 
-
-    container.innerHTML = '<div class="skeleton-text">El Sommelier está analizando la atmósfera...</div>';
-    container.classList.remove('hidden');
+    if (!container) return;
 
     try {
-        // ESPERAR a que los productos estén en el AppStore (máximo 3 segundos)
-        let intentos = 0;
-        while (AppStore.getProducts().length === 0 && intentos < 30) {
-            await new Promise(r => setTimeout(r, 100));
-            intentos++;
+        // No esperamos con un while, usamos los productos ya cargados
+        const productos = AppStore.getProducts();
+        if (productos.length === 0) {
+            // Si no hay productos aún, reintentamos en 500ms una sola vez
+            setTimeout(loadDynamicHero, 500);
+            return;
         }
 
         const context = await getUserContext();
-        const scriptUrl = CONFIG.URL_SCRIPT;
+        const ahora = new Date();
         
-        const response = await fetch(scriptUrl, {
-            method: "POST",
-            body: JSON.stringify({
-                action: "hero",
-                contexto: context, 
-                token: "DLV_SECURE_TOKEN_2025_X9"
-            })
-        });
+        // Obtenemos el mensaje Noir directamente del frontend (copywriter.js)
+        const mensajeNoir = getNoirMessage(context, ahora.getHours(), ahora.getMinutes());
+
+        // Lógica de elección de producto local (Rápida y eficiente)
+        // Elegimos un producto destacado que encaje con el clima o uno aleatorio "HOT"
+        const recomendados = productos.filter(p => p.destacado && p.estado !== 'agotado');
+        const elegido = recomendados[Math.floor(Math.random() * recomendados.length)] || productos[0];
+
+        renderHeroHTML({
+            copy_venta: mensajeNoir,
+            id_elegido: elegido.id
+        }, context);
         
-        const result = await response.json();
-        if(result.success && result.data) {
-            renderHeroHTML(result.data, context);
-        }
+        container.classList.remove('hidden');
     } catch (e) {
-        console.error("Fallo el Sommelier:", e);
-        container.classList.add('hidden');
+        console.error("Fallo el Sommelier Local:", e);
     }
 }
 function renderHeroHTML(aiData, context) {
