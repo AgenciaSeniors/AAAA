@@ -267,48 +267,52 @@ function precargarImagenes(productos) {
 }
 
 // --- MENÚ Y PRODUCTOS ---
-// js/script.js -> Modifica cargarMenu
 async function cargarMenu() {
     const grid = document.getElementById('menu-grid');
     
-    // 1. Mostrar Cache inmediatamente (Velocidad instantánea)
+    // 1. Carga instantánea desde Cache
     const menuCache = localStorage.getItem('menu_cache');
     if (menuCache) {
-        const cachedData = JSON.parse(menuCache);
-        AppStore.setProducts(cachedData);
-        renderizarMenu(cachedData); 
-        console.log("⚡ Menú cargado desde cache local");
+        AppStore.setProducts(JSON.parse(menuCache));
+        renderizarMenu(AppStore.getProducts());
     }
 
     try {
-        // 2. Traer solo lo necesario (Selecciona columnas específicas)
+        // 2. Consulta optimizada (Quitamos 'stock' si te da error)
+        // Si 'curiosidad' o 'destacado' tampoco existen en tu DB, quítalos de aquí:
         const { data: productos, error } = await supabaseClient
             .from('productos')
-            .select(`id, nombre, precio, imagen_url, categoria, destacado, estado, descripcion, curiosidad, stock, opiniones(puntuacion)`)
+            .select(`
+                id, nombre, precio, imagen_url, categoria, 
+                destacado, estado, descripcion, curiosidad,
+                opiniones(puntuacion)
+            `)
             .eq('activo', true);
 
         if (error) throw error;
 
-        // Procesar ratings...
         const productosProcesados = productos.map(prod => {
-            const total = prod.opiniones?.length || 0;
-            const suma = prod.opiniones?.reduce((acc, curr) => acc + curr.puntuacion, 0) || 0;
+            const opiniones = prod.opiniones || [];
+            const total = opiniones.length;
+            const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
             prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
             return prod;
         });
 
-        // 3. Solo actualizar si los datos cambiaron
+        // 3. Actualizar Cache y UI solo si hay cambios
         if (JSON.stringify(productosProcesados) !== menuCache) {
             localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
             AppStore.setProducts(productosProcesados);
             renderizarMenu(productosProcesados);
-            console.log("🔄 Menú actualizado desde servidor");
         }
+        
+        precargarImagenes(productosProcesados);
+
     } catch (err) {
         console.error("Error cargando menú:", err);
+        // Si el error persiste, vuelve temporalmente a .select(`*, opiniones(puntuacion)`)
     }
 }
-
 // --- RENDERIZADO POR SECCIONES (TIPO INSTAGRAM/UBER EATS) ---
 
 function renderizarMenu(lista) {
