@@ -335,16 +335,27 @@ async function generarCuriosidadIA() {
         const response = await fetch(CONFIG.URL_SCRIPT, {
             method: 'POST',
             body: JSON.stringify({
-                action: "shaker", // O la acción que maneje textos en tu Apps Script
-                sabor: nameInput.value,
+                // Cambiamos a una acción que genere más texto descriptivo
+                action: "pairing", 
+                producto: nameInput.value,
                 token: "DLV_SECURE_TOKEN_2025_X9"
             })
         });
+        
         const res = await response.json();
-        if (res.success) {
-            curiosityInput.value = (res.data.recomendacion || res.data.justificacion).replace(/^"|"$/g, '');
+        
+        if (res.success && res.data) {
+            // PRIORIDAD: 
+            // 1. copy_venta (usado en maridajes)
+            // 2. justificacion (explicación del porqué)
+            // 3. recomendacion (nombre del producto - último recurso)
+            const textoFinal = res.data.copy_venta || res.data.justificacion || res.data.recomendacion;
+            
+            curiosityInput.value = textoFinal.replace(/^"|"$/g, '');
+            showToast("Curiosidad generada", "success");
         }
     } catch (error) {
+        console.error("Error IA:", error);
         showToast("Error con la IA", "error");
     } finally {
         btn.textContent = "Generar"; btn.disabled = false;
