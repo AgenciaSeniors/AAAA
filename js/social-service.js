@@ -1,5 +1,18 @@
 // js/social-service.js
+let opinionesGlobal = []; // ¡Importante declarar esto!
 
+// UTILIDADES RESCATADAS
+function limpiarTelefono(input) {
+    let limpio = (input || "").replace(/\D/g, '');
+    if (limpio.length === 10 && limpio.startsWith('53')) limpio = limpio.substring(2);
+    return limpio;
+}
+
+function validarEntradasRegistro(nombre, telefono) {
+    if (!nombre || nombre.length < 3) { showToast("Nombre muy corto", "warning"); return false; }
+    if (!/^\d{8}$/.test(telefono)) { showToast("Teléfono inválido (8 dígitos)", "warning"); return false; }
+    return true;
+}
 const SocialService = {
     // --- BIENVENIDA Y VISITAS ---
     async checkWelcome() {
@@ -41,7 +54,49 @@ const SocialService = {
         const modal = document.getElementById('modal-welcome');
         if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 400); }
     },
+    abrirOpinionDesdeDetalle() {
+        cerrarDetalle();
+        const modal = document.getElementById('modal-opinion');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('active'), 10);
+        const nombre = localStorage.getItem('cliente_nombre');
+        if (nombre) document.getElementById('cliente-nombre').value = nombre;
+        AppStore.setReviewScore(0);
+        this.actualizarEstrellas();
+    },
 
+    actualizarEstrellas() {
+        const score = AppStore.state.reviewScore;
+        document.querySelectorAll('#stars-container span').forEach(s => {
+            const val = parseInt(s.dataset.val);
+            s.style.color = val <= score ? 'var(--gold)' : '#444';
+        });
+    },
+
+    async enviarOpinion() {
+        const score = AppStore.state.reviewScore;
+        const prod = AppStore.getActiveProduct();
+        if (score === 0) return showToast("¡Marca las estrellas!", "warning");
+        
+        const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
+        const comentario = document.getElementById('cliente-comentario').value;
+
+        const { error } = await supabaseClient.from('opiniones').insert([{
+            producto_id: prod.id, cliente_nombre: nombre, comentario: comentario, puntuacion: score
+        }]);
+
+        if (!error) {
+            showToast("¡Gracias!", "success");
+            this.cerrarModalOpiniones();
+            cargarMenu();
+        }
+    },
+
+    cerrarModalOpiniones() {
+        const modal = document.getElementById('modal-opinion');
+        if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300); }
+    },
     // --- OPINIONES ---
     async cargarOpiniones() {
         const { data, error } = await supabaseClient.from('opiniones').select('*, productos(nombre, imagen_url)').order('created_at', { ascending: false });

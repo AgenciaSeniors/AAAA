@@ -48,7 +48,47 @@ const AIService = {
         const msgs = NoirCopywriter[mood] || NoirCopywriter["standard"];
         return msgs[Math.floor(Math.random() * msgs.length)];
     },
+    
+    async askPairing(nombreProducto) {
+        const modal = document.getElementById('modal-match');
+        const loading = document.getElementById('match-loading');
+        const content = document.getElementById('match-content');
+        
+        if (!modal) return;
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('active'), 10);
+        loading.style.display = 'block';
+        content.style.display = 'none';
 
+        try {
+            const response = await fetch(CONFIG.URL_SCRIPT, {
+                method: 'POST',
+                body: JSON.stringify({ action: "pairing", producto: nombreProducto, token: "DLV_SECURE_TOKEN_2025_X9" })
+            });
+            const res = await response.json();
+            if (res.success) {
+                const recomendado = AppStore.getProducts().find(p => p.id == res.data.id_elegido);
+                if (recomendado) {
+                    document.getElementById('match-plato-base').textContent = nombreProducto;
+                    document.getElementById('match-img').src = recomendado.imagen_url || 'img/logo.png';
+                    document.getElementById('match-producto-nombre').textContent = recomendado.nombre;
+                    document.getElementById('match-justificacion').textContent = res.data.copy_venta;
+                    document.getElementById('match-btn-action').onclick = () => {
+                        this.cerrarMatch();
+                        abrirDetalle(recomendado.id, res.data.copy_venta);
+                    };
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                }
+            }
+        } catch (e) { this.cerrarMatch(); showToast("Error de conexión", "error"); }
+    },
+    cerrarMatch() {
+        const modal = document.getElementById('modal-match');
+        if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300); 
+
+        }
+    },
     // --- HERO DINÁMICO ---
     async loadDynamicHero() {
         const container = document.getElementById('hero-ai-container');
@@ -152,8 +192,6 @@ const AIService = {
         if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300); }
         if (elegido) abrirDetalle(elegido.id);
     },
-
-    // --- SENSORES ---
     iniciarDetectorMovimiento() {
         this.detenerDetectorMovimiento();
         window.motionHandler = (e) => {
@@ -180,10 +218,7 @@ const AIService = {
         else if (context.temp >= 30) body.classList.add('mode-heat');
         else if (context.hora >= 20 || context.hora <= 5) body.classList.add('mode-night');
     },
-
-    async askPairing(nombreProducto) {
-        // Lógica de maridaje movida aquí...
-    }
+    
 };
 
 // COMPATIBILIDAD CON HTML
