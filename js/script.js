@@ -59,7 +59,6 @@ const AppStore = {
         this.state.shaker.shakeCount = 0;
     }
 };
-
 document.addEventListener('DOMContentLoaded', () => {
     checkWelcome(); 
     cargarMenu();
@@ -67,10 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
     registrarServiceWorker();
     loadDynamicHero();
 });
-
-
-
-
 // --- PRECARGA ---
 function precargarImagenes(productos) {
     if (!productos) return;
@@ -84,18 +79,15 @@ function precargarImagenes(productos) {
         });
     });
 }
-
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     const grid = document.getElementById('menu-grid');
-    
     // 1. Carga instantánea desde Cache
     const menuCache = localStorage.getItem('menu_cache');
     if (menuCache) {
         AppStore.setProducts(JSON.parse(menuCache));
         renderizarMenu(AppStore.getProducts());
     }
-
     try {
         // 2. Consulta optimizada (Quitamos 'stock' si te da error)
         // Si 'curiosidad' o 'destacado' tampoco existen en tu DB, quítalos de aquí:
@@ -107,9 +99,7 @@ async function cargarMenu() {
                 opiniones(puntuacion)
             `)
             .eq('activo', true);
-
         if (error) throw error;
-
         const productosProcesados = productos.map(prod => {
             const opiniones = prod.opiniones || [];
             const total = opiniones.length;
@@ -117,16 +107,13 @@ async function cargarMenu() {
             prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
             return prod;
         });
-
         // 3. Actualizar Cache y UI solo si hay cambios
         if (JSON.stringify(productosProcesados) !== menuCache) {
             localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
             AppStore.setProducts(productosProcesados);
             renderizarMenu(productosProcesados);
         }
-        
         precargarImagenes(productosProcesados);
-
     } catch (err) {
         console.error("Error cargando menú:", err);
         // Si el error persiste, vuelve temporalmente a .select(`*, opiniones(puntuacion)`)
@@ -143,7 +130,6 @@ function renderizarMenu(lista) {
         contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px;"><h4>No hay resultados</h4></div>';
         return;
     }
-
     // 1. Mapa de Categorías
     const nombresCat = {
         'cocteles': 'Cócteles de la Casa 🍸',
