@@ -75,23 +75,31 @@ const SocialService = {
     },
 
     async enviarOpinion() {
-        const score = AppStore.state.reviewScore;
-        const prod = AppStore.getActiveProduct();
-        if (score === 0) return showToast("¡Marca las estrellas!", "warning");
-        
-        const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
-        const comentario = document.getElementById('cliente-comentario').value;
+    const score = AppStore.state.reviewScore;
+    const prod = AppStore.getActiveProduct();
+    
+    if (score === 0) return showToast("¡Marca las estrellas!", "warning");
+    if (!prod) return showToast("Error: No se seleccionó un producto", "error"); // Validación extra
 
-        const { error } = await supabaseClient.from('opiniones').insert([{
-            producto_id: prod.id, cliente_nombre: nombre, comentario: comentario, puntuacion: score
-        }]);
+    const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
+    const comentario = document.getElementById('cliente-comentario').value;
 
-        if (!error) {
-            showToast("¡Gracias!", "success");
-            this.cerrarModalOpiniones();
-            cargarMenu();
-        }
-    },
+    const { error } = await supabaseClient.from('opiniones').insert([{
+        producto_id: prod.id, 
+        cliente_nombre: nombre, 
+        comentario: comentario, 
+        puntuacion: score
+    }]);
+
+    if (error) {
+        console.error("Error Supabase:", error);
+        showToast("Error al enviar: " + error.message, "error");
+    } else {
+        showToast("¡Gracias!", "success");
+        this.cerrarModalOpiniones();
+        cargarMenu();
+    }
+},
 
     cerrarModalOpiniones() {
         const modal = document.getElementById('modal-opinion');
@@ -151,3 +159,8 @@ window.checkWelcome = () => SocialService.checkWelcome();
 window.registrarBienvenida = () => SocialService.registrarBienvenida();
 window.cargarOpiniones = () => SocialService.cargarOpiniones();
 window.cargarMetricasVisitas = () => SocialService.cargarMetricasVisitas();
+// Añade esto al final de js/social-service.js
+window.abrirOpinionDesdeDetalle = () => SocialService.abrirOpinionDesdeDetalle();
+window.enviarOpinion = () => SocialService.enviarOpinion();
+window.cerrarModalOpiniones = () => SocialService.cerrarModalOpiniones();
+window.actualizarEstrellas = () => SocialService.actualizarEstrellas();
