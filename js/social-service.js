@@ -22,6 +22,7 @@ const SocialService = {
         const modal = document.getElementById('modal-welcome');
 
         if (clienteId) {
+            await supabaseClient.from('visitas').insert([{ cliente_id: clienteId }]);
             if (modal) modal.style.display = 'none';
             if (nombre) {
                 setTimeout(() => showToast(`¡Qué bueno verte de nuevo, ${nombre}!`, "success"), 1500);
@@ -254,31 +255,104 @@ const SocialService = {
     },
 
     // --- 4. MÉTRICAS VISITAS ---
-    async cargarMetricasVisitas() {
-    // Corregimos la mutación de fechas creando objetos independientes
-    const hoyInicio = new Date();
-    hoyInicio.setHours(0,0,0,0);
-    
-    const mesInicio = new Date();
-    mesInicio.setDate(1);
-    mesInicio.setHours(0,0,0,0);
+    // js/social-service.js - Lógica de métricas y gráficos
 
+async cargarMetricasVisitas() {
     try {
-        const { data, error } = await supabaseClient.rpc('obtener_contadores_dashboard', {
-            fecha_inicio_dia: hoyInicio.toISOString(),
-            fecha_inicio_mes: mesInicio.toISOString()
-        });
-        
-        if (error) throw error;
+        // 1. Obtener todos los contadores de la base de datos
+        const { data: counts, error: errCounts } = await supabaseClient.rpc('obtener_contadores_dashboard');
+        if (errCounts) throw errCounts;
 
-        if (data && data[0]) {
-            if (document.getElementById('stat-hoy')) document.getElementById('stat-hoy').textContent = data[0].diario || 0;
-            if (document.getElementById('stat-mes')) document.getElementById('stat-mes').textContent = data[0].mensual || 0;
+        if (counts && counts[0]) {
+            const c = counts[0];
+            this.setVal('stat-hoy', c.hoy);
+            this.setVal('stat-ayer', c.ayer);
+            this.setVal('stat-semana', c.semana);
+            this.setVal('stat-mes', c.mes);
+            this.setVal('stat-anio', c.anio);
+
+            // 2. Cálculo del porcentaje comparativo (Hoy vs Ayer)
+            const pctEl = document.getElementById('pct-hoy');
+            if (pctEl && c.ayer > 0) {
+                const diff = ((c.hoy - c.ayer) / c.ayer) * 100;
+                const color = diff >= 0 ? '#00d4ff' : '#ff4444'; // Cian para subir, Rojo para bajar
+                const signo = diff >= 0 ? '+' : '';
+                pctEl.innerHTML = `<span style="color:${color}">${signo}${diff.toFixed(0)}%</span>`;
+            } else if (pctEl) {
+                pctEl.textContent = "N/A";
+            }
         }
+
+        // 3. Renderizar Gráficos de Tendencia y Horas
+        this.dibujarGraficos();
+
     } catch (err) {
-        console.error("Error en métricas:", err);
+        console.error("Error cargando métricas:", err);
     }
     this.cargarTopClientes();
+},
+
+setVal(id, val) { 
+    const el = document.getElementById(id); 
+    if(el) el.textContent = val || 0; 
+},
+
+async dibujarGraficos() {
+    // Gráfico de Tendencia (Line)
+    const { data: tend } = await supabaseClient.rpc('obtener_tendencia_visitas');
+    if (tend) {
+        this.initChart('chart-visitas', {
+            labels: tend.map(d => new Date(d.fecha).toLocaleDateString('es-ES', {day:'numeric', month:'short'})),
+            data: tend.map(d => d.conteo),
+            label: 'Visitas',
+            color: '#00d4ff'
+        });
+    }
+
+    // Gráfico de Horas Punta (Bar)
+    const { data: hrs } = await supabaseClient.rpc('obtener_horas_punta');
+    if (hrs) {
+        // Rellenar las 24 horas del día
+        const dataFull = Array.from({length: 24}, (_, i) => ({ hora: i, conteo: 0 }));
+        hrs.forEach(h => dataFull[h.hora].conteo = h.conteo);
+
+        this.initChart('chart-horas', {
+            type: 'bar',
+            labels: dataFull.map(h => `${h.hora}:00`),
+            data: dataFull.map(h => h.conteo),
+            label: 'Frecuencia',
+            color: '#ff0055'
+        });
+    }
+},
+
+initChart(id, conf) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    
+    // Destruir instancia previa si existe para evitar solapamiento
+    if (window[id + 'Inst']) window[id + 'Inst'].destroy();
+
+    window[id + 'Inst'] = new Chart(canvas, {
+        type: conf.type || 'line',
+        data: {
+            labels: conf.labels,
+            datasets: [{
+                label: conf.label,
+                data: conf.data,
+                borderColor: conf.color,
+                backgroundColor: conf.color + '22',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { color: '#333' } }, x: { grid: { display: false } } }
+        }
+    });
 },
 
     async cargarTopClientes() {
