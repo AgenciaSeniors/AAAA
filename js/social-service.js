@@ -149,11 +149,17 @@ const SocialService = {
     },
     // --- OPINIONES ---
     async cargarOpiniones() {
-        const { data, error } = await supabaseClient.from('opiniones').select('*, productos(nombre, imagen_url)').order('created_at', { ascending: false });
+        const { data, error } = await supabaseClient
+            .from('opiniones')
+            .select('*, productos(nombre, imagen_url)') // Nos aseguramos de traer el nombre del producto
+            .order('created_at', { ascending: false });
+
         if (!error) {
-            opinionesGlobal = data;
+            opinionesGlobal = data; // Guardamos copia para filtrar luego sin recargar
             this.renderizarOpiniones(data);
-            this.actualizarEstadisticasOpiniones(data);
+            
+            // ¡ESTA LÍNEA ES LA CLAVE!
+            this.actualizarEstadisticasOpiniones(data); 
         }
     },
 
@@ -204,6 +210,71 @@ const SocialService = {
                 </div>
             </div>`;
         }).join('');
+    },
+    // --- LÓGICA DE FILTRADO Y ESTADÍSTICAS ---
+
+    filtrarOpiniones(criterio, btnHTML) {
+        // 1. Gestión visual de los botones (Píldoras)
+        if (btnHTML) {
+            document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+            btnHTML.classList.add('active');
+        }
+
+        // 2. Lógica de filtrado sobre los datos globales
+        let filtradas = [];
+        if (criterio === 'todas') {
+            filtradas = opinionesGlobal;
+        } else if (criterio === '5') {
+            filtradas = opinionesGlobal.filter(op => op.puntuacion === 5);
+        } else if (criterio === 'alertas') {
+            filtradas = opinionesGlobal.filter(op => op.puntuacion <= 2);
+        }
+
+        // 3. Renderizamos solo lo que cumple el criterio
+        this.renderizarOpiniones(filtradas);
+    },
+
+    actualizarEstadisticasOpiniones(lista) {
+        if (!lista || lista.length === 0) return;
+
+        // A) Calcular Promedio General
+        const sumaTotal = lista.reduce((acc, curr) => acc + curr.puntuacion, 0);
+        const promedio = (sumaTotal / lista.length).toFixed(1);
+        
+        // B) Encontrar el MEJOR producto (Promedio ponderado)
+        const productosMap = {};
+
+        lista.forEach(op => {
+            const pid = op.producto_id;
+            const pNombre = op.productos?.nombre || 'Producto';
+            
+            if (!productosMap[pid]) {
+                productosMap[pid] = { nombre: pNombre, suma: 0, votos: 0 };
+            }
+            productosMap[pid].suma += op.puntuacion;
+            productosMap[pid].votos += 1;
+        });
+
+        let mejorProducto = { nombre: '--', promedio: 0 };
+
+        Object.values(productosMap).forEach(prod => {
+            // Filtro: Solo consideramos productos con al menos 2 votos para evitar "falsos positivos"
+            if (prod.votos >= 1) { 
+                const prom = prod.suma / prod.votos;
+                if (prom > mejorProducto.promedio) {
+                    mejorProducto = { nombre: prod.nombre, promedio: prom };
+                }
+            }
+        });
+
+        // C) Actualizar el HTML del Dashboard
+        const elPromedio = document.getElementById('stat-promedio');
+        const elTotal = document.getElementById('stat-total');
+        const elMejor = document.getElementById('stat-mejor');
+
+        if (elPromedio) elPromedio.textContent = promedio;
+        if (elTotal) elTotal.textContent = lista.length;
+        if (elMejor) elMejor.textContent = `${mejorProducto.nombre}`; // Muestra el nombre
     },
 
     // AÑADE TAMBIÉN ESTA FUNCIÓN NUEVA DENTRO DE SocialService PARA PODER BORRAR
@@ -257,3 +328,4 @@ window.abrirOpinionDesdeDetalle = () => SocialService.abrirOpinionDesdeDetalle()
 window.enviarOpinion = () => SocialService.enviarOpinion();
 window.cerrarModalOpiniones = () => SocialService.cerrarModalOpiniones();
 window.actualizarEstrellas = () => SocialService.actualizarEstrellas();
+window.filtrarOpiniones = (c, b) => SocialService.filtrarOpiniones(c, b);
