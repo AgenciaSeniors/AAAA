@@ -42,28 +42,43 @@ async checkWelcome() {
     },
 
     async registrarBienvenida() {
-        const nombre = document.getElementById('welcome-nombre').value.trim();
-        const telefonoRaw = document.getElementById('welcome-phone').value;
-        const telefono = limpiarTelefono(telefonoRaw);
+    const nombreInput = document.getElementById('welcome-nombre').value.trim();
+    const telefonoRaw = document.getElementById('welcome-phone').value;
+    const telefono = limpiarTelefono(telefonoRaw);
 
-        if (!validarEntradasRegistro(nombre, telefono)) return;
+    if (!validarEntradasRegistro(nombreInput, telefono)) return;
 
-        try {
-            const { data: cliente } = await supabaseClient.from('clientes').select('id').eq('telefono', telefono).single();
-            let id = cliente?.id;
-            if (!id) {
-                const { data: nuevo } = await supabaseClient.from('clientes').insert([{ nombre, telefono }]).select().single();
-                id = nuevo.id;
-            }
-            localStorage.setItem('cliente_id', id);
-            localStorage.setItem('cliente_nombre', nombre);
-            this.cerrarWelcome();
-            showToast(`¡Hola, ${nombre}!`, "success");
-        } catch (e) {
-            sessionStorage.setItem('es_invitado', 'true');
-            this.cerrarWelcome();
+    try {
+        // Buscamos si el teléfono ya existe
+        const { data: clienteExistente } = await supabaseClient.from('clientes')
+            .select('id, nombre')
+            .eq('telefono', telefono)
+            .single();
+
+        let id, nombreFinal;
+
+        if (clienteExistente) {
+            // Si existe, recuperamos su ID y su nombre real de la DB
+            id = clienteExistente.id;
+            nombreFinal = clienteExistente.nombre;
+            showToast(`¡Te reconocimos! Hola de nuevo, ${nombreFinal}`, "success");
+        } else {
+            // Si es nuevo, lo creamos
+            const { data: nuevo } = await supabaseClient.from('clientes')
+                .insert([{ nombre: nombreInput, telefono }])
+                .select().single();
+            id = nuevo.id;
+            nombreFinal = nombreInput;
+            showToast(`¡Bienvenido, ${nombreFinal}!`, "success");
         }
-    },
+
+        localStorage.setItem('cliente_id', id);
+        localStorage.setItem('cliente_nombre', nombreFinal);
+        this.cerrarWelcome();
+    } catch (e) {
+        this.cerrarWelcome();
+    }
+},
 
     cerrarWelcome() {
         const modal = document.getElementById('modal-welcome');
@@ -174,10 +189,10 @@ async checkWelcome() {
 
 // COMPATIBILIDAD CON HTML
 window.checkWelcome = () => SocialService.checkWelcome();
+window.entrarComoAnonimo = () => SocialService.entrarComoAnonimo();
 window.registrarBienvenida = () => SocialService.registrarBienvenida();
 window.cargarOpiniones = () => SocialService.cargarOpiniones();
 window.cargarMetricasVisitas = () => SocialService.cargarMetricasVisitas();
-// Añade esto al final de js/social-service.js
 window.abrirOpinionDesdeDetalle = () => SocialService.abrirOpinionDesdeDetalle();
 window.enviarOpinion = () => SocialService.enviarOpinion();
 window.cerrarModalOpiniones = () => SocialService.cerrarModalOpiniones();
