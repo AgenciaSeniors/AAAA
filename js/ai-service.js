@@ -1,3 +1,95 @@
+// js/ai-service.js
+
+// 1. DICCIONARIO DE COPYS (Noir)
+const NoirCopywriter = {
+    "standard": ["Un clásico nunca falla.", "El momento pide algo atemporal.", "Déjate llevar por la intuición."],
+    "rainy": ["Día gris, copa llena. El refugio perfecto.", "Llueve fuera. Aquí dentro, el clima lo pones tú."],
+    "rainy_hot": ["Lluvia y calor: trópico puro. Necesitas hielo.", "El cielo cae caliente. Enfríalo con un buen mix."],
+    "late_night": ["La noche es joven para los valientes.", "Madrugada. Los mejores secretos se cuentan ahora."],
+    "morning": ["El sol apenas sale. ¿Un café o empezamos fuerte?", "Mañana fresca. El día promete."],
+    "sunset": ["La hora dorada. Ni día, ni noche.", "Sunset vibes. El aperitivo es obligatorio."],
+    "night_party": ["La ciudad despierta ahora. ¿Estás listo?", "Es de noche. Todo está permitido."],
+    "hot_day": ["El calor aprieta. La hidratación es un arte.", "Sol implacable. Mereces algo helado."],
+    "pleasant_day": ["Clima perfecto. Ni frío ni calor, solo disfrute."],
+    "cold_day": ["El aire muerde un poco. Calienta el espíritu.", "Abrígate o bebe algo fuerte."]
+};
+
+const AIService = {
+    // --- CONTEXTO Y CLIMA ---
+    async getUserContext() {
+        const ahora = new Date();
+        const API_KEY = "3bc237701499f9b6b03de6f10e1e65d6"; 
+        const url = `https://api.openweathermap.org/data/2.5/weather?lat=21.9297&lon=-79.4440&appid=${API_KEY}&units=metric`;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const desc = data.weather?.[0].description || "despejado";
+            return {
+                temp: Math.round(data.main?.temp || 28),
+                isRaining: data.weather?.[0].main === "Rain" || desc.includes("lluvia"),
+                descripcion: desc,
+                hora: ahora.getHours()
+            };
+        } catch (e) {
+            return { temp: 28, isRaining: false, descripcion: "estimado", hora: ahora.getHours() };
+        }
+    },
+
+    // --- GENERACIÓN DE MENSAJES ---
+    getNoirMessage(context) {
+        let mood = "standard";
+        if (context.isRaining) mood = context.temp >= 28 ? "rainy_hot" : "rainy";
+        else if (context.hora < 5) mood = "late_night";
+        else if (context.hora < 8) mood = "morning";
+        else if (context.hora >= 17 && context.hora < 20) mood = "sunset";
+        else if (context.hora >= 20) mood = "night_party";
+        else mood = context.temp >= 28 ? "hot_day" : (context.temp >= 24 ? "pleasant_day" : "cold_day");
+
+        const msgs = NoirCopywriter[mood] || NoirCopywriter["standard"];
+        return msgs[Math.floor(Math.random() * msgs.length)];
+    },
+
+    // --- SHAKER IA ---
+    async procesarMezcla() {
+        const shaker = AppStore.getShakerState();
+        if (shaker.isProcessing) return;
+        shaker.isProcessing = true;
+        
+        // UI Feedback
+        document.getElementById('shaker-status').textContent = "El Sommelier está pensando...";
+        
+        try {
+            const response = await fetch(CONFIG.URL_SCRIPT, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "shaker",
+                    sabor: shaker.selected.join(', '),
+                    token: "DLV_SECURE_TOKEN_2025_X9"
+                })
+            });
+            const res = await response.json();
+            window.mostrarResultadoShaker(res.data.recomendacion, res.data.id_elegido);
+        } catch (error) {
+            console.error("Fallo IA:", error);
+            showToast("Usando recomendación local", "info");
+        } finally {
+            shaker.isProcessing = false;
+        }
+    },
+
+    // --- ATMÓSFERA VISUAL ---
+    setAtmosphere(context) {
+        const body = document.body;
+        body.classList.remove('mode-heat', 'mode-rain', 'mode-night');
+        if (context.isRaining) body.classList.add('mode-rain');
+        else if (context.temp >= 30) body.classList.add('mode-heat');
+        else if (context.hora >= 20 || context.hora <= 5) body.classList.add('mode-night');
+    }
+};
+
+// Exportar funciones globales para mantener compatibilidad con HTML
+window.abrirShaker = abrirShaker; //
+window.procesarMezcla = AIService.procesarMezcla;
 async function getUserContext() {
     const ahora = new Date();
     const hora = ahora.getHours() + ":" + ahora.getMinutes();

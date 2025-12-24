@@ -67,10 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
     registrarServiceWorker();
     loadDynamicHero();
 });
-// 1. Detectar Contexto del Usuario
-
-// --- LÓGICA DE VISITAS Y BIENVENIDA ---
-
 function limpiarTelefono(input) {
     if (!input) return "";
     let limpio = input.replace(/\D/g, '');

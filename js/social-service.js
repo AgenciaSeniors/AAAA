@@ -1,3 +1,63 @@
+// js/social-service.js
+let opinionesGlobal = [];
+
+// UTILIDADES DE VALIDACIÓN (Movidas desde script.js)
+function limpiarTelefono(input) {
+    let limpio = input.replace(/\D/g, '');
+    if (limpio.length === 10 && limpio.startsWith('53')) limpio = limpio.substring(2);
+    return limpio;
+}
+
+function validarEntradasRegistro(nombre, telefono) {
+    if (!nombre || nombre.length < 3) return { ok: false, msg: "Nombre muy corto" };
+    if (!/^\d{8}$/.test(telefono)) return { ok: false, msg: "Teléfono de 8 dígitos" };
+    return { ok: true };
+}
+
+const SocialService = {
+    async registrarBienvenida() {
+        const nombre = document.getElementById('welcome-nombre').value.trim();
+        const telefono = limpiarTelefono(document.getElementById('welcome-phone').value);
+        
+        const validacion = validarEntradasRegistro(nombre, telefono);
+        if (!validacion.ok) return showToast(validacion.msg, "warning");
+
+        try {
+            const { data: cliente } = await supabaseClient.from('clientes')
+                .select('id').eq('telefono', telefono).single();
+            
+            let id = cliente?.id;
+            if (!id) {
+                const { data: nuevo } = await supabaseClient.from('clientes')
+                    .insert([{ nombre, telefono }]).select().single();
+                id = nuevo.id;
+            }
+
+            localStorage.setItem('cliente_id', id);
+            localStorage.setItem('cliente_nombre', nombre);
+            window.cerrarWelcome();
+            showToast(`¡Hola, ${nombre}!`, "success");
+        } catch (e) {
+            sessionStorage.setItem('es_invitado', 'true');
+            window.cerrarWelcome();
+        }
+    },
+
+    async cargarMetricasVisitas() {
+        const ahora = new Date();
+        const { data, error } = await supabaseClient.rpc('obtener_contadores_dashboard', {
+            fecha_inicio_dia: new Date(ahora.setHours(0,0,0,0)).toISOString(),
+            fecha_inicio_mes: new Date(ahora.setDate(1)).toISOString()
+        });
+        if (!error && data) {
+            document.getElementById('stat-hoy').textContent = data.diario || 0;
+            document.getElementById('stat-mes').textContent = data.mensual || 0;
+        }
+    }
+};
+
+// Exponer al window para el HTML (onclick)
+window.registrarBienvenida = SocialService.registrarBienvenida;
 async function checkWelcome() {
     const clienteId = localStorage.getItem('cliente_id');
     // Verificamos si es un invitado temporal (solo dura mientras el navegador esté abierto)
