@@ -224,8 +224,10 @@ body {
 }
 /* BADGES */
 .badge-destacado { 
+    background: linear-gradient(135deg, #ffd700, #ff8c00); /* Color dorado/oro */
+    color: #000;
+    font-weight: 800;
     position: absolute; top: 10px; right: 10px; 
-    background: var(--neon-red); color: white; 
     padding: 4px 10px; border-radius: 4px; 
     font-size: 0.65rem; font-weight: 800; z-index: 10; font-family: var(--font-body);
     box-shadow: 0 0 10px var(--neon-red);

@@ -207,7 +207,7 @@ function generarCardHTML(item) {
     if (esAgotado) {
         badgeHTML = `<span class="badge-agotado">AGOTADO</span>`;
     } else if (item.destacado) {
-        badgeHTML = `<span class="badge-destacado">🔥 HOT</span>`;
+        badgeHTML = `<span class="badge-destacado">✨ TOP</span>`;
     } else if (item.stock < 5 && item.stock > 0) {
         badgeHTML = `<span class="badge-urgent">¡Últimos ${item.stock}!</span>`;
     }
