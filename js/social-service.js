@@ -255,42 +255,59 @@ const SocialService = {
     },
 
     // --- 4. MÉTRICAS VISITAS ---
-    // js/social-service.js - Lógica de métricas y gráficos
-
 async cargarMetricasVisitas() {
     try {
-        // 1. Obtener todos los contadores de la base de datos
-        const { data: counts, error: errCounts } = await supabaseClient.rpc('obtener_contadores_dashboard');
-        if (errCounts) throw errCounts;
+        console.log("Iniciando carga de métricas...");
+        
+        // 1. Llamada al RPC
+        const { data, error } = await supabaseClient.rpc('obtener_contadores_dashboard');
+        
+        if (error) {
+            console.error("Error detallado de Supabase:", error.message, error.details);
+            throw error;
+        }
 
-        if (counts && counts[0]) {
-            const c = counts[0];
+        if (data && data[0]) {
+            const c = data[0];
+            
+            // Inyectar valores en los IDs de admin.html
             this.setVal('stat-hoy', c.hoy);
+            this.setVal('stat-mes', c.mes);
+            this.setVal('stat-unique-clients', c.total_historico);
+            
+            // Campos extra solicitados (Asegúrate de que estos IDs existan en admin.html)
             this.setVal('stat-ayer', c.ayer);
             this.setVal('stat-semana', c.semana);
-            this.setVal('stat-mes', c.mes);
             this.setVal('stat-anio', c.anio);
-            this.setVal('stat-unique-clients', c.total_historico);
 
-            // 2. Cálculo del porcentaje comparativo (Hoy vs Ayer)
-            const pctEl = document.getElementById('pct-hoy');
-            if (pctEl && c.ayer > 0) {
-                const diff = ((c.hoy - c.ayer) / c.ayer) * 100;
-                const color = diff >= 0 ? '#00d4ff' : '#ff4444'; // Cian para subir, Rojo para bajar
-                const signo = diff >= 0 ? '+' : '';
-                pctEl.innerHTML = `<span style="color:${color}">${signo}${diff.toFixed(0)}%</span>`;
-            } else if (pctEl) {
-                pctEl.textContent = "N/A";
+            // 2. Lógica de comparación porcentual (Hoy vs Ayer)
+            const trendEl = document.getElementById('trend-hoy'); // Usamos el ID existente en admin.html
+            if (trendEl) {
+                if (c.ayer > 0) {
+                    const diff = ((c.hoy - c.ayer) / c.ayer) * 100;
+                    const color = diff >= 0 ? '#00ff88' : '#ff4444';
+                    const icono = diff >= 0 ? '▲' : '▼';
+                    trendEl.innerHTML = `<span style="color:${color}; font-weight:bold;">${icono} ${Math.abs(diff).toFixed(1)}%</span> vs ayer`;
+                } else {
+                    trendEl.textContent = "Sin datos de ayer";
+                }
             }
         }
 
-        // 3. Renderizar Gráficos de Tendencia y Horas
-        this.dibujarGraficos();
+        // Cargar gráficos y VIPs
+        if (typeof this.dibujarGraficos === 'function') this.dibujarGraficos();
+        this.cargarTopClientes();
 
     } catch (err) {
-        console.error("Error cargando métricas:", err);
+        console.error("Error crítico en métricas:", err);
+        showToast("Error al conectar con las estadísticas", "error");
     }
-    this.cargarTopClientes();
+},
+
+// Función auxiliar para evitar errores de DOM
+setVal(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val !== undefined ? val : 0;
 },
 
 setVal(id, val) { 
