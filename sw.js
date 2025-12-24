@@ -1,29 +1,12 @@
-// sw.js - Service Worker Mejorado
-const CACHE_NAME = 'bar-v2'; // Incrementamos versión para forzar actualización
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './css/style.css',
-  './css/modal.css',
-  './css/admin.css', // Si lo usas
-  './js/script.js',
-  './js/config.js',
-  './img/logo.png',
-  './favicon.ico',
-  './manifest.json'
-];
+// sw.js - Versión enfocada en Red y solo Caché de Imágenes
+const CACHE_NAME = 'bar-v3'; // Incrementamos versión
 
-// 1. Instalación: Guardar archivos estáticos "App Shell"
+// 1. Instalación: Solo guardamos lo mínimo indispensable para el arranque
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
-  self.skipWaiting(); // Fuerza al SW a activarse inmediatamente
+  self.skipWaiting(); 
 });
 
-// 2. Activación: Limpiar cachés viejos
+// 2. Activación: Limpieza de versiones antiguas
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keyList) => {
@@ -34,43 +17,45 @@ self.addEventListener('activate', (e) => {
       }));
     })
   );
-  self.clients.claim(); // Toma control de los clientes inmediatamente
+  self.clients.claim();
 });
 
-// 3. Interceptación de Red (Estrategia: Cache First + Dynamic Caching)
-
+// 3. Interceptación: Estrategia diferenciada
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return; // Cambiado event por e
-  // ...
+  if (e.request.method !== 'GET') return;
 
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      // A) Si está en caché, lo devolvemos
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      // B) Si no está, vamos a internet
-      return fetch(e.request).then((networkResponse) => {
-        // Verificamos que la respuesta sea válida
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic' && networkResponse.type !== 'cors') {
+  const url = new URL(e.request.url);
+  
+  // A) SI ES UNA IMAGEN: Estrategia Cache First (Para ahorrar datos en Cuba)
+  if (url.pathname.match(/\.(jpg|jpeg|png|gif|svg|avif|webp)$/i)) {
+    e.respondWith(
+      caches.match(e.request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        
+        return fetch(e.request).then((networkResponse) => {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseToCache);
+          });
           return networkResponse;
-        }
-
-        // Clonamos la respuesta (porque el stream solo se puede consumir una vez)
+        });
+      })
+    );
+  } 
+  // B) TODO LO DEMÁS (HTML, JS, CSS): Estrategia Network First (Siempre Online)
+  else {
+    e.respondWith(
+      fetch(e.request).then((networkResponse) => {
+        // Si hay internet, actualizamos el caché con lo nuevo y devolvemos la respuesta
         const responseToCache = networkResponse.clone();
-
-        // Guardamos la copia en el caché para la próxima vez
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(e.request, responseToCache);
         });
-
         return networkResponse;
       }).catch(() => {
-        // C) Si falla internet y no estaba en caché (Offline total)
-        // Podrías retornar una imagen placeholder aquí si quisieras
-        // return caches.match('./img/offline-placeholder.png');
-      });
-    })
-  );
+        // Si no hay internet, intentamos servir desde el caché
+        return caches.match(e.request);
+      })
+    );
+  }
 });
