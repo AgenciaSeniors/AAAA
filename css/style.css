@@ -116,6 +116,8 @@ body {
     border: 1px solid #333; 
     padding: 8px 20px; border-radius: 100px; 
     font-family: var(--font-body); font-size: 0.85rem;
+    transition: all 0.2s ease;
+    position: relative;
     cursor: pointer; transition: 0.3s; white-space: nowrap;
 }
 .filter-btn.active { 
@@ -124,6 +126,41 @@ body {
     border-color: var(--neon-cyan); 
     font-weight: 700; 
     box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+}
+.filter-btn:hover {
+    background: rgba(0, 255, 255, 0.1); /* Fondo sutil */
+    color: var(--neon-cyan);
+    transform: scale(1.05);
+}
+
+.filter-btn.active {
+    box-shadow: 0 0 10px var(--neon-cyan); /* Resplandor cuando está activo */
+}
+/* Botón flotante IA */
+.fab-ia {
+    transition: all 0.3s ease;
+}
+
+.fab-ia:hover {
+    transform: scale(1.1) rotate(5deg); /* Crece y rota un poco */
+    box-shadow: 0 0 20px var(--neon-magenta); /* Brillo magenta intenso */
+}
+
+/* Botón de Maridaje */
+.btn-match {
+    transition: background 0.3s, box-shadow 0.3s;
+}
+
+.btn-match:hover {
+    background: var(--neon-magenta);
+    box-shadow: 0 0 12px var(--neon-magenta);
+    animation: shake 0.5s ease; /* Pequeño temblor sutil para llamar la atención */
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
 }
 
 /* --- GRID MENÚ (CORREGIDO PARA CATEGORÍAS) --- */
@@ -180,7 +217,25 @@ body {
     border: 1px solid #222; 
     position: relative; cursor: pointer; 
     box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Transición suave */
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.card:hover {
+    transform: translateY(-8px) scale(1.02); /* Se eleva y crece sutilmente */
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 
+                0 0 15px var(--neon-cyan); /* Añade un resplandor neón */
+    border-color: var(--neon-cyan); /* Cambia el borde al color de la marca */
+}
+
+/* Efecto de zoom en la imagen al hacer hover */
+.card .img-box img {
+    transition: transform 0.5s ease;
+}
+
+.card:hover .img-box img {
+    transform: scale(1.1); /* Zoom suave en la foto del cóctel/plato */
 }
 .card:active { transform: scale(0.98); }
 

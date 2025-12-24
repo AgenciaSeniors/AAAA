@@ -373,30 +373,36 @@ initChart(id, conf) {
     });
 },
 
-    async cargarTopClientes() {
+async cargarTopClientes() {
     const { data, error } = await supabaseClient.rpc('obtener_top_clientes');
     const container = document.getElementById('top-clientes-list');
     
     if (error || !data) {
-        container.innerHTML = '<p style="text-align:center; color:#666;">No hay datos VIP aún.</p>';
+        if (container) container.innerHTML = '<p style="text-align:center; color:#666;">No hay datos VIP aún.</p>';
         return;
     }
 
-    // Cambiamos el renderizado para usar clases de reviews.css y mejorar la estética
-    container.innerHTML = data.map((c, i) => {
-        const medal = ['🥇', '🥈', '🥉'][i] || '👤';
-        return `
-            <div class="review-card" style="margin-bottom:10px; padding:15px; flex-direction:row; align-items:center; gap:15px;">
-                <div class="user-avatar" style="width:50px; height:50px; font-size:1.5rem;">${medal}</div>
-                <div style="flex-grow:1;">
-                    <h4 style="margin:0; color:white;">${c.nombre}</h4>
-                    <span style="font-size:0.75rem; color:var(--gold);">CLIENTE FRECUENTE</span>
-                </div>
-                <div class="review-rating" style="background:rgba(255,215,0,0.1); color:var(--gold); border:1px solid var(--gold);">
-                    ${c.total_visitas} visitas
-                </div>
-            </div>`;
-    }).join('');
+    if (container) {
+        container.innerHTML = data.map((c, i) => {
+            const medal = ['🥇', '🥈', '🥉'][i] || '👤';
+            // Formateamos el teléfono para que sea clicable (opcional)
+            const linkTel = `tel:+53${c.telefono}`; 
+            
+            return `
+                <div class="review-card" style="margin-bottom:10px; padding:15px; flex-direction:row; align-items:center; gap:15px;">
+                    <div class="user-avatar" style="width:50px; height:50px; font-size:1.5rem;">${medal}</div>
+                    <div style="flex-grow:1;">
+                        <h4 style="margin:0; color:white;">${c.nombre}</h4>
+                        <a href="${linkTel}" style="font-size:0.8rem; color:var(--neon-cyan); text-decoration:none;">
+                            📞 ${c.telefono}
+                        </a>
+                    </div>
+                    <div class="review-rating" style="background:rgba(255,215,0,0.1); color:var(--gold); border:1px solid var(--gold); min-width:80px; text-align:center;">
+                        ${c.total_visitas} visitas
+                    </div>
+                </div>`;
+        }).join('');
+    }
 }
 };
 
