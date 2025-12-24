@@ -188,34 +188,43 @@ const SocialService = {
     },
 
     // NUEVA FUNCIÓN: MATEMÁTICAS
+    // js/social-service.js - Función corregida
     actualizarEstadisticasOpiniones(lista) {
         if (!lista || lista.length === 0) return;
 
-        // A. Promedio
-        const suma = lista.reduce((acc, curr) => acc + curr.puntuacion, 0);
-        const promedio = (suma / lista.length).toFixed(1);
+        // A. Promedio General
+        const sumaTotal = lista.reduce((acc, curr) => acc + curr.puntuacion, 0);
+        const promedioGral = (sumaTotal / lista.length).toFixed(1);
 
-        // B. Mejor Producto
+        // B. Cálculo del Mejor Producto
         const conteo = {};
         lista.forEach(op => {
             const pid = op.producto_id;
-            const pNombre = op.productos?.nombre || 'Desc';
+            const pNombre = op.productos?.nombre || 'Producto';
             if (!conteo[pid]) conteo[pid] = { nombre: pNombre, suma: 0, votos: 0 };
             conteo[pid].suma += op.puntuacion;
             conteo[pid].votos += 1;
         });
 
-        let mejor = { nombre: 'N/A', prom: 0 };
+        let mejor = { nombre: 'Sin datos', prom: 0 };
         Object.values(conteo).forEach(c => {
-            if (c.votos > 1) { 
-                const p = c.suma / c.votos;
-                if (p > mejor.prom) mejor = { nombre: c.nombre, prom: p };
+            const p = c.suma / c.votos;
+            // Eliminamos la restricción de 'votos > 1' para que funcione desde la primera reseña
+            if (p > mejor.prom) {
+                mejor = { nombre: c.nombre, prom: p };
             }
         });
 
-        if (document.getElementById('stat-promedio')) document.getElementById('stat-promedio').textContent = promedio;
+        // C. Inyección en el DOM
+        if (document.getElementById('stat-promedio')) document.getElementById('stat-promedio').textContent = promedioGral;
         if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = lista.length;
-        if (document.getElementById('stat-mejor')) document.getElementById('stat-mejor').textContent = mejor.nombre;
+        
+        // Mostramos el nombre del producto mejor calificado
+        const elMejor = document.getElementById('stat-mejor');
+        if (elMejor) {
+            elMejor.textContent = mejor.nombre;
+            elMejor.title = `Promedio: ${mejor.prom.toFixed(1)}`; // Tooltip con el promedio exacto
+        }
     },
 
     // NUEVA FUNCIÓN: FILTRAR
