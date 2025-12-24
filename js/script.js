@@ -396,7 +396,6 @@ function abrirDetalle(id, mensajeMaridaje = null) {
         notaSommelier.style.display = 'none';
     }
 
-    // --- AQUÍ ESTABA EL FALLO: LÓGICA DE CURIOSIDAD ---
     const boxCuriosidad = document.getElementById('box-curiosidad');
     const textoCuriosidad = document.getElementById('det-curiosidad');
 
@@ -468,10 +467,6 @@ if(starsContainer) {
     });
 }
 
-
-
-
-
 // --- UTILIDADES ---
 function setText(id, val) { const el = document.getElementById(id); if(el) el.textContent = val; }
 
@@ -533,15 +528,6 @@ const ESENCIAS = [
 let watchID = null;
 
 
-
-// CORRECCIÓN ACCESIBILIDAD: Usamos <button>
-
-
-// ==========================================
-// 🌪️ GESTIÓN DE SENSORES (Optimizado)
-// ==========================================
-
-// Variable global para almacenar la REFERENCIA EXACTA de la función
 let motionHandler = null; 
 
 
