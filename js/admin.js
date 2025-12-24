@@ -346,19 +346,45 @@ if(form) {
 async function generarCuriosidadIA() {
     const nombre = document.getElementById('nombre').value;
     const desc = document.getElementById('descripcion').value;
+    const categoria = document.getElementById('categoria').value;
     if (!nombre) return showToast("Escribe un nombre primero", "warning");
 
     const loader = document.getElementById('loader-ia');
     const txtArea = document.getElementById('curiosidad');
     
     if(loader) loader.style.display = 'block';
-    txtArea.value = "Generando curiosidad creativa...";
+    txtArea.value = "Consultando al Sommelier Digital... 🧠";
     
-    // Simulación rápida (aquí podrías conectar tu API real)
-    setTimeout(() => {
+    try {
+        // Realizamos la petición real a tu API de IA
+        const response = await fetch(CONFIG.URL_SCRIPT, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: "curiosidad", // Nueva acción para tu backend
+                producto: nombre,
+                descripcion: desc,
+                categoria: categoria,
+                token: "DLV_SECURE_TOKEN_2025_X9" 
+            })
+        });
+
+        const res = await response.json();
+
+        if (res.success) {
+            // La IA nos devuelve un texto creativo
+            txtArea.value = res.data.texto;
+            showToast("¡Curiosidad generada!", "success");
+        } else {
+            throw new Error(res.message || "Error en la respuesta de IA");
+        }
+
+    } catch (err) {
+        console.error("Fallo IA Curiosidad:", err);
+        txtArea.value = "";
+        showToast("No se pudo conectar con la IA", "error");
+    } finally {
         if(loader) loader.style.display = 'none';
-        txtArea.value = `¿Sabías que el ${nombre} es ideal para acompañar momentos nocturnos? Su sabor único resalta más con buena música.`;
-    }, 1500);
+    }
 }
 
 // 5. NAVEGACIÓN TABS
