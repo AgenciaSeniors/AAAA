@@ -140,6 +140,14 @@ const AIService = {
             this.iniciarDetectorMovimiento();
         }
     },
+    // Pon esto justo debajo de abrirShaker() o al final del objeto
+    cerrarShaker() {
+        const modal = document.getElementById('modal-shaker');
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+    },
 
     renderizarEsencias() {
         const grid = document.getElementById('essences-grid');
@@ -173,17 +181,55 @@ const AIService = {
         const shaker = AppStore.getShakerState();
         if (shaker.isProcessing) return;
         shaker.isProcessing = true;
+        
+        // 1. ACTIVAR ANIMACIÓN VISUAL (FEEDBACK)
+        const shakerImg = document.getElementById('shaker-img');
+        const statusText = document.getElementById('shaker-status');
+        const btn = document.getElementById('btn-mix-manual');
+        
+        if(shakerImg) {
+            shakerImg.classList.remove('ready'); // Quitamos el pulso suave
+            shakerImg.classList.add('shaking'); // Activamos el terremoto
+        }
+        if(statusText) statusText.textContent = "🌪️ Mezclando sabores...";
+        if(btn) {
+            btn.disabled = true;
+            btn.innerHTML = "Agitando... <span class='material-icons fa-spin' style='font-size:1rem'>autorenew</span>";
+        }
+
         this.detenerDetectorMovimiento();
+
         try {
-            const response = await fetch(CONFIG.URL_SCRIPT, {
-                method: 'POST',
-                body: JSON.stringify({ action: "shaker", sabor: shaker.selected.join(', '), token: "DLV_SECURE_TOKEN_2025_X9" })
-            });
+            // 2. PETICIÓN EN PARALELO AL DELAY (Para que la animación luzca)
+            // Lanzamos el fetch y esperamos al menos 1.5 segundos de animación
+            const [response] = await Promise.all([
+                fetch(CONFIG.URL_SCRIPT, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "shaker", sabor: shaker.selected.join(', '), token: "DLV_SECURE_TOKEN_2025_X9" })
+                }),
+                new Promise(resolve => setTimeout(resolve, 1500)) // Espera mínima para el efecto visual
+            ]);
+
             const res = await response.json();
+            
+            // 3. MOSTRAR RESULTADO
             this.mostrarResultadoShaker(res.data.recomendacion, res.data.id_elegido);
+
         } catch (e) {
             console.error("Fallo IA:", e);
-        } finally { shaker.isProcessing = false; }
+            if(statusText) statusText.textContent = "❌ Algo falló. Intenta de nuevo.";
+            if(shakerImg) shakerImg.classList.remove('shaking');
+        } finally { 
+            // 4. LIMPIEZA
+            shaker.isProcessing = false; 
+            // No quitamos la clase 'shaking' aquí si fue éxito, porque el modal se cierra inmediatamente
+            // y se ve más fluido si desaparece agitando.
+            
+            if(btn) {
+                btn.disabled = false;
+                btn.textContent = "¡MEZCLAR AHORA! 🌪️";
+            }
+        }
     },
 
     mostrarResultadoShaker(nombreIA, idOpcional) {
@@ -192,6 +238,7 @@ const AIService = {
         if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300); }
         if (elegido) abrirDetalle(elegido.id);
     },
+    
     iniciarDetectorMovimiento() {
         this.detenerDetectorMovimiento();
         window.motionHandler = (e) => {
@@ -223,6 +270,8 @@ const AIService = {
 
 // COMPATIBILIDAD CON HTML
 window.abrirShaker = () => AIService.abrirShaker();
+window.cerrarShaker = () => AIService.cerrarShaker();
 window.procesarMezcla = () => AIService.procesarMezcla();
 window.loadDynamicHero = () => AIService.loadDynamicHero();
 window.askPairing = (n, b) => AIService.askPairing(n, b);
+window.cerrarMatch = () => AIService.cerrarMatch();

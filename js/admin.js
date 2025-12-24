@@ -1,15 +1,23 @@
-// js/admin.js - Panel de Administración (Refactorizado con Store y Seguridad)
+// js/admin.js - Panel de Administración (Versión Instantánea)
 
 // --- GESTIÓN DE ESTADO CENTRALIZADO (STORE) ---
 const AdminStore = {
     state: {
         inventory: [],
-        searchTimeout: null,
-        currentEditId: null
+        searchTimeout: null
     },
 
     setInventory(list) { this.state.inventory = list; },
     getInventory() { return this.state.inventory; },
+
+    // Actualiza un solo producto en la lista local (Para velocidad instantánea)
+    updateLocalItem(id, data) {
+        const index = this.state.inventory.findIndex(p => p.id === id);
+        if (index !== -1) {
+            this.state.inventory[index] = { ...this.state.inventory[index], ...data };
+            this.refreshView();
+        }
+    },
 
     filterInventory(term) {
         if (!term) return this.state.inventory;
@@ -19,10 +27,17 @@ const AdminStore = {
             (p.descripcion || '').toLowerCase().includes(lowerTerm) ||
             (p.categoria || '').toLowerCase().includes(lowerTerm)
         );
+    },
+
+    // Re-renderiza manteniendo el filtro actual si existe
+    refreshView() {
+        const term = document.getElementById('search-inventory')?.value;
+        const list = this.filterInventory(term);
+        renderizarInventario(list);
     }
 };
 
-// FUNCIÓN AUXILIAR DE NOTIFICACIONES (Autorreparable)
+// UTILIDADES
 function showToast(msg, tipo = 'success') {
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -40,7 +55,6 @@ function showToast(msg, tipo = 'success') {
     }, 3000);
 }
 
-// FUNCIÓN DE SEGURIDAD (Sanitización)
 function escapeHTML(str) {
     if (!str) return '';
     return str.toString().replace(/[&<>'"]/g, tag => ({
@@ -48,7 +62,7 @@ function escapeHTML(str) {
     }[tag]));
 }
 
-// 1. VERIFICACIÓN AUTH
+// 1. AUTH & CARGA INICIAL
 async function checkAuth() {
     if (typeof supabaseClient === 'undefined') return;
     const { data: { session } } = await supabaseClient.auth.getSession();
@@ -56,13 +70,13 @@ async function checkAuth() {
     if (!session) {
         window.location.href = "login.html";
     } else {
-        // Esta línea es la que hace visible el panel
         document.body.classList.add('auth-verified'); 
         cargarAdmin();
     }
 }
 
 async function cargarAdmin() {
+    // Solo mostramos loading si es la primera carga para no molestar
     const { data, error } = await supabaseClient
         .from('productos')
         .select('*')
@@ -70,12 +84,11 @@ async function cargarAdmin() {
 
     if (error) {
         console.error("Error productos:", error);
-        showToast("Error al cargar inventario", "error");
-        return;
+        return showToast("Error al cargar inventario", "error");
     }
     
     AdminStore.setInventory(data);
-    renderizarInventario(AdminStore.getInventory());
+    renderizarInventario(data);
 }
 
 async function cerrarSesion() {
@@ -83,35 +96,13 @@ async function cerrarSesion() {
     window.location.href = "login.html";
 }
 
-// 2. TABS
-function cambiarVista(vista) {
-    document.querySelectorAll('.vista-seccion').forEach(el => {
-        el.classList.remove('active');
-        el.style.display = 'none';
-    });
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-
-    const target = document.getElementById(`vista-${vista}`);
-    if (target) {
-        target.style.display = 'block';
-        setTimeout(() => target.classList.add('active'), 10);
-    }
-
-    const map = { 'inventario': 0, 'opiniones': 1, 'visitas': 2 };
-    const btns = document.querySelectorAll('.tab-btn');
-    if(btns[map[vista]]) btns[map[vista]].classList.add('active');
-
-    if (vista === 'visitas' && typeof cargarMetricasVisitas === 'function') cargarMetricasVisitas();
-    if (vista === 'opiniones' && typeof cargarOpiniones === 'function') cargarOpiniones(); 
-}
-
-// 3. RENDER INVENTARIO (SEGURO)
+// 2. RENDERIZADO
 function renderizarInventario(lista) {
     const container = document.getElementById('lista-admin');
     if (!container) return;
     
     if (!lista || lista.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">No hay productos.</p>';
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">No hay productos coinciden.</p>';
         return;
     }
 
@@ -122,37 +113,40 @@ function renderizarInventario(lista) {
         const esAgotado = item.estado === 'agotado';
         const statusText = esAgotado ? 'AGOTADO' : 'DISPONIBLE';
         const statusClass = esAgotado ? 'status-bad' : 'status-ok';
-        const iconState = esAgotado ? 'toggle_off' : 'toggle_on';
-        const colorState = esAgotado ? '#666' : 'var(--green-success)';
         const colorStar = item.destacado ? 'var(--gold)' : '#444';
         const img = item.imagen_url || 'https://via.placeholder.com/60';
+        
+        // Visualmente atenuamos si está eliminado (soft delete)
         const opacity = item.activo ? '' : 'opacity:0.5; filter:grayscale(1);';
-        const deletedLabel = !item.activo ? '<small style="color:red">(ELIMINADO)</small>' : '';
-        const isChecked = item.estado === 'disponible' ? 'checked' : '';
+        const deletedLabel = !item.activo ? '<b style="color:red; font-size:0.7rem;">(ELIMINADO)</b>' : '';
+        const isChecked = !esAgotado ? 'checked' : '';
 
         return `
-            <div class="inventory-item" style="${opacity}">
-        <img src="${img}" class="item-thumb" alt="img">
+    <div class="inventory-item" style="${opacity}">
+        <img src="${img}" class="item-thumb" alt="img" loading="lazy">
         <div class="item-meta">
             <span class="item-title">${nombreSafe} ${item.destacado ? '🌟' : ''} ${deletedLabel}</span>
             <span class="item-price">$${precioSafe}</span>
             <span class="item-status ${statusClass}">${statusText}</span>
         </div>
-        <div class="action-btn-group" style="align-items:center;"> <button class="icon-btn" onclick="prepararEdicion(${item.id})"><span class="material-icons">edit</span></button>
-            <button class="icon-btn" style="color:${colorStar}" onclick="toggleDestacado(${item.id}, ${item.destacado})"><span class="material-icons">star</span></button>
+        <div class="action-btn-group">
+            <button class="icon-btn" onclick="prepararEdicion(${item.id})" title="Editar"><span class="material-icons">edit</span></button>
             
-            <label class="switch" title="Cambiar Disponibilidad">
-                <input type="checkbox" ${isChecked} onchange="toggleEstado(${item.id}, this)">
+            <button class="icon-btn" style="color:${colorStar}" onclick="toggleDestacado(${item.id}, ${item.destacado})" title="Destacar">
+                <span class="material-icons">star</span>
+            </button>
+            
+            <label class="switch" title="Disponibilidad">
+                <input type="checkbox" ${isChecked} onchange="toggleEstado(${item.id}, this.checked)">
                 <span class="slider"></span>
             </label>
             
             ${item.activo ? 
-                `<button class="icon-btn btn-del" onclick="eliminarProducto(${item.id})"><span class="material-icons">delete</span></button>` :
-                `<button class="icon-btn" style="color:green" onclick="restaurarProducto(${item.id})"><span class="material-icons">restore_from_trash</span></button>`
+                `<button class="icon-btn btn-del" onclick="eliminarProducto(${item.id})" title="Borrar"><span class="material-icons" style="color:#ff4444">delete</span></button>` :
+                `<button class="icon-btn" onclick="restaurarProducto(${item.id})" title="Restaurar"><span class="material-icons" style="color:#00C851">restore_from_trash</span></button>`
             }
         </div>
-    </div>
-        `;
+    </div>`;
     }).join('');
 
     container.innerHTML = html;
@@ -162,13 +156,82 @@ function buscarInventario(e) {
     clearTimeout(AdminStore.state.searchTimeout);
     const term = e.target.value;
     
+    // Búsqueda con debounce para no saturar
     AdminStore.state.searchTimeout = setTimeout(() => {
-        const filtrada = AdminStore.filterInventory(term);
-        renderizarInventario(filtrada);
-    }, 300);
+        AdminStore.refreshView();
+    }, 150);
 }
 
-// 4. EDICIÓN / CREACIÓN
+// 3. ACCIONES INSTANTÁNEAS (Aquí está la magia)
+
+async function toggleDestacado(id, valorActual) {
+    const nuevoValor = !valorActual;
+    
+    // 1. Cambio visual INMEDIATO
+    AdminStore.updateLocalItem(id, { destacado: nuevoValor });
+    showToast(nuevoValor ? "¡Destacado!" : "Ya no es destacado", "success");
+
+    // 2. Guardado en segundo plano
+    try {
+        const { error } = await supabaseClient.from('productos').update({ destacado: nuevoValor }).eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        // Si falla, revertimos visualmente
+        AdminStore.updateLocalItem(id, { destacado: valorActual });
+        showToast("Error al guardar cambios", "error");
+    }
+}
+
+async function toggleEstado(id, isChecked) {
+    const nuevoEstado = isChecked ? 'disponible' : 'agotado';
+    
+    // 1. Cambio visual INMEDIATO
+    AdminStore.updateLocalItem(id, { estado: nuevoEstado });
+
+    // 2. Guardado en segundo plano
+    try {
+        const { error } = await supabaseClient.from('productos').update({ estado: nuevoEstado }).eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        AdminStore.updateLocalItem(id, { estado: !isChecked ? 'disponible' : 'agotado' });
+        showToast("Error de conexión", "error");
+    }
+}
+
+async function eliminarProducto(id) {
+    if (!confirm("¿Seguro que quieres eliminar este producto? (Se ocultará del menú)")) return;
+
+    // 1. Cambio visual INMEDIATO
+    AdminStore.updateLocalItem(id, { activo: false });
+    
+    // 2. Guardado
+    try {
+        const { error } = await supabaseClient.from('productos').update({ activo: false }).eq('id', id);
+        if (error) throw error;
+        showToast("Producto eliminado", "warning");
+    } catch (err) {
+        AdminStore.updateLocalItem(id, { activo: true });
+        showToast("No se pudo eliminar", "error");
+    }
+}
+
+async function restaurarProducto(id) {
+    // 1. Cambio visual
+    AdminStore.updateLocalItem(id, { activo: true });
+
+    // 2. Guardado
+    try {
+        const { error } = await supabaseClient.from('productos').update({ activo: true }).eq('id', id);
+        if (error) throw error;
+        showToast("Producto restaurado", "success");
+    } catch (err) {
+        AdminStore.updateLocalItem(id, { activo: false });
+        showToast("Error al restaurar", "error");
+    }
+}
+
+// 4. EDICIÓN Y FORMULARIO
+
 function prepararEdicion(id) {
     const prod = AdminStore.getInventory().find(p => p.id === id);
     if (!prod) return;
@@ -181,9 +244,14 @@ function prepararEdicion(id) {
     document.getElementById('curiosidad').value = prod.curiosidad || '';
     document.getElementById('destacado').checked = prod.destacado;
 
-    document.getElementById('btn-submit').textContent = "ACTUALIZAR PRODUCTO";
+    // UI del Formulario
+    const btnSubmit = document.getElementById('btn-submit');
+    btnSubmit.textContent = "ACTUALIZAR PRODUCTO";
+    btnSubmit.classList.add('btn-update-mode'); // Opcional para CSS
+    
     document.getElementById('btn-cancelar').style.display = "block";
     
+    // Scroll arriba y cambiar tab
     cambiarVista('inventario');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -195,7 +263,7 @@ function cancelarEdicion() {
     document.getElementById('btn-cancelar').style.display = "none";
 }
 
-// 5. SUBMIT FORMULARIO
+// Manejo del Submit
 const form = document.getElementById('form-producto');
 if(form) {
     form.addEventListener('submit', async (e) => {
@@ -221,27 +289,52 @@ if(form) {
                 const fileName = `prod_${Date.now()}.${file.name.split('.').pop()}`;
                 const { error: upErr } = await supabaseClient.storage.from('imagenes').upload(fileName, file);
                 if (upErr) throw upErr;
+                
                 const { data } = supabaseClient.storage.from('imagenes').getPublicUrl(fileName);
                 datos.imagen_url = data.publicUrl;
             }
 
-            let errorDb;
+            let dataRes;
             if (id) {
-                const { error } = await supabaseClient.from('productos').update(datos).eq('id', id);
-                errorDb = error;
+                // UPDATE: Pedimos el registro actualizado (.select().single())
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .update(datos)
+                    .eq('id', id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                dataRes = data;
+                showToast("Producto Actualizado", "success");
             } else {
+                // INSERT
                 datos.estado = 'disponible';
                 datos.activo = true;
-                const { error } = await supabaseClient.from('productos').insert([datos]);
-                errorDb = error;
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .insert([datos])
+                    .select()
+                    .single();
+                if (error) throw error;
+                dataRes = data;
+                showToast("Producto Creado", "success");
             }
 
-            if (errorDb) throw errorDb;
-            showToast(id ? "Producto Actualizado" : "Producto Creado", "success");
+            // ACTUALIZACIÓN LOCAL (Sin recargar toda la tabla)
+            if (id) {
+                AdminStore.updateLocalItem(parseInt(id), dataRes);
+            } else {
+                // Si es nuevo, lo ponemos al principio
+                const current = AdminStore.getInventory();
+                current.unshift(dataRes);
+                AdminStore.setInventory(current);
+                renderizarInventario(current);
+            }
+
             cancelarEdicion();
-            cargarAdmin();
 
         } catch (err) {
+            console.error(err);
             showToast("Error: " + err.message, "error");
         } finally {
             btn.textContent = txtOriginal; btn.disabled = false;
@@ -249,23 +342,59 @@ if(form) {
     });
 }
 
-// 6. TOGGLES (Versiones Seguras)
-async function toggleDestacado(id, val) {
-    try {
-        const { error } = await supabaseClient
-            .from('productos')
-            .update({ destacado: !val })
-            .eq('id', id);
+// Generador de Curiosidad (Placeholder para que no de error)
+async function generarCuriosidadIA() {
+    const nombre = document.getElementById('nombre').value;
+    const desc = document.getElementById('descripcion').value;
+    if (!nombre) return showToast("Escribe un nombre primero", "warning");
 
-        if (error) throw error;
-
-        showToast(val ? "Quitado de destacados" : "¡Destacado activado!", "success");
-        await cargarAdmin(); 
-
-    } catch (err) {
-        console.error("Error toggleDestacado:", err);
-        showToast("Error de conexión.", "error");
-    }
+    const loader = document.getElementById('loader-ia');
+    const txtArea = document.getElementById('curiosidad');
+    
+    if(loader) loader.style.display = 'block';
+    txtArea.value = "Generando curiosidad creativa...";
+    
+    // Simulación rápida (aquí podrías conectar tu API real)
+    setTimeout(() => {
+        if(loader) loader.style.display = 'none';
+        txtArea.value = `¿Sabías que el ${nombre} es ideal para acompañar momentos nocturnos? Su sabor único resalta más con buena música.`;
+    }, 1500);
 }
 
+// 5. NAVEGACIÓN TABS
+function cambiarVista(vista) {
+    document.querySelectorAll('.vista-seccion').forEach(el => {
+        el.classList.remove('active');
+        el.style.display = 'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+    const target = document.getElementById(`vista-${vista}`);
+    if (target) {
+        target.style.display = 'block';
+        setTimeout(() => target.classList.add('active'), 10);
+    }
+
+    const map = { 'inventario': 0, 'opiniones': 1, 'visitas': 2 };
+    const btns = document.querySelectorAll('.tab-btn');
+    if(btns[map[vista]]) btns[map[vista]].classList.add('active');
+
+    // Cargas perezosas de otras pestañas
+    if (vista === 'visitas' && typeof window.cargarMetricasVisitas === 'function') window.cargarMetricasVisitas();
+    if (vista === 'opiniones' && typeof window.cargarOpiniones === 'function') window.cargarOpiniones(); 
+}
+
+// EXPORTAR FUNCIONES AL HTML (Crucial para que los onclick funcionen)
+window.prepararEdicion = prepararEdicion;
+window.toggleDestacado = toggleDestacado;
+window.toggleEstado = toggleEstado;
+window.eliminarProducto = eliminarProducto;
+window.restaurarProducto = restaurarProducto;
+window.cambiarVista = cambiarVista;
+window.buscarInventario = buscarInventario;
+window.cancelarEdicion = cancelarEdicion;
+window.generarCuriosidadIA = generarCuriosidadIA;
+window.cerrarSesion = cerrarSesion;
+
+// INICIO
 document.addEventListener('DOMContentLoaded', checkAuth);
