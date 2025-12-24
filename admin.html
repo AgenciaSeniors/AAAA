@@ -182,16 +182,30 @@
                 <div style="display:flex; flex-direction:column; gap:20px;">
                     
                     <div class="metrics-grid">
-                        <div class="metric-card">
-                            <span class="metric-value" id="stat-hoy">--</span>
-                            <span class="metric-label">Visitas Hoy</span>
-                            <small id="trend-hoy" style="color:#888; display:block; margin-top:5px;">...</small>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-value" id="stat-mes">--</span>
-                            <span class="metric-label">Este Mes</span>
-                        </div>
-                    </div>
+    <div class="metric-card">
+        <div style="display:flex; align-items: baseline; gap:8px;">
+            <span class="metric-value" id="stat-hoy">--</span>
+            <small id="pct-hoy" title="Comparado con ayer" style="font-size:0.8rem; font-weight:bold;"></small>
+        </div>
+        <span class="metric-label">Visitas Hoy</span>
+    </div>
+    <div class="metric-card">
+        <span class="metric-value" id="stat-ayer">--</span>
+        <span class="metric-label">Ayer</span>
+    </div>
+    <div class="metric-card">
+        <span class="metric-value" id="stat-semana">--</span>
+        <span class="metric-label">Esta Semana</span>
+    </div>
+    <div class="metric-card">
+        <span class="metric-value" id="stat-mes">--</span>
+        <span class="metric-label">Este Mes</span>
+    </div>
+    <div class="metric-card">
+        <span class="metric-value" id="stat-anio">--</span>
+        <span class="metric-label">Este Año</span>
+    </div>
+</div>
 
                     <div class="reviews-zone">
                         <h4 style="color:var(--gold); margin-bottom:15px;">📊 Tendencia (Últimos 15 días)</h4>
