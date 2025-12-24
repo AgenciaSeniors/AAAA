@@ -270,6 +270,7 @@ async cargarMetricasVisitas() {
             this.setVal('stat-semana', c.semana);
             this.setVal('stat-mes', c.mes);
             this.setVal('stat-anio', c.anio);
+            this.setVal('stat-unique-clients', c.total_historico);
 
             // 2. Cálculo del porcentaje comparativo (Hoy vs Ayer)
             const pctEl = document.getElementById('pct-hoy');
