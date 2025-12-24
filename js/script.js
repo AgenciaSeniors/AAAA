@@ -130,40 +130,42 @@ function renderizarMenu(lista) {
         contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px;"><h4>No hay resultados</h4></div>';
         return;
     }
-    // 1. Mapa de Categorías
+
+    // 1. Mapa de Categorías (se mantiene igual)
     const nombresCat = {
         'cocteles': 'Cócteles de la Casa 🍸',
         'cervezas': 'Cervezas Frías 🍺',
         'licores': 'Vinos y Licores 🍷',
-        'tapas': 'Para Picar 🍟',          // <--- Subimos la comida
-        'italiana': 'Pizzas y Pastas 🍕',   // <--- Comida principal
-        'fuertes': 'Platos Fuertes 🍽️',    // <--- Comida fuerte
-        'bebidas_sin': 'Refrescos y Jugos 🥤', // <--- S/ Alcohol al final
+        'tapas': 'Para Picar 🍟',
+        'italiana': 'Pizzas y Pastas 🍕',
+        'fuertes': 'Platos Fuertes 🍽️',
+        'bebidas_sin': 'Refrescos y Jugos 🥤',
         'otros': 'Otros 🍴'
     };
 
     // 2. Agrupamos los productos
     const categorias = {};
     
-    // --- NUEVO ORDEN LÓGICO ---
-    const orden = [
-        'cocteles', 
-        'cervezas', 
-        'licores', 
-        'tapas',       // Comida ligera después del alcohol
-        'italiana',    // Comida media
-        'fuertes',     // Comida pesada
-        'bebidas_sin'  // Refrescos al final
-    ];
-    // ---------------------------
-
     lista.forEach(item => {
         const cat = item.categoria || 'otros';
         if (!categorias[cat]) categorias[cat] = [];
         categorias[cat].push(item);
     });
 
-    // 3. Generamos el HTML respetando el orden
+    // --- NUEVO: Ordenar productos dentro de cada categoría ---
+    // Esto hace que los 'destacado' (TOP) suban al principio de su sección
+    Object.keys(categorias).forEach(catKey => {
+        categorias[catKey].sort((a, b) => {
+            // Si 'a' es destacado y 'b' no, 'a' va primero
+            if (a.destacado && !b.destacado) return -1;
+            // Si 'b' es destacado y 'a' no, 'b' va primero
+            if (!a.destacado && b.destacado) return 1;
+            return 0; // Si ambos son iguales, mantienen su orden
+        });
+    });
+
+    // 3. Generamos el HTML respetando el orden de categorías (se mantiene igual)
+    const orden = ['cocteles', 'cervezas', 'licores', 'tapas', 'italiana', 'fuertes', 'bebidas_sin'];
     let htmlFinal = '';
 
     orden.forEach(catKey => {
@@ -173,13 +175,13 @@ function renderizarMenu(lista) {
         }
     });
 
+    // Resto de categorías no listadas en 'orden'
     Object.keys(categorias).forEach(catKey => {
         const titulo = nombresCat[catKey] || catKey.toUpperCase();
         htmlFinal += construirSeccionHTML(catKey, titulo, categorias[catKey]);
     });
 
     contenedor.innerHTML = htmlFinal;
-    
     setTimeout(iniciarScrollSpy, 100); 
 }
 // Función auxiliar para crear el bloque HTML de cada sección

@@ -15,15 +15,30 @@ function validarEntradasRegistro(nombre, telefono) {
 }
 const SocialService = {
     // --- BIENVENIDA Y VISITAS ---
-    async checkWelcome() {
-        const clienteId = localStorage.getItem('cliente_id');
-        const modal = document.getElementById('modal-welcome');
-        if (clienteId || sessionStorage.getItem('es_invitado') === 'true') {
-            if (modal) modal.style.display = 'none';
-        } else if (modal) {
+    // Reemplaza checkWelcome en js/social-service.js
+async checkWelcome() {
+    const clienteId = localStorage.getItem('cliente_id');
+    const nombre = localStorage.getItem('cliente_nombre');
+    const modal = document.getElementById('modal-welcome');
+
+    if (clienteId) {
+        // EL USUARIO YA ESTÁ REGISTRADO:
+        if (modal) modal.style.display = 'none';
+        
+        // Le damos el mensaje de bienvenida cada vez que entra
+        if (nombre) {
+            setTimeout(() => {
+                showToast(`¡Qué bueno verte de nuevo, ${nombre}!`, "success");
+            }, 1500); // Un pequeño retraso para que la página cargue visualmente primero
+        }
+    } else {
+        // EL USUARIO NO ESTÁ REGISTRADO (o entró como anónimo la vez anterior):
+        // Mostramos el modal SIEMPRE hasta que decida registrarse
+        if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
         }
+    }
     },
 
     async registrarBienvenida() {
@@ -151,7 +166,10 @@ const SocialService = {
         if (data && container) {
             container.innerHTML = data.map((c, i) => `<div>${['👑','🥇','🥈'][i] || '👤'} ${c.nombre} (${c.total_visitas})</div>`).join('');
         }
-    }
+    },
+    entrarComoAnonimo() {
+    this.cerrarWelcome(); // Cierra el modal
+    },
 };
 
 // COMPATIBILIDAD CON HTML
