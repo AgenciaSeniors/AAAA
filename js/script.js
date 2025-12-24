@@ -67,36 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
     registrarServiceWorker();
     loadDynamicHero();
 });
-function limpiarTelefono(input) {
-    if (!input) return "";
-    let limpio = input.replace(/\D/g, '');
-    if (limpio.length === 10 && limpio.startsWith('53')) {
-        limpio = limpio.substring(2);
-    }
-    return limpio;
-}
-
-function validarEntradasRegistro(nombre, telefono) {
-    if (!nombre || nombre.length < 3) {
-        showToast("El nombre debe tener al menos 3 letras.", "warning");
-        return false;
-    }
-    const nombreRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
-    if (!nombreRegex.test(nombre)) {
-        showToast("El nombre solo puede contener letras.", "warning");
-        return false;
-    }
-    const telefonoRegex = /^\d{8}$/;
-    if (!telefono) {
-        showToast("El teléfono es obligatorio.", "warning");
-        return false;
-    }
-    if (!telefonoRegex.test(telefono)) {
-        showToast("Ingresa un número válido de 8 dígitos.", "warning");
-        return false;
-    }
-    return true;
-}
 
 
 
