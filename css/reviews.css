@@ -182,3 +182,23 @@
     .reviews-grid { grid-template-columns: 1fr; }
     .filter-pill { padding: 8px 16px; font-size: 0.8rem; }
 }
+/* Animación de entrada para las vistas del admin */
+.vista-seccion {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.4s ease-out;
+}
+
+.vista-seccion.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Mejora para el contenedor de VIPs */
+#top-clientes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}

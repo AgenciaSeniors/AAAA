@@ -246,38 +246,57 @@ const SocialService = {
 
     // --- 4. MÉTRICAS VISITAS ---
     async cargarMetricasVisitas() {
-        const ahora = new Date();
-        const { data } = await supabaseClient.rpc('obtener_contadores_dashboard', {
-            fecha_inicio_dia: new Date(ahora.setHours(0,0,0,0)).toISOString(),
-            fecha_inicio_mes: new Date(ahora.setDate(1)).toISOString()
+    // Corregimos la mutación de fechas creando objetos independientes
+    const hoyInicio = new Date();
+    hoyInicio.setHours(0,0,0,0);
+    
+    const mesInicio = new Date();
+    mesInicio.setDate(1);
+    mesInicio.setHours(0,0,0,0);
+
+    try {
+        const { data, error } = await supabaseClient.rpc('obtener_contadores_dashboard', {
+            fecha_inicio_dia: hoyInicio.toISOString(),
+            fecha_inicio_mes: mesInicio.toISOString()
         });
-        if (data) {
-            if (document.getElementById('stat-hoy')) document.getElementById('stat-hoy').textContent = data.diario || 0;
-            if (document.getElementById('stat-mes')) document.getElementById('stat-mes').textContent = data.mensual || 0;
+        
+        if (error) throw error;
+
+        if (data && data[0]) {
+            if (document.getElementById('stat-hoy')) document.getElementById('stat-hoy').textContent = data[0].diario || 0;
+            if (document.getElementById('stat-mes')) document.getElementById('stat-mes').textContent = data[0].mensual || 0;
         }
-        this.cargarTopClientes();
-    },
+    } catch (err) {
+        console.error("Error en métricas:", err);
+    }
+    this.cargarTopClientes();
+},
 
     async cargarTopClientes() {
-        // Lista VIP
-        const { data } = await supabaseClient.rpc('obtener_top_clientes');
-        const container = document.getElementById('top-clientes-list');
-        if (data && container) {
-            container.innerHTML = data.map((c, i) => 
-                `<div class="inventory-item">
-                    <span style="font-size:1.2rem; margin-right:10px;">${['👑','🥇','🥈'][i] || '👤'}</span>
-                    <div style="flex-grow:1;"><strong>${c.nombre}</strong></div>
-                    <div style="color:var(--gold); font-weight:bold;">${c.total_visitas} visitas</div>
-                 </div>`
-            ).join('');
-        }
-
-        // Conteo TOTAL de clientes (Arregla "no se cuenta el total")
-        const { count } = await supabaseClient.from('clientes').select('*', { count: 'exact', head: true });
-        if (document.getElementById('stat-unique-clients')) {
-            document.getElementById('stat-unique-clients').textContent = count || 0;
-        }
+    const { data, error } = await supabaseClient.rpc('obtener_top_clientes');
+    const container = document.getElementById('top-clientes-list');
+    
+    if (error || !data) {
+        container.innerHTML = '<p style="text-align:center; color:#666;">No hay datos VIP aún.</p>';
+        return;
     }
+
+    // Cambiamos el renderizado para usar clases de reviews.css y mejorar la estética
+    container.innerHTML = data.map((c, i) => {
+        const medal = ['🥇', '🥈', '🥉'][i] || '👤';
+        return `
+            <div class="review-card" style="margin-bottom:10px; padding:15px; flex-direction:row; align-items:center; gap:15px;">
+                <div class="user-avatar" style="width:50px; height:50px; font-size:1.5rem;">${medal}</div>
+                <div style="flex-grow:1;">
+                    <h4 style="margin:0; color:white;">${c.nombre}</h4>
+                    <span style="font-size:0.75rem; color:var(--gold);">CLIENTE FRECUENTE</span>
+                </div>
+                <div class="review-rating" style="background:rgba(255,215,0,0.1); color:var(--gold); border:1px solid var(--gold);">
+                    ${c.total_visitas} visitas
+                </div>
+            </div>`;
+    }).join('');
+}
 };
 
 // EXPOSICIÓN GLOBAL
