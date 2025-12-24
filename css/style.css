@@ -7,7 +7,8 @@
     /* --- PALETA NEON NOIR --- */
     --bg-noir: #050505;       /* Fondo Base: Negro Profundo */
     --bg-surface: #0f0f0f;    /* Superficies: Casi negro */
-    
+    --gold: #FFD700; /* Añade esta línea para que el dorado funcione */
+    --gold-glow: rgba(255, 215, 0, 0.5); /* Brillo dorado */
     /* Colores Neón (Alta Saturación) */
     --neon-red: #FF003C;      /* Rojo Vida (Botones, Ofertas) */
     --neon-green: #CCFF00;    /* Verde Lima (Precios) */

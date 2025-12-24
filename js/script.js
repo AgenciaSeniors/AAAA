@@ -411,13 +411,53 @@ function cerrarDetalle() {
 
 
 // Estrellas
+// --- LÓGICA DE ESTRELLAS INTERACTIVAS (MEJORADA) ---
 const starsContainer = document.getElementById('stars-container');
 if(starsContainer) {
+    const estrellas = starsContainer.querySelectorAll('span');
+
+    // 1. Efecto al pasar el ratón (Hover)
+    estrellas.forEach(star => {
+        star.addEventListener('mouseenter', () => {
+            const val = parseInt(star.dataset.val);
+            pintarEstrellasVisual(val, true); // true = modo previsualización
+        });
+    });
+
+    // 2. Al sacar el ratón, vuelve a la nota que habías marcado
+    starsContainer.addEventListener('mouseleave', () => {
+        const notaGuardada = AppStore.state.reviewScore || 0;
+        pintarEstrellasVisual(notaGuardada, false);
+    });
+
+    // 3. Al hacer clic (Guardar nota)
     starsContainer.addEventListener('click', (e) => {
         if (e.target.tagName === 'SPAN') {
-            AppStore.setReviewScore(parseInt(e.target.dataset.val));
-            actualizarEstrellas();
+            const val = parseInt(e.target.dataset.val);
+            AppStore.setReviewScore(val);
+            pintarEstrellasVisual(val, false);
+            
+            // Pequeña animación de "pop" al pulsar
+            e.target.style.transform = "scale(1.4)";
+            setTimeout(() => e.target.style.transform = "scale(1)", 200);
         }
+    });
+}
+
+// Función auxiliar para pintar rápido sin esperar a la base de datos
+function pintarEstrellasVisual(nota, esPreview) {
+    const estrellas = document.querySelectorAll('#stars-container span');
+    estrellas.forEach(s => {
+        const sVal = parseInt(s.dataset.val);
+        // Si es preview usamos un amarillo pálido, si es fijo usamos el dorado fuerte
+        const colorActivo = esPreview ? '#fff5cc' : 'var(--gold)'; 
+        const colorInactivo = '#333'; // Gris oscuro para las apagadas
+        
+        s.style.color = sVal <= nota ? colorActivo : colorInactivo;
+        s.style.transition = "color 0.1s, transform 0.2s"; // Suavidad
+        
+        // Efecto de brillo si está activa
+        s.style.textShadow = (sVal <= nota && !esPreview) ? "0 0 10px var(--gold-glow)" : "none";
     });
 }
 
