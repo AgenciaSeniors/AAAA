@@ -85,13 +85,25 @@ const SocialService = {
         if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 400); }
     },
     abrirOpinionDesdeDetalle() {
-        cerrarDetalle();
+        // 1. Rescatamos el producto ANTES de cerrar el detalle
+        const productoActual = AppStore.getActiveProduct();
+        
+        cerrarDetalle(); // Esto borra el activeProduct en script.js, pero ya tenemos copia
+        
+        // 2. Lo restauramos inmediatamente para que 'enviarOpinion' sepa qué estamos calificando
+        if (productoActual) {
+            AppStore.state.activeProduct = productoActual;
+        }
+
         const modal = document.getElementById('modal-opinion');
         if (!modal) return;
+        
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('active'), 10);
+        
         const nombre = localStorage.getItem('cliente_nombre');
         if (nombre) document.getElementById('cliente-nombre').value = nombre;
+        
         AppStore.setReviewScore(0);
         this.actualizarEstrellas();
     },
@@ -148,18 +160,65 @@ const SocialService = {
     renderizarOpiniones(lista) {
         const container = document.getElementById('grid-opiniones');
         if (!container) return;
-        container.innerHTML = lista.map(op => `
+        
+        if (!lista || lista.length === 0) {
+            container.innerHTML = '<p style="color:#666; text-align:center; width:100%;">No hay opiniones aún.</p>';
+            return;
+        }
+
+        container.innerHTML = lista.map(op => {
+            // Formateo de fecha
+            const fecha = new Date(op.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+            // Inicial para el avatar
+            const inicial = op.cliente_nombre ? op.cliente_nombre.charAt(0).toUpperCase() : '?';
+            // Color de las estrellas según la nota
+            const colorEstrella = op.puntuacion >= 4 ? 'var(--gold)' : (op.puntuacion < 3 ? 'var(--neon-red)' : '#ccc');
+
+            return `
             <div class="review-card">
                 <div class="review-header">
-                    <img src="${op.productos?.imagen_url || 'img/logo.png'}">
-                    <span>${op.productos?.nombre || 'Producto'}</span>
+                    <div class="user-profile">
+                        <div class="user-avatar">${inicial}</div>
+                        <div class="user-info">
+                            <h4>${op.cliente_nombre || 'Anónimo'}</h4>
+                            <span class="review-date">${fecha}</span>
+                        </div>
+                    </div>
+                    <div class="review-rating" style="color: ${colorEstrella}">
+                        ${"★".repeat(op.puntuacion)}
+                    </div>
                 </div>
+
                 <div class="review-body">
-                    <strong>${op.cliente_nombre}</strong>
-                    <p>"${op.comentario}"</p>
-                    <span>${"⭐".repeat(op.puntuacion)}</span>
+                    <p class="review-text">"${op.comentario}"</p>
                 </div>
-            </div>`).join('');
+
+                <div class="review-footer">
+                    <div class="product-tag">
+                        <img src="${op.productos?.imagen_url || 'img/logo.png'}" alt="prod">
+                        <span>${op.productos?.nombre || 'Producto eliminado'}</span>
+                    </div>
+                    <button class="btn-delete-icon" onclick="eliminarOpinion(${op.id})" title="Borrar opinión">
+                        <span class="material-icons">delete_outline</span>
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    // AÑADE TAMBIÉN ESTA FUNCIÓN NUEVA DENTRO DE SocialService PARA PODER BORRAR
+    async eliminarOpinion(id) {
+        if(!confirm("¿Borrar esta opinión permanentemente?")) return;
+        
+        const { error } = await supabaseClient.from('opiniones').delete().eq('id', id);
+        if (error) {
+            alert("Error al borrar: " + error.message);
+        } else {
+            // Recargamos la lista visualmente
+            this.cargarOpiniones(); 
+            // Opcional: mostrar un toast si tienes la función disponible
+            if(typeof showToast === 'function') showToast("Opinión eliminada", "success");
+        }
     },
 
     // --- MÉTRICAS ---
@@ -189,6 +248,7 @@ const SocialService = {
 
 // COMPATIBILIDAD CON HTML
 window.checkWelcome = () => SocialService.checkWelcome();
+window.eliminarOpinion = (id) => SocialService.eliminarOpinion(id);
 window.entrarComoAnonimo = () => SocialService.entrarComoAnonimo();
 window.registrarBienvenida = () => SocialService.registrarBienvenida();
 window.cargarOpiniones = () => SocialService.cargarOpiniones();

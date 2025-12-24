@@ -1,137 +1,175 @@
-/* reviews.css - Estilos del Panel de Opiniones (Responsive) */
+/* reviews.css - Rediseño Premium de Opiniones */
 
-/* 1. Métricas Superiores */
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 25px;
-}
-
-.metric-card {
-    background: linear-gradient(145deg, #1e1e24, #141418);
-    padding: 20px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-}
-
-.metric-value { font-size: 2rem; font-weight: 800; color: white; display: block; margin: 5px 0; }
-.metric-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-
-/* 2. Filtros */
-.reviews-filter {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    overflow-x: auto; /* Permite scroll lateral en móvil */
-    padding-bottom: 5px;
-    -webkit-overflow-scrolling: touch; /* Suavidad en iOS */
-    scrollbar-width: none; /* Ocultar scrollbar en Firefox */
-}
-.reviews-filter::-webkit-scrollbar { display: none; } /* Ocultar en Chrome/Safari */
-
-.filter-pill {
-    background: transparent;
-    border: 1px solid #444;
-    color: #ccc;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: 0.3s;
-    white-space: nowrap; /* Evita que el texto se rompa */
-}
-.filter-pill.active { background: var(--gold); color: black; border-color: var(--gold); font-weight: bold; }
-
-/* 3. Grid de Opiniones */
+/* 1. GRID PRINCIPAL */
 .reviews-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
+    padding-bottom: 40px;
 }
 
+/* 2. TARJETA DE OPINIÓN */
 .review-card {
-    background: #1a1a20;
-    border-radius: 12px;
+    background: #1e1e24; /* Fondo oscuro base */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
     padding: 20px;
-    border: 1px solid rgba(255,255,255,0.05);
-    position: relative; /* Necesario para el botón absoluto */
-    transition: transform 0.2s;
-    display: flex;       /* Flex para empujar el footer abajo */
+    display: flex;
     flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
-.review-card:hover { transform: translateY(-3px); border-color: rgba(255, 215, 0, 0.3); }
 
-.review-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-.review-stars { color: var(--gold); letter-spacing: 2px; font-size: 1rem; }
-.review-date { font-size: 0.7rem; color: #666; }
-
-.review-product {
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; margin-bottom: 15px;
+.review-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border-color: var(--gold);
 }
-.review-prod-img { width: 35px; height: 35px; border-radius: 6px; object-fit: cover; }
-.review-prod-name { font-size: 0.85rem; font-weight: 600; color: #ddd; }
 
-.review-body { color: #aaa; font-size: 0.9rem; line-height: 1.5; font-style: italic; margin-bottom: 15px; }
-.review-footer { margin-top: auto; /* Empuja el autor al fondo */ }
-.review-author { font-size: 0.8rem; color: white; font-weight: bold; }
-.review-email { display: block; font-size: 0.75rem; color: #555; font-weight: normal; }
-
-.btn-delete-review {
-    position: absolute; bottom: 15px; right: 15px;
-    background: none; border: none; color: #444; cursor: pointer;
-    transition: 0.2s;
-    padding: 5px;
+/* Decoración sutil de fondo */
+.review-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent);
+    border-radius: 0 0 0 100%;
+    pointer-events: none;
 }
-.btn-delete-review:hover { color: var(--red-danger); transform: scale(1.1); }
 
-/* =========================================
-   4. AJUSTES RESPONSIVE (MÓVIL)
-   ========================================= */
-@media (max-width: 768px) {
-    /* Métricas en cuadrícula más compacta (2 columnas) o pila */
-    .metrics-grid {
-        grid-template-columns: 1fr 1fr; /* 2 columnas en móvil */
-        gap: 10px;
-    }
-    /* Tarjeta destacada ocupa todo el ancho */
-    .metric-card:last-child {
-        grid-column: 1 / -1; 
-    }
+/* 3. CABECERA (Usuario + Estrellas) */
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
 
-    .metric-value { font-size: 1.5rem; }
-    .metric-card { padding: 15px; }
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-    /* Filtros más cómodos al tacto */
-    .filter-pill {
-        padding: 8px 20px;
-        font-size: 0.9rem;
-    }
+.user-avatar {
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, #333, #444);
+    color: var(--gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.1rem;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
 
-    /* Opiniones en una sola columna para leer bien */
+.user-info h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: white;
+    font-weight: 600;
+}
+
+.review-date {
+    font-size: 0.7rem;
+    color: #777;
+    display: block;
+    margin-top: 2px;
+}
+
+.review-rating {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    background: rgba(0,0,0,0.3);
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+
+/* 4. CUERPO (Texto) */
+.review-body {
+    margin-bottom: 20px;
+    flex-grow: 1;
+}
+
+.review-text {
+    color: #bbb;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    font-style: italic;
+    background: rgba(255,255,255,0.02);
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 2px solid rgba(255,255,255,0.1);
+}
+
+/* 5. FOOTER (Producto + Botones) */
+.review-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.product-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.4);
+    padding: 5px 10px 5px 5px;
+    border-radius: 20px;
+    border: 1px solid #333;
+}
+
+.product-tag img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #555;
+}
+
+.product-tag span {
+    font-size: 0.75rem;
+    color: #ccc;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+/* Botón de eliminar */
+.btn-delete-icon {
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 8px;
+    border-radius: 50%;
+}
+
+.btn-delete-icon:hover {
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+    transform: rotate(10deg);
+}
+
+/* Responsive para Móvil */
+@media (max-width: 480px) {
     .reviews-grid {
-        grid-template-columns: 1fr; 
-        gap: 15px;
+        grid-template-columns: 1fr;
     }
-
     .review-card {
         padding: 15px;
-        padding-bottom: 50px; /* Espacio extra para el botón de borrar */
     }
-
-    /* El botón de borrar se hace más grande y fácil de tocar */
-    .btn-delete-review {
-        bottom: 10px;
-        right: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 50%;
-        width: 35px;
-        height: 35px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .product-tag span {
+        max-width: 100px;
     }
 }
