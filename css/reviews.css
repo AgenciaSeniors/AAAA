@@ -1,6 +1,62 @@
-/* reviews.css - Rediseño Premium de Opiniones */
+/* reviews.css - Diseño Premium y Responsive */
 
-/* 1. GRID PRINCIPAL */
+/* 1. MÉTRICAS SUPERIORES */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.metric-card {
+    background: #1e1e24;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+}
+
+.metric-value { font-size: 2.2rem; font-weight: 800; color: white; line-height: 1; margin-bottom: 5px; }
+.metric-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; }
+
+/* 2. FILTROS (DISEÑO PÍLDORA MEJORADO) */
+.reviews-filter {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 25px;
+    overflow-x: auto;
+    padding: 5px 2px 15px 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.reviews-filter::-webkit-scrollbar { display: none; }
+
+.filter-pill {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #ccc;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    white-space: nowrap;
+}
+
+.filter-pill:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+
+.filter-pill.active {
+    background: var(--gold);
+    color: black;
+    border-color: var(--gold);
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    transform: scale(1.05);
+}
+
+/* 3. GRID DE OPINIONES */
 .reviews-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -8,9 +64,9 @@
     padding-bottom: 40px;
 }
 
-/* 2. TARJETA DE OPINIÓN */
+/* 4. TARJETA DE OPINIÓN */
 .review-card {
-    background: #1e1e24; /* Fondo oscuro base */
+    background: #1a1a20;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
     padding: 20px;
@@ -24,22 +80,11 @@
 
 .review-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    border-color: var(--gold);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 215, 0, 0.3);
 }
 
-/* Decoración sutil de fondo */
-.review-card::before {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 80px; height: 80px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent);
-    border-radius: 0 0 0 100%;
-    pointer-events: none;
-}
-
-/* 3. CABECERA (Usuario + Estrellas) */
+/* Header: Avatar y Fecha */
 .review-header {
     display: flex;
     justify-content: space-between;
@@ -47,40 +92,20 @@
     margin-bottom: 15px;
 }
 
-.user-profile {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
+.user-profile { display: flex; align-items: center; gap: 12px; }
 
 .user-avatar {
-    width: 42px;
-    height: 42px;
+    width: 40px; height: 40px;
     background: linear-gradient(135deg, #333, #444);
     color: var(--gold);
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     font-weight: 800;
-    font-size: 1.1rem;
-    border: 1px solid rgba(255, 215, 0, 0.3);
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255, 215, 0, 0.2);
 }
 
-.user-info h4 {
-    margin: 0;
-    font-size: 0.95rem;
-    color: white;
-    font-weight: 600;
-}
-
-.review-date {
-    font-size: 0.7rem;
-    color: #777;
-    display: block;
-    margin-top: 2px;
-}
+.user-info h4 { margin: 0; font-size: 0.95rem; color: white; font-weight: 600; }
+.review-date { font-size: 0.7rem; color: #777; display: block; margin-top: 2px; }
 
 .review-rating {
     font-size: 1rem;
@@ -90,24 +115,21 @@
     border-radius: 8px;
 }
 
-/* 4. CUERPO (Texto) */
-.review-body {
-    margin-bottom: 20px;
-    flex-grow: 1;
-}
+/* Cuerpo */
+.review-body { margin-bottom: 20px; flex-grow: 1; }
 
 .review-text {
     color: #bbb;
     font-size: 0.9rem;
     line-height: 1.5;
     font-style: italic;
-    background: rgba(255,255,255,0.02);
+    background: rgba(255,255,255,0.03);
     padding: 12px;
     border-radius: 8px;
     border-left: 2px solid rgba(255,255,255,0.1);
 }
 
-/* 5. FOOTER (Producto + Botones) */
+/* Footer: Producto y Borrar */
 .review-footer {
     display: flex;
     justify-content: space-between;
@@ -117,59 +139,46 @@
 }
 
 .product-tag {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: flex; align-items: center; gap: 8px;
     background: rgba(0,0,0,0.4);
-    padding: 5px 10px 5px 5px;
+    padding: 5px 12px 5px 5px;
     border-radius: 20px;
     border: 1px solid #333;
+    max-width: 80%;
 }
 
 .product-tag img {
-    width: 28px;
-    height: 28px;
+    width: 24px; height: 24px;
     border-radius: 50%;
     object-fit: cover;
-    border: 1px solid #555;
 }
 
 .product-tag span {
-    font-size: 0.75rem;
-    color: #ccc;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px;
+    font-size: 0.75rem; color: #ccc;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Botón de eliminar */
 .btn-delete-icon {
     background: transparent;
     border: none;
-    color: #555;
+    color: #666;
     cursor: pointer;
-    transition: all 0.2s;
     padding: 8px;
     border-radius: 50%;
+    transition: 0.2s;
 }
 
 .btn-delete-icon:hover {
     color: #ff4444;
     background: rgba(255, 68, 68, 0.1);
-    transform: rotate(10deg);
+    transform: scale(1.1);
 }
 
-/* Responsive para Móvil */
-@media (max-width: 480px) {
-    .reviews-grid {
-        grid-template-columns: 1fr;
-    }
-    .review-card {
-        padding: 15px;
-    }
-    .product-tag span {
-        max-width: 100px;
-    }
+/* RESPONSIVE MÓVIL */
+@media (max-width: 768px) {
+    .metrics-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric-card:last-child { grid-column: 1 / -1; }
+    .metric-value { font-size: 1.8rem; }
+    .reviews-grid { grid-template-columns: 1fr; }
+    .filter-pill { padding: 8px 16px; font-size: 0.8rem; }
 }

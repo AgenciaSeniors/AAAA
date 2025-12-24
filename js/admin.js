@@ -382,6 +382,9 @@ function cambiarVista(vista) {
     // Cargas perezosas de otras pestañas
     if (vista === 'visitas' && typeof window.cargarMetricasVisitas === 'function') window.cargarMetricasVisitas();
     if (vista === 'opiniones' && typeof window.cargarOpiniones === 'function') window.cargarOpiniones(); 
+    if (vista === 'opiniones' && typeof cargarOpiniones === 'function') {
+        cargarOpiniones(); 
+    }
 }
 
 // EXPORTAR FUNCIONES AL HTML (Crucial para que los onclick funcionen)
