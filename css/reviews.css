@@ -1,4 +1,4 @@
-/* reviews.css - Estilos del Panel de Opiniones */
+/* reviews.css - Estilos del Panel de Opiniones (Responsive) */
 
 /* 1. Métricas Superiores */
 .metrics-grid {
@@ -25,9 +25,12 @@
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    overflow-x: auto;
+    overflow-x: auto; /* Permite scroll lateral en móvil */
     padding-bottom: 5px;
+    -webkit-overflow-scrolling: touch; /* Suavidad en iOS */
+    scrollbar-width: none; /* Ocultar scrollbar en Firefox */
 }
+.reviews-filter::-webkit-scrollbar { display: none; } /* Ocultar en Chrome/Safari */
 
 .filter-pill {
     background: transparent;
@@ -38,7 +41,7 @@
     font-size: 0.8rem;
     cursor: pointer;
     transition: 0.3s;
-    white-space: nowrap;
+    white-space: nowrap; /* Evita que el texto se rompa */
 }
 .filter-pill.active { background: var(--gold); color: black; border-color: var(--gold); font-weight: bold; }
 
@@ -54,8 +57,10 @@
     border-radius: 12px;
     padding: 20px;
     border: 1px solid rgba(255,255,255,0.05);
-    position: relative;
+    position: relative; /* Necesario para el botón absoluto */
     transition: transform 0.2s;
+    display: flex;       /* Flex para empujar el footer abajo */
+    flex-direction: column;
 }
 .review-card:hover { transform: translateY(-3px); border-color: rgba(255, 215, 0, 0.3); }
 
@@ -71,7 +76,7 @@
 .review-prod-name { font-size: 0.85rem; font-weight: 600; color: #ddd; }
 
 .review-body { color: #aaa; font-size: 0.9rem; line-height: 1.5; font-style: italic; margin-bottom: 15px; }
-.review-footer { margin-top: auto; }
+.review-footer { margin-top: auto; /* Empuja el autor al fondo */ }
 .review-author { font-size: 0.8rem; color: white; font-weight: bold; }
 .review-email { display: block; font-size: 0.75rem; color: #555; font-weight: normal; }
 
@@ -79,5 +84,54 @@
     position: absolute; bottom: 15px; right: 15px;
     background: none; border: none; color: #444; cursor: pointer;
     transition: 0.2s;
+    padding: 5px;
 }
-.btn-delete-review:hover { color: var(--red-danger); }
+.btn-delete-review:hover { color: var(--red-danger); transform: scale(1.1); }
+
+/* =========================================
+   4. AJUSTES RESPONSIVE (MÓVIL)
+   ========================================= */
+@media (max-width: 768px) {
+    /* Métricas en cuadrícula más compacta (2 columnas) o pila */
+    .metrics-grid {
+        grid-template-columns: 1fr 1fr; /* 2 columnas en móvil */
+        gap: 10px;
+    }
+    /* Tarjeta destacada ocupa todo el ancho */
+    .metric-card:last-child {
+        grid-column: 1 / -1; 
+    }
+
+    .metric-value { font-size: 1.5rem; }
+    .metric-card { padding: 15px; }
+
+    /* Filtros más cómodos al tacto */
+    .filter-pill {
+        padding: 8px 20px;
+        font-size: 0.9rem;
+    }
+
+    /* Opiniones en una sola columna para leer bien */
+    .reviews-grid {
+        grid-template-columns: 1fr; 
+        gap: 15px;
+    }
+
+    .review-card {
+        padding: 15px;
+        padding-bottom: 50px; /* Espacio extra para el botón de borrar */
+    }
+
+    /* El botón de borrar se hace más grande y fácil de tocar */
+    .btn-delete-review {
+        bottom: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
