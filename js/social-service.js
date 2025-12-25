@@ -276,6 +276,7 @@ async cargarMetricasVisitas() {
             trendEl.innerHTML = `<span style="color:${color}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(0)}%</span> vs ayer`;
         }
         this.cargarTopClientes();
+        this.dibujarGraficos();
     } catch (e) { console.error(e); }
 },
 
