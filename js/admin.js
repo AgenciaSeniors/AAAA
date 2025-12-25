@@ -263,7 +263,33 @@ function cancelarEdicion() {
     document.getElementById('btn-cancelar').style.display = "none";
 }
 
-// Manejo del Submit
+async function optimizarImagenLocal(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600;
+                const scaleSize = MAX_WIDTH / img.width;
+                
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // Exportamos a WebP (muy similar a AVIF pero con soporte nativo más rápido en Canvas)
+                // Usamos calidad 0.7 para asegurar que pese menos de 40kb
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/webp', 0.7); 
+            };
+        };
+    });
+}
 const form = document.getElementById('form-producto');
 if(form) {
     form.addEventListener('submit', async (e) => {
@@ -285,9 +311,23 @@ if(form) {
 
             const fileInput = document.getElementById('imagen-file');
             if (fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const fileName = `prod_${Date.now()}.${file.name.split('.').pop()}`;
-                const { error: upErr } = await supabaseClient.storage.from('imagenes').upload(fileName, file);
+                let file = fileInput.files[0];
+                
+                showToast("Optimizando instantáneamente...", "info");
+                
+                // Compresión local en milisegundos antes de subir
+                const blobOptimizado = await optimizarImagenLocal(file);
+                
+                // Forzamos extensión .webp
+                const fileName = `prod_${Date.now()}.webp`; 
+                
+                const { error: upErr } = await supabaseClient.storage
+                    .from('imagenes')
+                    .upload(fileName, blobOptimizado, {
+                        contentType: 'image/webp',
+                        upsert: true
+                    });
+
                 if (upErr) throw upErr;
                 
                 const { data } = supabaseClient.storage.from('imagenes').getPublicUrl(fileName);
