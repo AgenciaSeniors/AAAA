@@ -331,10 +331,15 @@ function abrirDetalle(id, mensajeMaridaje = null) {
     // Llenar datos básicos
     const imgEl = document.getElementById('det-img');
     if(imgEl) imgEl.src = p.imagen_url || 'img/logo.png';
+    
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
+    
+    // --- ESTA ES LA LÍNEA QUE FALTA ---
+    setText('det-precio', `$${p.precio}`); 
+    // ----------------------------------
 
-    // Corregir SyntaxError y filtrar "undefined"
+    // Lógica para la curiosidad (IA)
     const boxCuriosidad = document.getElementById('box-curiosidad');
     const textoCuriosidad = document.getElementById('det-curiosidad');
 
