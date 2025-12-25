@@ -257,51 +257,23 @@ const SocialService = {
     // --- 4. MÉTRICAS VISITAS ---
 async cargarMetricasVisitas() {
     try {
-        console.log("Iniciando carga de métricas...");
-        
-        // 1. Llamada al RPC
         const { data, error } = await supabaseClient.rpc('obtener_contadores_dashboard');
-        
-        if (error) {
-            console.error("Error detallado de Supabase:", error.message, error.details);
-            throw error;
+        if (error) throw error;
+
+        const c = data[0];
+        this.setVal('stat-hoy', c.hoy);
+        this.setVal('stat-ayer', c.ayer);
+        this.setVal('stat-unique-clients', c.total_clientes);
+
+        // Comparación porcentual
+        const trendEl = document.getElementById('trend-hoy');
+        if (trendEl && c.ayer > 0) {
+            const diff = ((c.hoy - c.ayer) / c.ayer) * 100;
+            const color = diff >= 0 ? '#00ff88' : '#ff4444';
+            trendEl.innerHTML = `<span style="color:${color}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(0)}%</span> vs ayer`;
         }
-
-        if (data && data[0]) {
-            const c = data[0];
-            
-            // Inyectar valores en los IDs de admin.html
-            this.setVal('stat-hoy', c.hoy);
-            this.setVal('stat-mes', c.mes);
-            this.setVal('stat-unique-clients', c.total_historico);
-            
-            // Campos extra solicitados (Asegúrate de que estos IDs existan en admin.html)
-            this.setVal('stat-ayer', c.ayer);
-            this.setVal('stat-semana', c.semana);
-            this.setVal('stat-anio', c.anio);
-
-            // 2. Lógica de comparación porcentual (Hoy vs Ayer)
-            const trendEl = document.getElementById('trend-hoy'); // Usamos el ID existente en admin.html
-            if (trendEl) {
-                if (c.ayer > 0) {
-                    const diff = ((c.hoy - c.ayer) / c.ayer) * 100;
-                    const color = diff >= 0 ? '#00ff88' : '#ff4444';
-                    const icono = diff >= 0 ? '▲' : '▼';
-                    trendEl.innerHTML = `<span style="color:${color}; font-weight:bold;">${icono} ${Math.abs(diff).toFixed(1)}%</span> vs ayer`;
-                } else {
-                    trendEl.textContent = "Sin datos de ayer";
-                }
-            }
-        }
-
-        // Cargar gráficos y VIPs
-        if (typeof this.dibujarGraficos === 'function') this.dibujarGraficos();
         this.cargarTopClientes();
-
-    } catch (err) {
-        console.error("Error crítico en métricas:", err);
-        showToast("Error al conectar con las estadísticas", "error");
-    }
+    } catch (e) { console.error(e); }
 },
 
 // Función auxiliar para evitar errores de DOM

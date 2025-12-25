@@ -325,47 +325,25 @@ function actualizarBotonesActivos(categoriaActiva) {
 // --- DETALLES Y OPINIONES (Refactorizado) ---
 
 function abrirDetalle(id, mensajeMaridaje = null) {
-    const p = AppStore.setActiveProduct(id); 
-    const boxCuriosidad = document.getElementById('box-curiosidad');
-    const textoCuriosidad = document.getElementById('det-curiosidad');
-    if (!p) {
-        console.warn("Producto no encontrado:", id);
-        showToast("Esa recomendación no está disponible hoy.", "info");
-        return;
-    }
-    if (p.curiosidad && p.curiosidad !== "undefined" && p.curiosidad.trim().length > 5) {
-    if(boxCuriosidad) boxCuriosidad.style.display = "block";
-    if(textoCuriosidad) textoCuriosidad.textContent = p.curiosidad;
-    } else {
-    if(boxCuriosidad) boxCuriosidad.style.display = "none";
-    }   
-    // 1. Llenar datos básicos
+    const p = AppStore.setActiveProduct(id);
+    if (!p) return;
+
+    // Llenar datos básicos
     const imgEl = document.getElementById('det-img');
     if(imgEl) imgEl.src = p.imagen_url || 'img/logo.png';
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
-    setText('det-precio', `$${p.precio}`);
-    setText('det-rating-big', p.ratingPromedio ? `★ ${p.ratingPromedio}` : '★ --');
 
-    // 2. Lógica de la NOTA DEL SOMMELIER (Maridaje)
-    const notaSommelier = document.getElementById('nota-sommelier');
-    if (mensajeMaridaje && notaSommelier) {
-        notaSommelier.innerHTML = `<div class="ai-pairing-note"><small>🍷 NOTA DEL SOMMELIER:</small><p>"${mensajeMaridaje}"</p></div>`;
-        notaSommelier.style.display = 'block';
-    } else if(notaSommelier) {
-        notaSommelier.style.display = 'none';
-    }
-
+    // Corregir SyntaxError y filtrar "undefined"
     const boxCuriosidad = document.getElementById('box-curiosidad');
     const textoCuriosidad = document.getElementById('det-curiosidad');
 
-    if (p.curiosidad && p.curiosidad.trim().length > 5) {
+    if (p.curiosidad && p.curiosidad !== "undefined" && p.curiosidad.trim().length > 5) {
         if(boxCuriosidad) boxCuriosidad.style.display = "block";
         if(textoCuriosidad) textoCuriosidad.textContent = p.curiosidad;
     } else {
         if(boxCuriosidad) boxCuriosidad.style.display = "none";
     }
-    // ------------------------------------------------
 
     const modal = document.getElementById('modal-detalle');
     if(modal) {
