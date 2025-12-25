@@ -237,12 +237,12 @@ function prepararEdicion(id) {
     if (!prod) return;
 
     document.getElementById('edit-id').value = prod.id;
-    document.getElementById('nombre').value = prod.nombre;
-    document.getElementById('precio').value = prod.precio;
-    document.getElementById('categoria').value = prod.categoria;
+    document.getElementById('nombre').value = prod.nombre || ''; // Añade || ''
+    document.getElementById('precio').value = prod.precio || 0;  // Añade || 0
+    document.getElementById('categoria').value = prod.categoria || 'cocteles';
     document.getElementById('descripcion').value = prod.descripcion || '';
     document.getElementById('curiosidad').value = prod.curiosidad || '';
-    document.getElementById('destacado').checked = prod.destacado;
+    document.getElementById('destacado').checked = !!prod.destacado; // Asegura booleano
 
     // UI del Formulario
     const btnSubmit = document.getElementById('btn-submit');
