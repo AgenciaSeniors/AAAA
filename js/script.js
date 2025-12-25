@@ -326,13 +326,19 @@ function actualizarBotonesActivos(categoriaActiva) {
 
 function abrirDetalle(id, mensajeMaridaje = null) {
     const p = AppStore.setActiveProduct(id); 
-
+    const boxCuriosidad = document.getElementById('box-curiosidad');
+    const textoCuriosidad = document.getElementById('det-curiosidad');
     if (!p) {
         console.warn("Producto no encontrado:", id);
         showToast("Esa recomendación no está disponible hoy.", "info");
         return;
     }
-
+    if (p.curiosidad && p.curiosidad !== "undefined" && p.curiosidad.trim().length > 5) {
+    if(boxCuriosidad) boxCuriosidad.style.display = "block";
+    if(textoCuriosidad) textoCuriosidad.textContent = p.curiosidad;
+    } else {
+    if(boxCuriosidad) boxCuriosidad.style.display = "none";
+    }   
     // 1. Llenar datos básicos
     const imgEl = document.getElementById('det-img');
     if(imgEl) imgEl.src = p.imagen_url || 'img/logo.png';

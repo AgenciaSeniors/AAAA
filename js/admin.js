@@ -342,28 +342,23 @@ if(form) {
     });
 }
 
-// Generador de Curiosidad (Placeholder para que no de error)
 async function generarCuriosidadIA() {
     const nombre = document.getElementById('nombre').value;
     const desc = document.getElementById('descripcion').value;
-    const categoria = document.getElementById('categoria').value;
     if (!nombre) return showToast("Escribe un nombre primero", "warning");
 
     const loader = document.getElementById('loader-ia');
     const txtArea = document.getElementById('curiosidad');
     
     if(loader) loader.style.display = 'block';
-    txtArea.value = "Consultando al Sommelier Digital... 🧠";
-    
+    txtArea.value = "Generando curiosidad creativa...";
     try {
-        // Realizamos la petición real a tu API de IA
         const response = await fetch(CONFIG.URL_SCRIPT, {
             method: 'POST',
             body: JSON.stringify({ 
-                action: "curiosidad", // Nueva acción para tu backend
-                producto: nombre,
+                action: "curiosidad", 
+                producto: nombre, 
                 descripcion: desc,
-                categoria: categoria,
                 token: "DLV_SECURE_TOKEN_2025_X9" 
             })
         });
@@ -371,17 +366,21 @@ async function generarCuriosidadIA() {
         const res = await response.json();
 
         if (res.success) {
-            // La IA nos devuelve un texto creativo
-            txtArea.value = res.data.texto;
-            showToast("¡Curiosidad generada!", "success");
-        } else {
-            throw new Error(res.message || "Error en la respuesta de IA");
+            // Buscamos el texto en varias propiedades posibles para evitar el 'undefined'
+            const textoFinal = res.data.texto || res.data.curiosidad || res.data.answer || (typeof res.data === 'string' ? res.data : "");
+            
+            if (textoFinal && textoFinal !== "undefined") {
+                txtArea.value = textoFinal;
+                showToast("¡Curiosidad generada!", "success");
+            } else {
+                txtArea.value = "";
+                showToast("La IA no devolvió un texto claro", "warning");
+            }
         }
-
     } catch (err) {
-        console.error("Fallo IA Curiosidad:", err);
+        console.error("Fallo IA:", err);
         txtArea.value = "";
-        showToast("No se pudo conectar con la IA", "error");
+        showToast("Error de conexión con la IA", "error");
     } finally {
         if(loader) loader.style.display = 'none';
     }
