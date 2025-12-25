@@ -263,6 +263,9 @@ async cargarMetricasVisitas() {
         const c = data[0];
         this.setVal('stat-hoy', c.hoy);
         this.setVal('stat-ayer', c.ayer);
+        this.setVal('stat-semana', c.semana);
+        this.setVal('stat-mes', c.mes);
+        this.setVal('stat-anio', c.anio);
         this.setVal('stat-unique-clients', c.total_clientes);
 
         // Comparación porcentual
