@@ -112,6 +112,7 @@ async function cargarMenu() {
             localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
             AppStore.setProducts(productosProcesados);
             renderizarMenu(productosProcesados);
+            crearBotonesFiltro(productosProcesados); // <--- AÑADE ESTO
         }
         precargarImagenes(productosProcesados);
     } catch (err) {
@@ -215,8 +216,8 @@ function generarCardHTML(item) {
     }
 
     // BOTÓN DE MARIDAJE (Solo para comida)
-    const categoriasComida = ['tapas', 'italiana', 'fuertes', 'otros'];
-    const esComida = categoriasComida.includes(item.categoria);
+    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin', 'cafes', 'jugos'].some(c => item.categoria.toLowerCase().includes(c));
+    const esComida = !esBebida;
     const btnMatch = (esComida && !esAgotado) 
         ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}', this)">🍷 Match</button>` 
         : '';
@@ -507,7 +508,30 @@ const ESENCIAS = [
     { id: 'amargo', icono: '🍋', nombre: 'Ácido' },
     { id: 'party', icono: '🎉', nombre: 'Fiesta' }
 ];
+// Función para crear botones automáticamente según tus categorías
+function crearBotonesFiltro(productos) {
+    const contenedor = document.querySelector('.filters');
+    // Obtenemos las categorías únicas de tus productos
+    const categorias = [...new Set(productos.map(p => p.categoria))];
 
+    // Diccionario para poner emojis bonitos (opcional)
+    const emojis = {
+        'cocteles': 'Cócteles 🍸', 'cervezas': 'Cervezas 🍺', 
+        'italiana': 'Italiana 🍕', 'tapas': 'Picar 🍟'
+    };
+
+    categorias.forEach(cat => {
+        // Si ya existe el botón (ej: Todos), no lo creamos de nuevo
+        if ([...contenedor.children].some(btn => btn.getAttribute('onclick')?.includes(cat))) return;
+
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        // Si tenemos emoji lo usa, si no, pone el nombre tal cual (con mayúscula inicial)
+        btn.textContent = emojis[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
+        btn.onclick = function() { filtrar(cat, this); };
+        contenedor.appendChild(btn);
+    });
+}
 let watchID = null;
 
 
