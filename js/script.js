@@ -105,15 +105,15 @@ async function cargarMenu() {
         renderizarMenu(AppStore.getProducts());
     }
     try {
-        // 2. Consulta optimizada (Quitamos 'stock' si te da error)
-        // Si 'curiosidad' o 'destacado' tampoco existen en tu DB, quítalos de aquí:
+        // 2. Consulta optimizada CORREGIDA
+        // AÑADIMOS 'stock' a la lista para que funcione la alerta de "¡Últimos X!"
         const { data: productos, error } = await supabaseClient
             .from('productos')
             .select(`
                 id, nombre, precio, imagen_url, categoria, 
-                destacado, estado, descripcion, curiosidad,
+                destacado, estado, descripcion, curiosidad, stock, 
                 opiniones(puntuacion)
-            `)
+            `) // <--- ¡Asegúrate de que 'stock' esté aquí!
             .eq('activo', true);
         if (error) throw error;
         const productosProcesados = productos.map(prod => {
