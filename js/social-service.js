@@ -1,5 +1,6 @@
 // js/social-service.js
 let opinionesGlobal = []; // Memoria para filtros sin recarga
+const RESTAURANT_ID = '3d615b07-c20b-492e-a3b1-e25951967a47'; // Agrégalo aquí arriba
 
 // UTILIDADES AUXILIARES
 function limpiarTelefono(input) {
@@ -22,7 +23,11 @@ const SocialService = {
         const modal = document.getElementById('modal-welcome');
 
         if (clienteId) {
-            await supabaseClient.from('visitas').insert([{ cliente_id: clienteId }]);
+            await supabaseClient.from('visitas').insert([{
+                 cliente_id: clienteId,
+                 restaurant_id: RESTAURANT_ID
+                 }]);
+                 
             if (modal) modal.style.display = 'none';
             if (nombre) {
                 setTimeout(() => showToast(`¡Qué bueno verte de nuevo, ${nombre}!`, "success"), 1500);
@@ -38,9 +43,6 @@ const SocialService = {
     async registrarBienvenida() {
     const nombre = document.getElementById('welcome-nombre').value;
     const telefono = document.getElementById('welcome-phone').value;
-    
-    // ID real de tu restaurante (De La Vida Bar)
-    const RESTAURANT_ID = '3d615b07-c20b-492e-a3b1-e25951967a47';
 
     if (!nombre) return showToast("Por favor, dinos tu nombre", "warning");
 
@@ -115,30 +117,31 @@ const SocialService = {
     },
 
     async enviarOpinion() {
-        const score = AppStore.state.reviewScore;
-        const prod = AppStore.getActiveProduct();
-        
-        if (score === 0) return showToast("¡Marca las estrellas!", "warning");
-        if (!prod) return showToast("Error: Producto no identificado", "error");
+    const score = AppStore.state.reviewScore;
+    const prod = AppStore.getActiveProduct();
+    
+    if (score === 0) return showToast("¡Marca las estrellas!", "warning");
+    if (!prod) return showToast("Error: Producto no identificado", "error");
 
-        const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
-        const comentario = document.getElementById('cliente-comentario').value;
+    const nombre = document.getElementById('cliente-nombre').value || "Anónimo";
+    const comentario = document.getElementById('cliente-comentario').value;
 
-        const { error } = await supabaseClient.from('opiniones').insert([{
-            producto_id: prod.id, 
-            cliente_nombre: nombre, 
-            comentario: comentario, 
-            puntuacion: score
-        }]);
+    const { error } = await supabaseClient.from('opiniones').insert([{
+        restaurant_id: RESTAURANT_ID, // <--- ESTA LÍNEA SOLUCIONA EL ERROR
+        producto_id: prod.id, 
+        cliente_nombre: nombre, 
+        comentario: comentario, 
+        puntuacion: score
+    }]);
 
-        if (error) {
-            showToast("Error: " + error.message, "error");
-        } else {
-            showToast("¡Gracias por tu opinión!", "success");
-            this.cerrarModalOpiniones();
-            if (typeof cargarOpiniones === 'function') cargarOpiniones(); // Refrescar si es admin
-        }
-    },
+    if (error) {
+        showToast("Error: " + error.message, "error");
+    } else {
+        showToast("¡Gracias por tu opinión!", "success");
+        this.cerrarModalOpiniones();
+        if (typeof cargarOpiniones === 'function') cargarOpiniones();
+    }
+},
 
     cerrarModalOpiniones() {
         const modal = document.getElementById('modal-opinion');
