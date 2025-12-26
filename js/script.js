@@ -59,13 +59,17 @@ const AppStore = {
         this.state.shaker.shakeCount = 0;
     }
 };
-document.addEventListener('DOMContentLoaded', () => {
-    await inicializarRestaurante();
-    checkWelcome(); 
-    cargarMenu();
-    updateConnectionStatus();
-    registrarServiceWorker();
-    loadDynamicHero();
+document.addEventListener('DOMContentLoaded', async () => { 
+    try {
+        await inicializarRestaurante(); // Ahora el await funcionará correctamente
+        checkWelcome(); 
+        cargarMenu();
+        updateConnectionStatus();
+        registrarServiceWorker();
+        loadDynamicHero();
+    } catch (error) {
+        console.error("Error en la inicialización:", error);
+    }
 });
 // --- PRECARGA ---
 function precargarImagenes(productos) {

@@ -85,8 +85,21 @@ async function checkAuth() {
     }
 }
 
+// js/admin.js
+
 async function cargarAdmin() {
-    // Solo mostramos loading si es la primera carga para no molestar
+    // 1. Validamos u obtenemos el ID del restaurante antes de la consulta
+    if (!currentAdminRestaurantId) {
+        currentAdminRestaurantId = await obtenerMiRestaurante();
+    }
+
+    // Seguridad: Si después de intentar obtenerlo sigue siendo null, detenemos la carga
+    if (!currentAdminRestaurantId) {
+        console.error("No se pudo cargar el ID del restaurante.");
+        return showToast("Error: No tienes un restaurante asignado", "error");
+    }
+
+    // 2. Ahora la consulta usará el ID correcto
     const { data, error } = await supabaseClient
         .from('productos')
         .select('*')
