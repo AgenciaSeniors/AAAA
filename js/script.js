@@ -140,64 +140,46 @@ async function cargarMenu() {
 }
 // --- RENDERIZADO POR SECCIONES (TIPO INSTAGRAM/UBER EATS) ---
 
+
 function renderizarMenu(lista) {
     const contenedor = document.getElementById('menu-grid');
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
-    if (!lista || lista.length === 0) {
-        contenedor.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px;"><h4>No hay resultados</h4></div>';
-        return;
-    }
-
-    // 1. Mapa de Categorías (se mantiene igual)
+    // 1. Mapa de Categorías actualizado con tus nuevos nombres
     const nombresCat = {
-        'cocteles': 'Cócteles de la Casa 🍸',
-        'cervezas': 'Cervezas Frías 🍺',
-        'licores': 'Vinos y Licores 🍷',
-        'tapas': 'Para Picar 🍟',
-        'italiana': 'Pizzas y Pastas 🍕',
-        'fuertes': 'Platos Fuertes 🍽️',
-        'bebidas_sin': 'Refrescos y Jugos 🥤',
-        'otros': 'Otros 🍴'
+        'TRAGOS': 'Tragos y Cócteles 🍸',
+        'BEBIDAS': 'Bebidas Frías 🥤',
+        'CAFÉ': 'Momento Café ☕',
+        'WHISKEY': 'Selección de Whiskies 🥃',
+        'ESPECIALIDADES': 'Nuestras Especialidades ✨',
+        'RON': 'Rones Selectos 🥃',
+        'TAPAS': 'Para Picar 🍟',
+        'AGREGOS': 'Agregos y Extras 🍕'
     };
 
-    // 2. Agrupamos los productos
     const categorias = {};
-    
     lista.forEach(item => {
-        const cat = item.categoria || 'otros';
+        // Importante: Convertimos a mayúsculas para que coincida con el HTML
+        const cat = (item.categoria || 'OTROS').toUpperCase(); 
         if (!categorias[cat]) categorias[cat] = [];
         categorias[cat].push(item);
     });
 
-    // --- NUEVO: Ordenar productos dentro de cada categoría ---
-    // Esto hace que los 'destacado' (TOP) suban al principio de su sección
-    Object.keys(categorias).forEach(catKey => {
-        categorias[catKey].sort((a, b) => {
-            // Si 'a' es destacado y 'b' no, 'a' va primero
-            if (a.destacado && !b.destacado) return -1;
-            // Si 'b' es destacado y 'a' no, 'b' va primero
-            if (!a.destacado && b.destacado) return 1;
-            return 0; // Si ambos son iguales, mantienen su orden
-        });
-    });
-
-    // 3. Generamos el HTML respetando el orden de categorías (se mantiene igual)
-    const orden = ['cocteles', 'cervezas', 'licores', 'tapas', 'italiana', 'fuertes', 'bebidas_sin'];
+    // 2. Orden de aparición en la página (el orden que tú definiste)
+    const orden = ['TRAGOS', 'BEBIDAS', 'CAFÉ', 'WHISKEY', 'ESPECIALIDADES', 'RON', 'TAPAS', 'AGREGOS'];
+    
     let htmlFinal = '';
-
     orden.forEach(catKey => {
         if (categorias[catKey] && categorias[catKey].length > 0) {
-            htmlFinal += construirSeccionHTML(catKey, nombresCat[catKey], categorias[catKey]);
+            htmlFinal += construirSeccionHTML(catKey, nombresCat[catKey] || catKey, categorias[catKey]);
             delete categorias[catKey];
         }
     });
 
-    // Resto de categorías no listadas en 'orden'
+    // Categorías que no estén en el orden (por si acaso)
     Object.keys(categorias).forEach(catKey => {
-        const titulo = nombresCat[catKey] || catKey.toUpperCase();
-        htmlFinal += construirSeccionHTML(catKey, titulo, categorias[catKey]);
+        htmlFinal += construirSeccionHTML(catKey, catKey, categorias[catKey]);
     });
 
     contenedor.innerHTML = htmlFinal;
@@ -332,27 +314,24 @@ function iniciarScrollSpy() {
  */
 function actualizarBotonesActivos(categoriaActiva) {
     const botones = document.querySelectorAll('.filter-btn');
-    const contenedorFiltros = document.querySelector('.filters');
+    const nav = document.getElementById('nav-filtros');
     
     botones.forEach(btn => {
         btn.classList.remove('active');
         
+        // Obtenemos la categoría del atributo onclick: filtrar('RON', this) -> sacamos 'RON'
         const clickAttr = btn.getAttribute('onclick') || "";
         
-        // Verificamos si el botón corresponde a la categoría
-        if (clickAttr.includes(`'${categoriaActiva}'`) || 
-           (categoriaActiva === 'todos' && btn.textContent.toLowerCase().includes('todos'))) {
-            
+        if (clickAttr.includes(`'${categoriaActiva}'`)) {
             btn.classList.add('active');
 
-            // --- MEJORA: Centrar el botón en la barra horizontal ---
-            if (contenedorFiltros) {
-                const btnOffset = btn.offsetLeft;
+            if (nav) {
+                const btnLeft = btn.offsetLeft;
                 const btnWidth = btn.offsetWidth;
-                const containerWidth = contenedorFiltros.offsetWidth;
+                const navWidth = nav.offsetWidth;
                 
-                contenedorFiltros.scrollTo({
-                    left: btnOffset - (containerWidth / 2) + (btnWidth / 2),
+                nav.scrollTo({
+                    left: btnLeft - (navWidth / 2) + (btnWidth / 2),
                     behavior: 'smooth'
                 });
             }
@@ -360,9 +339,6 @@ function actualizarBotonesActivos(categoriaActiva) {
     });
 }
 
-/**
- * Renderiza los botones basados en las categorías REALES de la base de datos
- */
 function renderizarBotonesFiltro(productos) {
     const nav = document.querySelector('.filters');
     if (!nav) return;
