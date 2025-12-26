@@ -1,6 +1,6 @@
 // js/social-service.js
+const RESTAURANT_ID = '3d615b07-c20b-492e-a3b1-e25951967a47';
 let opinionesGlobal = []; // Memoria para filtros sin recarga
-const RESTAURANT_ID = '3d615b07-c20b-492e-a3b1-e25951967a47'; // Agrégalo aquí arriba
 
 // UTILIDADES AUXILIARES
 function limpiarTelefono(input) {
