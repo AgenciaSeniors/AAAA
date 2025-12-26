@@ -273,21 +273,17 @@ if(searchInput) {
 // --- NAVEGACIÓN Y SCROLL SPY ---
 
 function filtrar(cat, btn) {
-    // Si pulsan "Todos", volvemos arriba
     if (cat === 'todos') {
-        renderizarMenu(AppStore.getProducts());
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        // Actualizamos botones manualmente
         actualizarBotonesActivos('todos');
         return;
     }
 
-    // Buscamos la sección y scrolleamos hacia ella
-    const seccionId = `cat-${cat}`; // ej: cat-cocteles
+    const seccionId = `cat-${cat}`;
     const seccion = document.getElementById(seccionId);
     
     if (seccion) {
-        // Cálculo para descontar el header fijo
+        // Ajustamos el offset según la altura de tu header + barra de filtros
         const headerOffset = 130; 
         const elementPosition = seccion.getBoundingClientRect().top;
         const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
@@ -296,45 +292,86 @@ function filtrar(cat, btn) {
             top: offsetPosition,
             behavior: "smooth"
         });
-    } else {
-        // Si la sección no existe (ej. no hay productos de esa categoría), filtramos normal
-        showToast("No hay productos en esta categoría hoy", "info");
     }
 }
 
 function iniciarScrollSpy() {
     const secciones = document.querySelectorAll('.category-section');
+    const navFilters = document.querySelector('.filters');
     
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
+            // Usamos isIntersecting con un umbral para detectar la sección predominante
             if (entry.isIntersecting) {
-                // Obtenemos el ID puro (quitamos 'cat-')
                 const idPuro = entry.target.id.replace('cat-', '');
                 actualizarBotonesActivos(idPuro);
             }
         });
     }, {
-        rootMargin: "-20% 0px -60% 0px" // Ajuste fino para detectar la sección activa al medio
+        // Marcamos como "activa" la sección cuando ocupa la parte superior/media
+        rootMargin: "-15% 0px -70% 0px" 
     });
 
     secciones.forEach(sec => observer.observe(sec));
 }
 
+/**
+ * Resalta el botón y lo centra automáticamente en la barra horizontal
+ */
 function actualizarBotonesActivos(categoriaActiva) {
-    document.querySelectorAll('.filter-btn').forEach(btn => {
+    const botones = document.querySelectorAll('.filter-btn');
+    const contenedorFiltros = document.querySelector('.filters');
+    
+    botones.forEach(btn => {
         btn.classList.remove('active');
         
-        // Obtenemos el atributo onclick y verificamos que exista antes de usar .includes
-        const clickAttr = btn.getAttribute('onclick');
+        const clickAttr = btn.getAttribute('onclick') || "";
         
-        if (clickAttr && clickAttr.includes(`'${categoriaActiva}'`)) {
+        // Verificamos si el botón corresponde a la categoría
+        if (clickAttr.includes(`'${categoriaActiva}'`) || 
+           (categoriaActiva === 'todos' && btn.textContent.toLowerCase().includes('todos'))) {
+            
             btn.classList.add('active');
-        }
 
-        // Caso especial para resaltar "Todos" cuando estamos arriba
-        if (categoriaActiva === 'todos' && btn.textContent.toLowerCase().includes('todos')) {
-            btn.classList.add('active');
+            // --- MEJORA: Centrar el botón en la barra horizontal ---
+            if (contenedorFiltros) {
+                const btnOffset = btn.offsetLeft;
+                const btnWidth = btn.offsetWidth;
+                const containerWidth = contenedorFiltros.offsetWidth;
+                
+                contenedorFiltros.scrollTo({
+                    left: btnOffset - (containerWidth / 2) + (btnWidth / 2),
+                    behavior: 'smooth'
+                });
+            }
         }
+    });
+}
+
+/**
+ * Renderiza los botones basados en las categorías REALES de la base de datos
+ */
+function renderizarBotonesFiltro(productos) {
+    const nav = document.querySelector('.filters');
+    if (!nav) return;
+
+    const categoriasUnicas = [...new Set(productos.map(p => p.categoria))].filter(Boolean);
+    
+    // Limpiamos y dejamos el de "Todos"
+    nav.innerHTML = '<button class="filter-btn active" onclick="filtrar(\'todos\', this)">Todos</button>';
+
+    const emojis = {
+        'cocteles': 'Cócteles 🍸', 'cervezas': 'Cervezas 🍺', 'licores': 'Vinos 🍷',
+        'tapas': 'Tapas 🍟', 'italiana': 'Pizzas 🍕', 'fuertes': 'Platos 🍽️',
+        'bebidas_sin': 'Refrescos 🥤'
+    };
+
+    categoriasUnicas.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.textContent = emojis[cat.toLowerCase()] || cat;
+        btn.onclick = function() { filtrar(cat, this); };
+        nav.appendChild(btn);
     });
 }
 
@@ -545,33 +582,6 @@ function crearBotonesFiltro(productos) {
         btn.textContent = emojis[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
         btn.onclick = function() { filtrar(cat, this); };
         contenedor.appendChild(btn);
-    });
-}
-function renderizarBotonesFiltro(productos) {
-    const nav = document.querySelector('.filters');
-    if (!nav) return;
-
-    // 1. Obtenemos las categorías únicas de los productos reales
-    const categoriasUnicas = [...new Set(productos.map(p => p.categoria))];
-    
-    // 2. Reiniciamos el contenedor dejando solo el botón "Todos"
-    nav.innerHTML = '<button class="filter-btn active" onclick="filtrar(\'todos\', this)">Todos</button>';
-
-    // 3. Diccionario de Emojis para que se vea elegante
-    const emojis = {
-        'Tragos': 'Tragos 🍸', 'Bebidas': 'Bebidas 🍺', 'Café': 'Café ☕',
-        'Whiskey': 'Whiskey 🥃', 'Ron': 'Ron 🥃', 'Tapas': 'Tapas 🍟',
-        'Especialidades': 'Licores ✨', 'Agregos': 'Extras 🍕'
-    };
-
-    // 4. Creamos los botones dinámicamente
-    categoriasUnicas.forEach(cat => {
-        if(!cat) return;
-        const btn = document.createElement('button');
-        btn.className = 'filter-btn';
-        btn.textContent = emojis[cat] || cat;
-        btn.onclick = function() { filtrar(cat, this); };
-        nav.appendChild(btn);
     });
 }
 let watchID = null;
