@@ -217,13 +217,14 @@ function construirSeccionHTML(id, titulo, items) {
 
 // Función auxiliar para la tarjeta (Misma lógica visual que tenías)
 function generarCardHTML(item) {
-    const esAgotado = item.estado === 'agotado';
+    // 1. Primera y única declaración de variables de estado
+    const esAgotado = item.estado === 'agotado'; 
     const img = item.imagen_url || 'img/logo.png';
     const rating = item.ratingPromedio ? `★ ${item.ratingPromedio}` : '';
     const accionClick = esAgotado ? '' : `onclick="abrirDetalle(${item.id})"`;
     const claseAgotado = esAgotado ? 'agotado' : '';
     
-    // BADGES DE IA Y URGENCIA
+    // 2. Lógica de Badges
     let badgeHTML = '';
     if (esAgotado) {
         badgeHTML = `<span class="badge-agotado">AGOTADO</span>`;
@@ -233,24 +234,35 @@ function generarCardHTML(item) {
         badgeHTML = `<span class="badge-urgent">¡Últimos ${item.stock}!</span>`;
     }
 
-    // BOTÓN DE MARIDAJE (Solo para comida)
-    // --- DENTRO DE generarCardHTML(item) ---
+    // 3. Lógica de Maridaje (Aquí estaba el error)
+    const categoriasBebida = ['tragos', 'bebidas', 'café', 'whiskey', 'especialidades', 'ron'];
+    const catLimpia = (item.categoria || '').toLowerCase();
+    const esBebida = categoriasBebida.includes(catLimpia);
+    const esComida = !esBebida; 
 
-// 1. Definimos qué categorías son estrictamente de BEBIDA
-const categoriasBebida = ['tragos', 'bebidas', 'café', 'whiskey', 'especialidades', 'ron'];
+    // Ya no usamos "const esAgotado" aquí porque ya existe arriba
+    const btnMatch = (esComida && !esAgotado) 
+        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}', this)">🍷 Match</button>` 
+        : '';
 
-// 2. Verificamos si el producto NO es una bebida
-// Usamos toLowerCase() por seguridad para que coincida siempre
-const catLimpia = (item.categoria || '').toLowerCase();
-const esBebida = categoriasBebida.includes(catLimpia);
-
-// 3. El botón solo sale si NO es bebida y NO está agotado
-const esAgotado = item.estado === 'agotado';
-const esComida = !esBebida; 
-
-const btnMatch = (esComida && !esAgotado) 
-    ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}', this)">🍷 Match</button>` 
-    : '';
+    // 4. Retornar el HTML (Asegúrate de que tu función retorne el string de la tarjeta)
+    return `
+        <div class="card ${claseAgotado}" ${accionClick}>
+            ${badgeHTML}
+            <div class="img-box">
+                <img src="${img}" alt="${item.nombre}" loading="lazy">
+            </div>
+            <div class="info">
+                <h3>${item.nombre}</h3>
+                <p class="short-desc">${item.descripcion || ''}</p>
+                <div class="card-footer">
+                    <span class="price">$${item.precio}</span>
+                    <span class="rating-pill">${rating}</span>
+                </div>
+                ${btnMatch}
+            </div>
+        </div>
+    `;
 }
 
 // --- BÚSQUEDA Y FILTROS ---
