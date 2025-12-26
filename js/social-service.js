@@ -310,7 +310,7 @@ async cargarMetricasVisitas() {
         this.setVal('stat-unique-clients', c.total_clientes);
 
         // Comparación porcentual
-        const trendEl = document.getElementById('trend-hoy');
+        const trendEl = document.getElementById('pct-hoy');
         if (trendEl && c.ayer > 0) {
             const diff = ((c.hoy - c.ayer) / c.ayer) * 100;
             const color = diff >= 0 ? '#00ff88' : '#ff4444';

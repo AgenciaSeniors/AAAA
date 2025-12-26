@@ -375,11 +375,8 @@ function abrirDetalle(id, mensajeMaridaje = null) {
     
     setText('det-titulo', p.nombre);
     setText('det-desc', p.descripcion);
-    
-    // --- ESTA ES LA LÍNEA QUE FALTA ---
     setText('det-precio', `$${p.precio}`); 
-    // ----------------------------------
-
+    setText('det-rating-big', p.ratingPromedio ? `★ ${p.ratingPromedio}` : '★ --');
     // Lógica para la curiosidad (IA)
     const boxCuriosidad = document.getElementById('box-curiosidad');
     const textoCuriosidad = document.getElementById('det-curiosidad');
