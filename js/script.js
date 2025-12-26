@@ -149,25 +149,32 @@ function renderizarMenu(lista) {
     // 1. Mapa de Categorías actualizado con tus nuevos nombres
     const nombresCat = {
         'TRAGOS': 'Tragos y Cócteles 🍸',
-        'BEBIDAS': 'Bebidas Frías 🥤',
-        'CAFÉ': 'Momento Café ☕',
+        'CERVEZAS': 'Cervezas Frías 🍺',
+        'BEBIDAS': 'Refrescos y Jugos 🥤',
+        'CAFE': 'Momento Café ☕',          // Nota: CAFE sin tilde en la clave
         'WHISKEY': 'Selección de Whiskies 🥃',
-        'ESPECIALIDADES': 'Nuestras Especialidades ✨',
         'RON': 'Rones Selectos 🥃',
+        'VINOS': 'Vinos y Licores 🍷',
+        'ESPECIALIDADES': 'Nuestras Especialidades ✨',
         'TAPAS': 'Para Picar 🍟',
-        'AGREGOS': 'Agregos y Extras 🍕'
+        'AGREGOS': 'Agregos y Extras 🍕',
+        'COMIDA': 'Cocina & Platos 🍽️'
     };
 
     const categorias = {};
     lista.forEach(item => {
-        // Importante: Convertimos a mayúsculas para que coincida con el HTML
+        // Convertimos lo que viene de la BD (ej: "cafe") a mayúsculas ("CAFE")
         const cat = (item.categoria || 'OTROS').toUpperCase(); 
         if (!categorias[cat]) categorias[cat] = [];
         categorias[cat].push(item);
     });
 
     // 2. Orden de aparición en la página (el orden que tú definiste)
-    const orden = ['TRAGOS', 'BEBIDAS', 'CAFÉ', 'WHISKEY', 'ESPECIALIDADES', 'RON', 'TAPAS', 'AGREGOS'];
+    const orden = [
+        'TRAGOS', 'CERVEZAS', 'BEBIDAS', 'VINOS', 
+        'CAFE', 'WHISKEY', 'RON', 'ESPECIALIDADES', 
+        'TAPAS', 'COMIDA', 'AGREGOS'
+    ];
     
     let htmlFinal = '';
     orden.forEach(catKey => {
