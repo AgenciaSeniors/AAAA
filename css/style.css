@@ -105,10 +105,12 @@ body {
 
 /* --- FILTROS --- */
 .filters-container { 
-    position: sticky; top: 0; z-index: 90; 
-    background: rgba(5, 5, 5, 0.95); 
-    backdrop-filter: blur(12px); 
-    padding: 15px 0; border-bottom: 1px solid #222; 
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-dark); /* O el color de tu fondo */
+    padding: 10px 0;
+    border-bottom: 1px solid #222; 
 }
 .filters { display: flex; gap: 10px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
 .filter-btn { 

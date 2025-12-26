@@ -128,6 +128,8 @@ async function cargarMenu() {
             localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
             AppStore.setProducts(productosProcesados);
             renderizarMenu(productosProcesados);
+            renderizarBotonesFiltro(productosProcesados); // <--- CREA LOS BOTONES
+            setTimeout(iniciarScrollSpy, 500);            // <--- ACTIVA EL RASTREO DE SCROLL
             crearBotonesFiltro(productosProcesados); // <--- AÑADE ESTO
         }
         precargarImagenes(productosProcesados);
@@ -328,14 +330,14 @@ function actualizarBotonesActivos(categoriaActiva) {
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
         
-        // Obtenemos el atributo y verificamos que NO sea nulo antes de usar .includes
+        // Obtenemos el atributo onclick y verificamos que exista antes de usar .includes
         const clickAttr = btn.getAttribute('onclick');
         
         if (clickAttr && clickAttr.includes(`'${categoriaActiva}'`)) {
             btn.classList.add('active');
         }
 
-        // Caso especial para el botón "Todos"
+        // Caso especial para resaltar "Todos" cuando estamos arriba
         if (categoriaActiva === 'todos' && btn.textContent.toLowerCase().includes('todos')) {
             btn.classList.add('active');
         }
@@ -549,6 +551,33 @@ function crearBotonesFiltro(productos) {
         btn.textContent = emojis[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
         btn.onclick = function() { filtrar(cat, this); };
         contenedor.appendChild(btn);
+    });
+}
+function renderizarBotonesFiltro(productos) {
+    const nav = document.querySelector('.filters');
+    if (!nav) return;
+
+    // 1. Obtenemos las categorías únicas de los productos reales
+    const categoriasUnicas = [...new Set(productos.map(p => p.categoria))];
+    
+    // 2. Reiniciamos el contenedor dejando solo el botón "Todos"
+    nav.innerHTML = '<button class="filter-btn active" onclick="filtrar(\'todos\', this)">Todos</button>';
+
+    // 3. Diccionario de Emojis para que se vea elegante
+    const emojis = {
+        'Tragos': 'Tragos 🍸', 'Bebidas': 'Bebidas 🍺', 'Café': 'Café ☕',
+        'Whiskey': 'Whiskey 🥃', 'Ron': 'Ron 🥃', 'Tapas': 'Tapas 🍟',
+        'Especialidades': 'Licores ✨', 'Agregos': 'Extras 🍕'
+    };
+
+    // 4. Creamos los botones dinámicamente
+    categoriasUnicas.forEach(cat => {
+        if(!cat) return;
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.textContent = emojis[cat] || cat;
+        btn.onclick = function() { filtrar(cat, this); };
+        nav.appendChild(btn);
     });
 }
 let watchID = null;
