@@ -41,33 +41,71 @@ const SocialService = {
     },
 
     async registrarBienvenida() {
-    const nombre = document.getElementById('welcome-nombre').value;
-    const telefono = document.getElementById('welcome-phone').value;
+    // 1. Obtener datos del DOM
+    const nombreInput = document.getElementById('welcome-nombre');
+    const telefonoInput = document.getElementById('welcome-phone');
     
-    // Usamos el ID centralizado de CONFIG
-    const RESTAURANT_ID = CONFIG.RESTAURANT_ID; 
+    const nombre = nombreInput.value.trim();
+    const telefonoRaw = telefonoInput.value.trim();
+    
+    // 2. Validación (Usamos tu función auxiliar limpiarTelefono)
+    const telefono = limpiarTelefono(telefonoRaw);
+    
+    // Usamos la validación que ya tenías definida arriba
+    if (!validarEntradasRegistro(nombre, telefono)) return;
 
-    if (!nombre) return showToast("Por favor, dinos tu nombre", "warning");
+    const RESTAURANT_ID = CONFIG.RESTAURANT_ID; 
+    const btn = document.querySelector('.btn-modal-action');
+    const txtOriginal = btn.textContent;
+    
+    // Feedback visual de carga
+    btn.textContent = "Entrando...";
+    btn.disabled = true;
 
     try {
+        // 3. Insertar o Actualizar Cliente (UPSERT)
         const { data: cliente, error: errCliente } = await supabaseClient
             .from('clientes')
             .upsert({ 
                 restaurant_id: RESTAURANT_ID, 
                 nombre: nombre, 
                 telefono: telefono 
-            }, { onConflict: 'restaurant_id, telefono' })
+            }, { onConflict: 'restaurant_id, telefono' }) // Clave única compuesta
             .select()
             .single();
 
         if (errCliente) throw errCliente;
-        // ... resto del código
+
+        // --- PASO CRUCIAL QUE FALTABA ---
+        
+        // 4. Guardar en el navegador (Persistencia)
+        localStorage.setItem('cliente_id', cliente.id);
+        localStorage.setItem('cliente_nombre', cliente.nombre);
+
+        // 5. Registrar la visita inmediatamente
+        await supabaseClient.from('visitas').insert([{
+             cliente_id: cliente.id,
+             restaurant_id: RESTAURANT_ID
+        }]);
+
+        // 6. Cerrar modal y saludar
+        this.cerrarWelcome();
+        showToast(`¡Bienvenido a la experiencia, ${nombre}!`, "success");
+
     } catch (err) {
         console.error("Error en registro:", err);
-        showToast("Error de autenticación o permisos", "error");
+        // Mensaje amigable si es error de duplicado o permisos
+        if (err.code === '23505') {
+            showToast("Ya existe un registro con ese teléfono", "warning");
+        } else {
+            showToast("No pudimos registrarte. Intenta anónimo.", "error");
+        }
+    } finally {
+        // Restaurar botón
+        btn.textContent = txtOriginal;
+        btn.disabled = false;
     }
 },
-
     cerrarWelcome() {
         const modal = document.getElementById('modal-welcome');
         if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 400); }
