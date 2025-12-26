@@ -79,6 +79,22 @@ function precargarImagenes(productos) {
         });
     });
 }
+// Detecta el slug de la URL automáticamente (ej: de-la-vida-bar)
+const currentSlug = window.location.pathname.split('/').filter(Boolean).pop() || 'de-la-vida-bar';
+let globalRestaurantId = null;
+
+async function inicializarRestaurante() {
+    const { data, error } = await supabaseClient
+        .from('restaurantes')
+        .select('id')
+        .eq('slug', currentSlug)
+        .single();
+
+    if (data) {
+        globalRestaurantId = data.id;
+        console.log("Sistema listo para el restaurante:", globalRestaurantId);
+    }
+}
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     const grid = document.getElementById('menu-grid');
@@ -311,13 +327,16 @@ function iniciarScrollSpy() {
 function actualizarBotonesActivos(categoriaActiva) {
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
-        // El botón debe tener onclick="filtrar('cocteles', this)"
-        // Comprobamos si el atributo onclick contiene la categoría activa
-        if (btn.getAttribute('onclick').includes(`'${categoriaActiva}'`)) {
+        
+        // Obtenemos el atributo y verificamos que NO sea nulo antes de usar .includes
+        const clickAttr = btn.getAttribute('onclick');
+        
+        if (clickAttr && clickAttr.includes(`'${categoriaActiva}'`)) {
             btn.classList.add('active');
         }
-        // Caso especial para 'todos' si estamos arriba del todo (opcional)
-        if (categoriaActiva === 'todos' && btn.textContent.includes('Todos')) {
+
+        // Caso especial para el botón "Todos"
+        if (categoriaActiva === 'todos' && btn.textContent.toLowerCase().includes('todos')) {
             btn.classList.add('active');
         }
     });

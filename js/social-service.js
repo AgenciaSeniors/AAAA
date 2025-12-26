@@ -36,35 +36,49 @@ const SocialService = {
     },
 
     async registrarBienvenida() {
-        const nombre = document.getElementById('welcome-nombre').value.trim();
-        const telefonoRaw = document.getElementById('welcome-phone').value;
-        const telefono = limpiarTelefono(telefonoRaw);
+    const nombre = document.getElementById('welcome-nombre').value;
+    const telefono = document.getElementById('welcome-phone').value;
+    
+    // ID real de tu restaurante (De La Vida Bar)
+    const RESTAURANT_ID = '3d615b07-c20b-492e-a3b1-e25951967a47';
 
-        if (!validarEntradasRegistro(nombre, telefono)) return;
+    if (!nombre) return showToast("Por favor, dinos tu nombre", "warning");
 
-        try {
-            const { data: cliente } = await supabaseClient.from('clientes').select('id, nombre').eq('telefono', telefono).maybeSingle();
-            
-            let id, nombreFinal;
-            if (cliente) {
-                id = cliente.id;
-                nombreFinal = cliente.nombre;
-                showToast(`¡Te reconocimos! Hola, ${nombreFinal}`, "success");
-            } else {
-                const { data: nuevo } = await supabaseClient.from('clientes').insert([{ nombre, telefono }]).select().single();
-                id = nuevo.id;
-                nombreFinal = nombre;
-                showToast(`¡Bienvenido, ${nombreFinal}!`, "success");
-            }
-            
-            localStorage.setItem('cliente_id', id);
-            localStorage.setItem('cliente_nombre', nombreFinal);
-            this.cerrarWelcome();
-        } catch (e) {
-            sessionStorage.setItem('es_invitado', 'true');
-            this.cerrarWelcome();
-        }
-    },
+    try {
+        // 1. Primero intentamos registrar/identificar al cliente
+        const { data: cliente, error: errCliente } = await supabaseClient
+            .from('clientes')
+            .upsert({ 
+                restaurant_id: RESTAURANT_ID, 
+                nombre: nombre, 
+                telefono: telefono 
+            }, { onConflict: 'restaurant_id, telefono' })
+            .select()
+            .single();
+
+        if (errCliente) throw errCliente;
+
+        // 2. AHORA registramos la visita vinculando ambos IDs
+        const { error: errVisita } = await supabaseClient
+            .from('visitas')
+            .insert([{
+                restaurant_id: RESTAURANT_ID, // <--- ESTO ES LO QUE SUELE FALTAR
+                cliente_id: cliente.id,
+                motivo: 'qr_scan',
+                user_agent: navigator.userAgent
+            }]);
+
+        if (errVisita) throw errVisita;
+
+        // Éxito
+        cerrarWelcome();
+        showToast(`¡Bienvenido/a, ${nombre}!`);
+        
+    } catch (err) {
+        console.error("Error en registro:", err);
+        showToast("No pudimos registrar tu visita", "error");
+    }
+},
 
     cerrarWelcome() {
         const modal = document.getElementById('modal-welcome');

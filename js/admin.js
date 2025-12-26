@@ -6,7 +6,7 @@ const AdminStore = {
         inventory: [],
         searchTimeout: null
     },
-
+    
     setInventory(list) { this.state.inventory = list; },
     getInventory() { return this.state.inventory; },
 
@@ -36,7 +36,17 @@ const AdminStore = {
         renderizarInventario(list);
     }
 };
+async function obtenerMiRestaurante() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    
+    const { data: perfil } = await supabaseClient
+        .from('perfiles_admin')
+        .select('restaurant_id')
+        .eq('id', user.id)
+        .single();
 
+    return perfil.restaurant_id; // Este ID es seguro porque viene de la sesión autenticada
+}
 // UTILIDADES
 function showToast(msg, tipo = 'success') {
     let container = document.getElementById('toast-container');
