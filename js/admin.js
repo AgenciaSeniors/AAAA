@@ -1,5 +1,5 @@
 // js/admin.js - Panel de Administración (Versión Instantánea)
-
+let currentAdminRestaurantId = null;
 // --- GESTIÓN DE ESTADO CENTRALIZADO (STORE) ---
 const AdminStore = {
     state: {
@@ -90,6 +90,7 @@ async function cargarAdmin() {
     const { data, error } = await supabaseClient
         .from('productos')
         .select('*')
+        .eq('restaurant_id', currentAdminRestaurantId)
         .order('id', { ascending: false });
 
     if (error) {
@@ -360,6 +361,7 @@ if(form) {
                 // INSERT
                 datos.estado = 'disponible';
                 datos.activo = true;
+                datos.restaurant_id = currentAdminRestaurantId;
                 const { data, error } = await supabaseClient
                     .from('productos')
                     .insert([datos])

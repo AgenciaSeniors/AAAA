@@ -60,6 +60,7 @@ const AppStore = {
     }
 };
 document.addEventListener('DOMContentLoaded', () => {
+    await inicializarRestaurante();
     checkWelcome(); 
     cargarMenu();
     updateConnectionStatus();
@@ -98,43 +99,53 @@ async function inicializarRestaurante() {
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     const grid = document.getElementById('menu-grid');
-    // 1. Carga instantánea desde Cache
     const menuCache = localStorage.getItem('menu_cache');
+    
     if (menuCache) {
         AppStore.setProducts(JSON.parse(menuCache));
         renderizarMenu(AppStore.getProducts());
     }
+
     try {
-        // 2. Consulta optimizada CORREGIDA
-        // AÑADIMOS 'stock' a la lista para que funcione la alerta de "¡Últimos X!"
+        // PREVENCIÓN: Si falló la inicialización, usar ID por defecto o frenar
+        if (!globalRestaurantId) {
+            console.warn("ID de restaurante no detectado, reintentando inicialización...");
+            await inicializarRestaurante();
+        }
+
         const { data: productos, error } = await supabaseClient
             .from('productos')
             .select(`
                 id, nombre, precio, imagen_url, categoria, 
                 destacado, estado, descripcion, curiosidad, stock, 
                 opiniones(puntuacion)
-            `) // <--- ¡Asegúrate de que 'stock' esté aquí!
-            .eq('activo', true);
+            `)
+            .eq('activo', true)
+            .eq('restaurant_id', globalRestaurantId); // <--- FILTRO CLAVE AÑADIDO
+
         if (error) throw error;
+
+        // ... (Resto de tu lógica de procesamiento y renderizado igual que antes)
         const productosProcesados = productos.map(prod => {
-            const opiniones = prod.opiniones || [];
-            const total = opiniones.length;
-            const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
-            prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
-            return prod;
+             // ... tu lógica de map
+             const opiniones = prod.opiniones || [];
+             const total = opiniones.length;
+             const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
+             prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
+             return prod;
         });
-        // 3. Actualizar Cache y UI solo si hay cambios
+
         if (JSON.stringify(productosProcesados) !== menuCache) {
             localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
             AppStore.setProducts(productosProcesados);
             renderizarMenu(productosProcesados);
-            renderizarBotonesFiltro(productosProcesados); // <--- CREA LOS BOTONES
-            setTimeout(iniciarScrollSpy, 500);            // <--- ACTIVA EL RASTREO DE SCROLL
+            renderizarBotonesFiltro(productosProcesados);
+            setTimeout(iniciarScrollSpy, 500);
         }
         precargarImagenes(productosProcesados);
+
     } catch (err) {
         console.error("Error cargando menú:", err);
-        // Si el error persiste, vuelve temporalmente a .select(`*, opiniones(puntuacion)`)
     }
 }
 // --- RENDERIZADO POR SECCIONES (TIPO INSTAGRAM/UBER EATS) ---
