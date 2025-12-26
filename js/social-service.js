@@ -43,11 +43,13 @@ const SocialService = {
     async registrarBienvenida() {
     const nombre = document.getElementById('welcome-nombre').value;
     const telefono = document.getElementById('welcome-phone').value;
+    
+    // Usamos el ID centralizado de CONFIG
+    const RESTAURANT_ID = CONFIG.RESTAURANT_ID; 
 
     if (!nombre) return showToast("Por favor, dinos tu nombre", "warning");
 
     try {
-        // 1. Primero intentamos registrar/identificar al cliente
         const { data: cliente, error: errCliente } = await supabaseClient
             .from('clientes')
             .upsert({ 
@@ -59,26 +61,10 @@ const SocialService = {
             .single();
 
         if (errCliente) throw errCliente;
-
-        // 2. AHORA registramos la visita vinculando ambos IDs
-        const { error: errVisita } = await supabaseClient
-            .from('visitas')
-            .insert([{
-                restaurant_id: RESTAURANT_ID, // <--- ESTO ES LO QUE SUELE FALTAR
-                cliente_id: cliente.id,
-                motivo: 'qr_scan',
-                user_agent: navigator.userAgent
-            }]);
-
-        if (errVisita) throw errVisita;
-
-        // Éxito
-        cerrarWelcome();
-        showToast(`¡Bienvenido/a, ${nombre}!`);
-        
+        // ... resto del código
     } catch (err) {
         console.error("Error en registro:", err);
-        showToast("No pudimos registrar tu visita", "error");
+        showToast("Error de autenticación o permisos", "error");
     }
 },
 
