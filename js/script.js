@@ -234,28 +234,23 @@ function generarCardHTML(item) {
     }
 
     // BOTÓN DE MARIDAJE (Solo para comida)
-    const esBebida = ['cocteles', 'cervezas', 'licores', 'bebidas_sin', 'cafes', 'jugos'].some(c => item.categoria.toLowerCase().includes(c));
-    const esComida = !esBebida;
-    const btnMatch = (esComida && !esAgotado) 
-        ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}', this)">🍷 Match</button>` 
-        : '';
+    // --- DENTRO DE generarCardHTML(item) ---
 
-    return `
-        <div class="card ${claseAgotado}" ${accionClick}>
-            ${badgeHTML}
-            <div class="img-box"><img src="${img}" loading="lazy" alt="${item.nombre}"></div>
-            <div class="info">
-                <h3>${item.nombre}</h3>
-                <div class="card-footer">
-                     <span class="price">$${item.precio}</span>
-                     <div class="actions-right">
-                        ${btnMatch}
-                        <span class="rating-pill">${rating}</span>
-                     </div>
-                </div>
-            </div>
-        </div>
-    `;
+// 1. Definimos qué categorías son estrictamente de BEBIDA
+const categoriasBebida = ['tragos', 'bebidas', 'café', 'whiskey', 'especialidades', 'ron'];
+
+// 2. Verificamos si el producto NO es una bebida
+// Usamos toLowerCase() por seguridad para que coincida siempre
+const catLimpia = (item.categoria || '').toLowerCase();
+const esBebida = categoriasBebida.includes(catLimpia);
+
+// 3. El botón solo sale si NO es bebida y NO está agotado
+const esAgotado = item.estado === 'agotado';
+const esComida = !esBebida; 
+
+const btnMatch = (esComida && !esAgotado) 
+    ? `<button class="btn-match" onclick="event.stopPropagation(); askPairing('${item.nombre}', this)">🍷 Match</button>` 
+    : '';
 }
 
 // --- BÚSQUEDA Y FILTROS ---
@@ -274,7 +269,6 @@ if(searchInput) {
         }, 300);
     });
 }
-
 
 // --- NAVEGACIÓN Y SCROLL SPY ---
 
