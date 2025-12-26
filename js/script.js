@@ -130,7 +130,6 @@ async function cargarMenu() {
             renderizarMenu(productosProcesados);
             renderizarBotonesFiltro(productosProcesados); // <--- CREA LOS BOTONES
             setTimeout(iniciarScrollSpy, 500);            // <--- ACTIVA EL RASTREO DE SCROLL
-            crearBotonesFiltro(productosProcesados); // <--- AÑADE ESTO
         }
         precargarImagenes(productosProcesados);
     } catch (err) {
@@ -346,27 +345,63 @@ function actualizarBotonesActivos(categoriaActiva) {
     });
 }
 
+// EN js/script.js - Reemplaza la función renderizarBotonesFiltro completa
+
 function renderizarBotonesFiltro(productos) {
     const nav = document.querySelector('.filters');
     if (!nav) return;
 
-    const categoriasUnicas = [...new Set(productos.map(p => p.categoria))].filter(Boolean);
-    
-    // Limpiamos y dejamos el de "Todos"
-    nav.innerHTML = '<button class="filter-btn active" onclick="filtrar(\'todos\', this)">Todos</button>';
+    // 1. Obtenemos las categorías que REALMENTE tienen productos
+    // Las convertimos a mayúsculas para coincidir con la estandarización
+    const categoriasPresentes = [...new Set(productos.map(p => (p.categoria || 'OTROS').toUpperCase()))];
 
-    const emojis = {
-        'cocteles': 'Cócteles 🍸', 'cervezas': 'Cervezas 🍺', 'licores': 'Vinos 🍷',
-        'tapas': 'Tapas 🍟', 'italiana': 'Pizzas 🍕', 'fuertes': 'Platos 🍽️',
-        'bebidas_sin': 'Refrescos 🥤'
+    // 2. Diccionario de Nombres Cortos para los Botones
+    // (Deben coincidir con las CLAVES del paso anterior)
+    const nombresBotones = {
+        'TRAGOS': 'Tragos 🍸',
+        'CERVEZAS': 'Cervezas 🍺',
+        'BEBIDAS': 'Bebidas 🥤',
+        'CAFE': 'Café ☕',
+        'WHISKEY': 'Whiskey 🥃',
+        'RON': 'Ron 🥃',
+        'VINOS': 'Vinos 🍷',
+        'ESPECIALIDADES': 'Especiales ✨',
+        'TAPAS': 'Tapas 🍟',
+        'AGREGOS': 'Agregos 🍕',
+        'COMIDA': 'Platos 🍽️'
     };
 
-    categoriasUnicas.forEach(cat => {
-        const btn = document.createElement('button');
-        btn.className = 'filter-btn';
-        btn.textContent = emojis[cat.toLowerCase()] || cat;
-        btn.onclick = function() { filtrar(cat, this); };
-        nav.appendChild(btn);
+    // 3. Orden deseado para los botones (mismo orden visual que el menú)
+    const orden = [
+        'TRAGOS', 'CERVEZAS', 'BEBIDAS', 'VINOS', 
+        'CAFE', 'WHISKEY', 'RON', 'ESPECIALIDADES', 
+        'TAPAS', 'COMIDA', 'AGREGOS'
+    ];
+
+    // Ordenamos las categorías disponibles según nuestra lista
+    categoriasPresentes.sort((a, b) => {
+        const idxA = orden.indexOf(a);
+        const idxB = orden.indexOf(b);
+        return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+    });
+
+    // 4. Limpiamos el contenedor y regeneramos
+    // Importante: Dejamos "Todos" siempre al principio
+    nav.innerHTML = '<button class="filter-btn active" onclick="filtrar(\'todos\', this)">Todos</button>';
+
+    categoriasPresentes.forEach(catKey => {
+        // Solo creamos botón si tenemos un nombre definido para esa categoría
+        if (nombresBotones[catKey]) {
+            const btn = document.createElement('button');
+            btn.className = 'filter-btn';
+            btn.textContent = nombresBotones[catKey];
+            
+            // CLAVE DEL FIX: Usamos setAttribute para que sea idéntico al HTML estático
+            // Esto permite que el ScrollSpy detecte el atributo onclick correctamente
+            btn.setAttribute('onclick', `filtrar('${catKey}', this)`);
+            
+            nav.appendChild(btn);
+        }
     });
 }
 
@@ -552,30 +587,6 @@ const ESENCIAS = [
     { id: 'amargo', icono: '🍋', nombre: 'Ácido' },
     { id: 'party', icono: '🎉', nombre: 'Fiesta' }
 ];
-// Función para crear botones automáticamente según tus categorías
-function crearBotonesFiltro(productos) {
-    const contenedor = document.querySelector('.filters');
-    // Obtenemos las categorías únicas de tus productos
-    const categorias = [...new Set(productos.map(p => p.categoria))];
-
-    // Diccionario para poner emojis bonitos (opcional)
-    const emojis = {
-        'cocteles': 'Cócteles 🍸', 'cervezas': 'Cervezas 🍺', 
-        'italiana': 'Italiana 🍕', 'tapas': 'Picar 🍟'
-    };
-
-    categorias.forEach(cat => {
-        // Si ya existe el botón (ej: Todos), no lo creamos de nuevo
-        if ([...contenedor.children].some(btn => btn.getAttribute('onclick')?.includes(cat))) return;
-
-        const btn = document.createElement('button');
-        btn.className = 'filter-btn';
-        // Si tenemos emoji lo usa, si no, pone el nombre tal cual (con mayúscula inicial)
-        btn.textContent = emojis[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
-        btn.onclick = function() { filtrar(cat, this); };
-        contenedor.appendChild(btn);
-    });
-}
 let watchID = null;
 
 
