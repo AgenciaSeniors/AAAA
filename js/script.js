@@ -87,20 +87,7 @@ function precargarImagenes(productos) {
 // Detecta el slug de la URL automáticamente (ej: de-la-vida-bar)
 const currentSlug = 'de-la-vida-bar';
 let globalRestaurantId = null;
-const ORDEN_MENU = [
-    'TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'ESPECIALIDADES', 'TAPAS', 'AGREGOS'
-];
 
-const NOMBRES_MOSTRAR = {
-    'TRAGOS': 'Tragos y Cócteles 🍸',
-    'BEBIDAS': 'Bebidas y Refrescos 🥤',
-    'CAFE': 'Momento Café ☕',
-    'WHISKEY': 'Whiskies Selectos 🥃',
-    'RON': 'Rones de la Casa 🥃',
-    'ESPECIALIDADES': 'Nuestras Especialidades ✨',
-    'TAPAS': 'Para Picar (Tapas) 🍟',
-    'AGREGOS': 'Agregos y Extras 🍕'
-};
 async function inicializarRestaurante() {
     console.log("Buscando configuración para:", currentSlug); // Aquí verás "de-la-vida-bar"
     const { data, error } = await supabaseClient
@@ -121,39 +108,29 @@ async function inicializarRestaurante() {
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     try {
-        if (!globalRestaurantId) {
-            const id = await inicializarRestaurante();
-            if (!id) return; 
-        }
+        if (!globalRestaurantId) await inicializarRestaurante();
 
         const { data: productos, error } = await supabaseClient
             .from('productos')
-            .select(`
-                id, nombre, precio, imagen_url, categoria, 
-                destacado, estado, descripcion, curiosidad, stock, 
-                opiniones(puntuacion)
-            `)
+            .select(`id, nombre, precio, imagen_url, categoria, destacado, estado, descripcion, curiosidad, stock, opiniones(puntuacion)`)
             .eq('activo', true)
             .eq('restaurant_id', globalRestaurantId);
 
         if (error) throw error;
 
-        // FILTRADO USANDO LA CONSTANTE GLOBAL
+        // Filtramos para que solo entren productos de tu lista oficial
         const productosProcesados = productos
             .filter(p => ORDEN_MENU.includes((p.categoria || '').toUpperCase()))
             .map(prod => {
                  const opiniones = prod.opiniones || [];
-                 const total = opiniones.length;
-                 const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
-                 prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
+                 prod.ratingPromedio = opiniones.length ? 
+                    (opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0) / opiniones.length).toFixed(1) : null;
                  return prod;
             });
 
         AppStore.setProducts(productosProcesados);
         renderizarMenu(productosProcesados);
         renderizarBotonesFiltro(productosProcesados);
-        
-        setTimeout(iniciarScrollSpy, 500);
 
     } catch (err) {
         console.error("Error cargando menú:", err);
@@ -175,18 +152,12 @@ function renderizarMenu(lista) {
     });
 
     let htmlFinal = '';
-    
-    // SE SIGUE EL ORDEN: TRAGOS -> ... -> ESPECIALIDADES -> TAPAS -> AGREGOS
+    // CORRECCIÓN: Usamos ORDEN_MENU y NOMBRES_MOSTRAR
     ORDEN_MENU.forEach(catKey => {
         if (categorias[catKey] && categorias[catKey].length > 0) {
-            htmlFinal += construirSeccionHTML(
-                catKey, 
-                NOMBRES_MOSTRAR[catKey] || catKey, 
-                categorias[catKey]
-            );
+            htmlFinal += construirSeccionHTML(catKey, NOMBRES_MOSTRAR[catKey] || catKey, categorias[catKey]);
         }
     });
-
     contenedor.innerHTML = htmlFinal;
 }
 // Función auxiliar para crear el bloque HTML de cada sección
@@ -335,49 +306,22 @@ function renderizarBotonesFiltro(productos) {
     const nav = document.querySelector('.filters');
     if (!nav) return;
 
-    // 1. Obtenemos las categorías que REALMENTE tienen productos
-    // Las convertimos a mayúsculas para coincidir con la estandarización
     const categoriasPresentes = [...new Set(productos.map(p => (p.categoria || 'OTROS').toUpperCase()))];
 
-    // 2. Diccionario de Nombres Cortos para los Botones
-    // (Deben coincidir con las CLAVES del paso anterior)
-    const NOMBRES_MOSTRAR = {
-    'TRAGOS': 'Tragos y Cócteles 🍸',
-    'BEBIDAS': 'Bebidas y Refrescos 🥤',
-    'CAFE': 'Momento Café ☕',
-    'WHISKEY': 'Whiskies Selectos 🥃',
-    'RON': 'Rones de la Casa 🥃',
-    'ESPECIALIDADES': 'Nuestras Especialidades ✨',
-    'TAPAS': 'Para Picar (Tapas) 🍟',
-    'AGREGOS': 'Agregos y Extras 🍕'
-};
-
-    // 3. Orden deseado para los botones (mismo orden visual que el menú)
-    const ORDEN_MENU = [
-    'TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'ESPECIALIDADES', 'TAPAS', 'AGREGOS'
-];
-    // Ordenamos las categorías disponibles según nuestra lista
+    // CORRECCIÓN: Usamos ORDEN_MENU para el sort
     categoriasPresentes.sort((a, b) => {
-        const idxA = orden.indexOf(a);
-        const idxB = orden.indexOf(b);
+        const idxA = ORDEN_MENU.indexOf(a);
+        const idxB = ORDEN_MENU.indexOf(b);
         return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
     });
 
-    // 4. Limpiamos el contenedor y regeneramos
-    // Importante: Dejamos "Todos" siempre al principio
     nav.innerHTML = '<button class="filter-btn active" onclick="filtrar(\'todos\', this)">Todos</button>';
-
     categoriasPresentes.forEach(catKey => {
-        // Solo creamos botón si tenemos un nombre definido para esa categoría
-        if (nombresBotones[catKey]) {
+        if (NOMBRES_MOSTRAR[catKey]) {
             const btn = document.createElement('button');
             btn.className = 'filter-btn';
-            btn.textContent = nombresBotones[catKey];
-            
-            // CLAVE DEL FIX: Usamos setAttribute para que sea idéntico al HTML estático
-            // Esto permite que el ScrollSpy detecte el atributo onclick correctamente
+            btn.textContent = NOMBRES_MOSTRAR[catKey];
             btn.setAttribute('onclick', `filtrar('${catKey}', this)`);
-            
             nav.appendChild(btn);
         }
     });
