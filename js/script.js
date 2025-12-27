@@ -87,7 +87,20 @@ function precargarImagenes(productos) {
 // Detecta el slug de la URL automáticamente (ej: de-la-vida-bar)
 const currentSlug = 'de-la-vida-bar';
 let globalRestaurantId = null;
+const ORDEN_MENU = [
+    'TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'ESPECIALIDADES', 'TAPAS', 'AGREGOS'
+];
 
+const NOMBRES_MOSTRAR = {
+    'TRAGOS': 'Tragos y Cócteles 🍸',
+    'BEBIDAS': 'Bebidas y Refrescos 🥤',
+    'CAFE': 'Momento Café ☕',
+    'WHISKEY': 'Whiskies Selectos 🥃',
+    'RON': 'Rones de la Casa 🥃',
+    'ESPECIALIDADES': 'Nuestras Especialidades ✨',
+    'TAPAS': 'Para Picar (Tapas) 🍟',
+    'AGREGOS': 'Agregos y Extras 🍕'
+};
 async function inicializarRestaurante() {
     console.log("Buscando configuración para:", currentSlug); // Aquí verás "de-la-vida-bar"
     const { data, error } = await supabaseClient
@@ -108,29 +121,39 @@ async function inicializarRestaurante() {
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     try {
-        if (!globalRestaurantId) await inicializarRestaurante();
+        if (!globalRestaurantId) {
+            const id = await inicializarRestaurante();
+            if (!id) return; 
+        }
 
         const { data: productos, error } = await supabaseClient
             .from('productos')
-            .select(`id, nombre, precio, imagen_url, categoria, destacado, estado, descripcion, curiosidad, stock, opiniones(puntuacion)`)
+            .select(`
+                id, nombre, precio, imagen_url, categoria, 
+                destacado, estado, descripcion, curiosidad, stock, 
+                opiniones(puntuacion)
+            `)
             .eq('activo', true)
             .eq('restaurant_id', globalRestaurantId);
 
         if (error) throw error;
 
-        // Filtramos para que solo entren productos de tu lista oficial
+        // FILTRADO USANDO LA CONSTANTE GLOBAL
         const productosProcesados = productos
             .filter(p => ORDEN_MENU.includes((p.categoria || '').toUpperCase()))
             .map(prod => {
                  const opiniones = prod.opiniones || [];
-                 prod.ratingPromedio = opiniones.length ? 
-                    (opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0) / opiniones.length).toFixed(1) : null;
+                 const total = opiniones.length;
+                 const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
+                 prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
                  return prod;
             });
 
         AppStore.setProducts(productosProcesados);
         renderizarMenu(productosProcesados);
         renderizarBotonesFiltro(productosProcesados);
+        
+        setTimeout(iniciarScrollSpy, 500);
 
     } catch (err) {
         console.error("Error cargando menú:", err);
@@ -144,7 +167,6 @@ function renderizarMenu(lista) {
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
-    // Agrupamos los productos por categoría en un objeto
     const categorias = {};
     lista.forEach(item => {
         const cat = (item.categoria || 'AGREGOS').toUpperCase(); 
@@ -154,7 +176,7 @@ function renderizarMenu(lista) {
 
     let htmlFinal = '';
     
-    // Construimos el HTML siguiendo exactamente tu lista 'orden'
+    // SE SIGUE EL ORDEN: TRAGOS -> ... -> ESPECIALIDADES -> TAPAS -> AGREGOS
     ORDEN_MENU.forEach(catKey => {
         if (categorias[catKey] && categorias[catKey].length > 0) {
             htmlFinal += construirSeccionHTML(
@@ -162,20 +184,10 @@ function renderizarMenu(lista) {
                 NOMBRES_MOSTRAR[catKey] || catKey, 
                 categorias[catKey]
             );
-            // Eliminamos del objeto para saber qué ya renderizamos
-            delete categorias[catKey];
         }
     });
 
-    // Si hubiera categorías en la DB que no están en tu lista 'orden', las ponemos al final
-    Object.keys(categorias).forEach(catKey => {
-        htmlFinal += construirSeccionHTML(catKey, catKey, categorias[catKey]);
-    });
-
     contenedor.innerHTML = htmlFinal;
-    
-    // Reiniciamos el observador de scroll para las nuevas posiciones
-    setTimeout(iniciarScrollSpy, 200); 
 }
 // Función auxiliar para crear el bloque HTML de cada sección
 function construirSeccionHTML(id, titulo, items) {

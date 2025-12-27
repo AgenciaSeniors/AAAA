@@ -19,29 +19,36 @@ function validarEntradasRegistro(nombre, telefono) {
 
 const SocialService = {
     // --- 1. BIENVENIDA Y REGISTRO ---
-    async checkWelcome() {
-        const clienteId = localStorage.getItem('cliente_id');
-        const nombre = localStorage.getItem('cliente_nombre');
-        const modal = document.getElementById('modal-welcome');
+    // js/social-service.js
 
-        if (clienteId) {
-            // Registro silencioso de visita recurrente
-            await supabaseClient.from('visitas').insert([{
-                 cliente_id: clienteId,
-                 restaurant_id: SOCIAL_RESTAURANT_ID
-                 }]);
-                 
-            if (modal) modal.style.display = 'none';
-            if (nombre) {
-                setTimeout(() => showToast(`¡Qué bueno verte de nuevo, ${nombre}!`, "success"), 1500);
-            }
-        } else {
-            if (modal) {
-                modal.style.display = 'flex';
-                setTimeout(() => modal.classList.add('active'), 10);
-            }
+async checkWelcome() {
+    let clienteId = localStorage.getItem('cliente_id');
+    
+    // VALIDACIÓN DE SEGURIDAD: Evita enviar "undefined" o IDs rotos
+    if (clienteId === "undefined" || clienteId === "null" || (clienteId && clienteId.length < 10)) {
+        localStorage.removeItem('cliente_id');
+        clienteId = null;
+    }
+
+    const modal = document.getElementById('modal-welcome');
+
+    if (clienteId) {
+        // Solo intentamos insertar si el ID parece un UUID válido
+        await supabaseClient.from('visitas').insert([{
+             cliente_id: clienteId,
+             restaurant_id: SOCIAL_RESTAURANT_ID
+        }]);
+             
+        if (modal) modal.style.display = 'none';
+        // ... resto del código
+    } else {
+        // Mostrar modal si no hay cliente_id válido
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
         }
-    },
+    }
+},
 
     async registrarBienvenida() {
         const nombreInput = document.getElementById('welcome-nombre');
