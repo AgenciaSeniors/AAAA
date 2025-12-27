@@ -108,42 +108,29 @@ async function inicializarRestaurante() {
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     try {
-        // SEGURIDAD: Si no hay ID, intentamos obtenerlo de nuevo
-        if (!globalRestaurantId) {
-            const id = await inicializarRestaurante();
-            if (!id) return; // Si sigue siendo null, abortamos para evitar el error 400
-        }
+        if (!globalRestaurantId) await inicializarRestaurante();
 
         const { data: productos, error } = await supabaseClient
             .from('productos')
-            .select(`
-                id, nombre, precio, imagen_url, categoria, 
-                destacado, estado, descripcion, curiosidad, stock, 
-                opiniones(puntuacion)
-            `)
+            .select(`id, nombre, precio, imagen_url, categoria, destacado, estado, descripcion, curiosidad, stock, opiniones(puntuacion)`)
             .eq('activo', true)
-            .eq('restaurant_id', globalRestaurantId); // Ahora garantizamos que no sea null
+            .eq('restaurant_id', globalRestaurantId);
 
         if (error) throw error;
 
-        // FILTRADO DE CATEGORÍAS (Solo las que pediste)
-        const CATEGORIAS_PERMITIDAS = ['TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'TAPAS', 'AGREGOS', 'ESPECIALIDADES'];
-        
+        // Filtramos para que solo entren productos de tu lista oficial
         const productosProcesados = productos
-            .filter(p => CATEGORIAS_PERMITIDAS.includes((p.categoria || '').toUpperCase()))
+            .filter(p => ORDEN_MENU.includes((p.categoria || '').toUpperCase()))
             .map(prod => {
                  const opiniones = prod.opiniones || [];
-                 const total = opiniones.length;
-                 const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
-                 prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
+                 prod.ratingPromedio = opiniones.length ? 
+                    (opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0) / opiniones.length).toFixed(1) : null;
                  return prod;
             });
 
         AppStore.setProducts(productosProcesados);
         renderizarMenu(productosProcesados);
         renderizarBotonesFiltro(productosProcesados);
-        
-        setTimeout(iniciarScrollSpy, 500);
 
     } catch (err) {
         console.error("Error cargando menú:", err);
@@ -157,43 +144,38 @@ function renderizarMenu(lista) {
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
+    // Agrupamos los productos por categoría en un objeto
     const categorias = {};
     lista.forEach(item => {
-        const cat = (item.categoria || 'OTROS').toUpperCase(); 
+        const cat = (item.categoria || 'AGREGOS').toUpperCase(); 
         if (!categorias[cat]) categorias[cat] = [];
         categorias[cat].push(item);
     });
 
-    // Definimos las categorías y sus nombres para mostrar
-    const CATEGORIAS_VALIDAS = ['TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'TAPAS', 'AGREGOS', 'ESPECIALIDADES'];
-    const NOMBRES_MOSTRAR = {
-        'TRAGOS': 'Tragos y Cócteles 🍸',
-        'BEBIDAS': 'Bebidas y Refrescos 🥤',
-        'CAFE': 'Momento Café ☕',
-        'WHISKEY': 'Whiskies Selectos 🥃',
-        'RON': 'Rones de la Casa 🥃',
-        'TAPAS': 'Para Picar (Tapas) 🍟',
-        'AGREGOS': 'Agregos y Extras 🍕',
-        'ESPECIALIDADES': 'Especialidades ✨'
-    };
-    
     let htmlFinal = '';
     
-    // CORRECCIÓN: Usamos CATEGORIAS_VALIDAS y NOMBRES_MOSTRAR
-    CATEGORIAS_VALIDAS.forEach(catKey => {
+    // Construimos el HTML siguiendo exactamente tu lista 'orden'
+    ORDEN_MENU.forEach(catKey => {
         if (categorias[catKey] && categorias[catKey].length > 0) {
-            htmlFinal += construirSeccionHTML(catKey, NOMBRES_MOSTRAR[catKey] || catKey, categorias[catKey]);
+            htmlFinal += construirSeccionHTML(
+                catKey, 
+                NOMBRES_MOSTRAR[catKey] || catKey, 
+                categorias[catKey]
+            );
+            // Eliminamos del objeto para saber qué ya renderizamos
             delete categorias[catKey];
         }
     });
 
-    // Categorías extra (si existieran)
+    // Si hubiera categorías en la DB que no están en tu lista 'orden', las ponemos al final
     Object.keys(categorias).forEach(catKey => {
         htmlFinal += construirSeccionHTML(catKey, catKey, categorias[catKey]);
     });
 
     contenedor.innerHTML = htmlFinal;
-    setTimeout(iniciarScrollSpy, 100); 
+    
+    // Reiniciamos el observador de scroll para las nuevas posiciones
+    setTimeout(iniciarScrollSpy, 200); 
 }
 // Función auxiliar para crear el bloque HTML de cada sección
 function construirSeccionHTML(id, titulo, items) {
@@ -337,9 +319,6 @@ function actualizarBotonesActivos(categoriaActiva) {
         }
     });
 }
-
-// EN js/script.js - Reemplaza la función renderizarBotonesFiltro completa
-
 function renderizarBotonesFiltro(productos) {
     const nav = document.querySelector('.filters');
     if (!nav) return;
@@ -350,27 +329,21 @@ function renderizarBotonesFiltro(productos) {
 
     // 2. Diccionario de Nombres Cortos para los Botones
     // (Deben coincidir con las CLAVES del paso anterior)
-    const nombresBotones = {
-        'TRAGOS': 'Tragos 🍸',
-        'CERVEZAS': 'Cervezas 🍺',
-        'BEBIDAS': 'Bebidas 🥤',
-        'CAFE': 'Café ☕',
-        'WHISKEY': 'Whiskey 🥃',
-        'RON': 'Ron 🥃',
-        'VINOS': 'Vinos 🍷',
-        'ESPECIALIDADES': 'Especiales ✨',
-        'TAPAS': 'Tapas 🍟',
-        'AGREGOS': 'Agregos 🍕',
-        'COMIDA': 'Platos 🍽️'
-    };
+    const NOMBRES_MOSTRAR = {
+    'TRAGOS': 'Tragos y Cócteles 🍸',
+    'BEBIDAS': 'Bebidas y Refrescos 🥤',
+    'CAFE': 'Momento Café ☕',
+    'WHISKEY': 'Whiskies Selectos 🥃',
+    'RON': 'Rones de la Casa 🥃',
+    'ESPECIALIDADES': 'Nuestras Especialidades ✨',
+    'TAPAS': 'Para Picar (Tapas) 🍟',
+    'AGREGOS': 'Agregos y Extras 🍕'
+};
 
     // 3. Orden deseado para los botones (mismo orden visual que el menú)
-    const orden = [
-        'TRAGOS', 'CERVEZAS', 'BEBIDAS', 'VINOS', 
-        'CAFE', 'WHISKEY', 'RON', 'ESPECIALIDADES', 
-        'TAPAS', 'COMIDA', 'AGREGOS'
-    ];
-
+    const ORDEN_MENU = [
+    'TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'ESPECIALIDADES', 'TAPAS', 'AGREGOS'
+];
     // Ordenamos las categorías disponibles según nuestra lista
     categoriasPresentes.sort((a, b) => {
         const idxA = orden.indexOf(a);
