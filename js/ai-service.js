@@ -50,62 +50,63 @@ const AIService = {
     },
     
     async askPairing(nombreProducto) {
-        const modal = document.getElementById('modal-match');
-        const loading = document.getElementById('match-loading');
-        const content = document.getElementById('match-content');
-        
-        if (!modal) return;
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('active'), 10);
-        loading.style.display = 'block';
-        content.style.display = 'none';
+    const modal = document.getElementById('modal-match');
+    const loading = document.getElementById('match-loading');
+    const content = document.getElementById('match-content');
+    
+    if (!modal) return;
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    loading.style.display = 'block';
+    content.style.display = 'none';
 
-        try {
-            // [CORREGIDO] Se añaden headers para evitar errores de lectura en el backend
-            const response = await fetch(CONFIG.URL_SCRIPT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({ 
-                    action: "pairing", 
-                    producto: nombreProducto, 
-                    token: "DLV_SECURE_TOKEN_2025_X9" 
-                })
-            });
+    try {
+        // CORRECCIÓN CRÍTICA CORS:
+        // Usamos 'text/plain' para evitar que el navegador lance un "Preflight" (OPTIONS)
+        // que Google Apps Script no sabe responder.
+        const response = await fetch(CONFIG.URL_SCRIPT, {
+            method: 'POST',
+            redirect: "follow", // Importante para seguir la redirección de Google
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify({ 
+                action: "pairing", 
+                producto: nombreProducto, 
+                token: "DLV_SECURE_TOKEN_2025_X9" 
+            })
+        });
+
+        const res = await response.json();
+
+        if (res.success) {
+            const recomendado = AppStore.getProducts().find(p => p.id == res.data.id_elegido);
             
-            const res = await response.json();
-            
-            if (res.success) {
-                // Buscamos el producto recomendado en el Store local
-                const recomendado = AppStore.getProducts().find(p => p.id == res.data.id_elegido);
+            if (recomendado) {
+                document.getElementById('match-plato-base').textContent = nombreProducto;
+                document.getElementById('match-img').src = recomendado.imagen_url || 'img/logo.png';
+                document.getElementById('match-producto-nombre').textContent = recomendado.nombre;
+                document.getElementById('match-justificacion').textContent = res.data.copy_venta;
                 
-                if (recomendado) {
-                    document.getElementById('match-plato-base').textContent = nombreProducto;
-                    document.getElementById('match-img').src = recomendado.imagen_url || 'img/logo.png';
-                    document.getElementById('match-producto-nombre').textContent = recomendado.nombre;
-                    document.getElementById('match-justificacion').textContent = res.data.copy_venta;
-                    
-                    document.getElementById('match-btn-action').onclick = () => {
-                        this.cerrarMatch();
-                        abrirDetalle(recomendado.id, res.data.copy_venta);
-                    };
-                    
-                    loading.style.display = 'none';
-                    content.style.display = 'block';
-                } else {
-                    // Fallback si la IA sugiere un ID que no tenemos cargado (raro, pero posible)
-                    throw new Error("Producto recomendado no encontrado en menú local");
-                }
+                document.getElementById('match-btn-action').onclick = () => {
+                    this.cerrarMatch();
+                    abrirDetalle(recomendado.id, res.data.copy_venta);
+                };
+                
+                loading.style.display = 'none';
+                content.style.display = 'block';
             } else {
-                throw new Error(res.error || "Error en respuesta IA");
+                throw new Error("Producto recomendado no encontrado en menú local");
             }
-        } catch (e) { 
-            console.error("Error Pairing:", e);
-            this.cerrarMatch(); 
-            showToast("El Sommelier está ocupado...", "error"); 
+        } else {
+            throw new Error(res.error || "Error en respuesta IA");
         }
-    },
+    } catch (e) { 
+        console.error("Error Pairing:", e);
+        this.cerrarMatch(); 
+        showToast("El Sommelier está ocupado (Error de conexión)", "error"); 
+    }
+},
     cerrarMatch() {
         const modal = document.getElementById('modal-match');
         if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300); 
