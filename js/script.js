@@ -89,49 +89,67 @@ const currentSlug = window.location.pathname.split('/').filter(Boolean).pop() ||
 let globalRestaurantId = null;
 
 async function inicializarRestaurante() {
+    console.log("Buscando configuración para:", currentSlug);
     const { data, error } = await supabaseClient
         .from('restaurantes')
         .select('id')
         .eq('slug', currentSlug)
-        .single();
+        .maybeSingle(); // Usamos maybeSingle para evitar el error 406 si no hay resultados
+
+    if (error) {
+        console.error("Error crítico de conexión:", error);
+        return null;
+    }
 
     if (data) {
         globalRestaurantId = data.id;
-        console.log("Sistema listo para el restaurante:", globalRestaurantId);
+        console.log("Restaurante identificado ID:", globalRestaurantId);
+        return data.id;
+    } else {
+        console.error("No se encontró un restaurante con el slug:", currentSlug);
+        showToast("Error: Configuración de restaurante no encontrada", "error");
+        return null;
     }
 }
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     try {
-        if (!globalRestaurantId) await inicializarRestaurante();
+        // SEGURIDAD: Si no hay ID, intentamos obtenerlo de nuevo
+        if (!globalRestaurantId) {
+            const id = await inicializarRestaurante();
+            if (!id) return; // Si sigue siendo null, abortamos para evitar el error 400
+        }
 
         const { data: productos, error } = await supabaseClient
             .from('productos')
-            .select(`id, nombre, precio, imagen_url, categoria, destacado, estado, descripcion, curiosidad, stock, opiniones(puntuacion)`)
+            .select(`
+                id, nombre, precio, imagen_url, categoria, 
+                destacado, estado, descripcion, curiosidad, stock, 
+                opiniones(puntuacion)
+            `)
             .eq('activo', true)
-            .eq('restaurant_id', globalRestaurantId);
+            .eq('restaurant_id', globalRestaurantId); // Ahora garantizamos que no sea null
 
         if (error) throw error;
 
-        // FILTRO: Solo incluimos las categorías de tu lista
+        // FILTRADO DE CATEGORÍAS (Solo las que pediste)
+        const CATEGORIAS_PERMITIDAS = ['TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'TAPAS', 'AGREGOS', 'ESPECIALIDADES'];
+        
         const productosProcesados = productos
-            .filter(p => {
-                const cat = (p.categoria || '').toUpperCase();
-                return CATEGORIAS_VALIDAS.includes(cat);
-            })
+            .filter(p => CATEGORIAS_PERMITIDAS.includes((p.categoria || '').toUpperCase()))
             .map(prod => {
-                const opiniones = prod.opiniones || [];
-                prod.ratingPromedio = opiniones.length ? 
-                    (opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0) / opiniones.length).toFixed(1) : null;
-                return prod;
+                 const opiniones = prod.opiniones || [];
+                 const total = opiniones.length;
+                 const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
+                 prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
+                 return prod;
             });
 
         AppStore.setProducts(productosProcesados);
         renderizarMenu(productosProcesados);
         renderizarBotonesFiltro(productosProcesados);
         
-        // Iniciamos el Scroll Spy con un ligero delay para asegurar que el DOM esté listo
-        setTimeout(iniciarScrollSpy, 400);
+        setTimeout(iniciarScrollSpy, 500);
 
     } catch (err) {
         console.error("Error cargando menú:", err);
