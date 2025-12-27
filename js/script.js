@@ -157,21 +157,15 @@ function renderizarMenu(lista) {
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
-    // 1. Mapa de Categorías actualizado con tus nuevos nombres
-    
-
     const categorias = {};
     lista.forEach(item => {
-        // Convertimos lo que viene de la BD (ej: "cafe") a mayúsculas ("CAFE")
         const cat = (item.categoria || 'OTROS').toUpperCase(); 
         if (!categorias[cat]) categorias[cat] = [];
         categorias[cat].push(item);
     });
 
-    // 2. Orden de aparición en la página (el orden que tú definiste)
-    const CATEGORIAS_VALIDAS = [
-    'TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'TAPAS', 'AGREGOS', 'ESPECIALIDADES'
-];
+    // Definimos las categorías y sus nombres para mostrar
+    const CATEGORIAS_VALIDAS = ['TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'TAPAS', 'AGREGOS', 'ESPECIALIDADES'];
     const NOMBRES_MOSTRAR = {
         'TRAGOS': 'Tragos y Cócteles 🍸',
         'BEBIDAS': 'Bebidas y Refrescos 🥤',
@@ -184,14 +178,16 @@ function renderizarMenu(lista) {
     };
     
     let htmlFinal = '';
-    orden.forEach(catKey => {
+    
+    // CORRECCIÓN: Usamos CATEGORIAS_VALIDAS y NOMBRES_MOSTRAR
+    CATEGORIAS_VALIDAS.forEach(catKey => {
         if (categorias[catKey] && categorias[catKey].length > 0) {
-            htmlFinal += construirSeccionHTML(catKey, nombresCat[catKey] || catKey, categorias[catKey]);
+            htmlFinal += construirSeccionHTML(catKey, NOMBRES_MOSTRAR[catKey] || catKey, categorias[catKey]);
             delete categorias[catKey];
         }
     });
 
-    // Categorías que no estén en el orden (por si acaso)
+    // Categorías extra (si existieran)
     Object.keys(categorias).forEach(catKey => {
         htmlFinal += construirSeccionHTML(catKey, catKey, categorias[catKey]);
     });
