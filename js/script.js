@@ -85,29 +85,23 @@ function precargarImagenes(productos) {
     });
 }
 // Detecta el slug de la URL automáticamente (ej: de-la-vida-bar)
-const currentSlug = window.location.pathname.split('/').filter(Boolean).pop() || 'de-la-vida-bar';
+const currentSlug = 'de-la-vida-bar';
 let globalRestaurantId = null;
 
 async function inicializarRestaurante() {
-    console.log("Buscando configuración para:", currentSlug);
+    console.log("Buscando configuración para:", currentSlug); // Aquí verás "de-la-vida-bar"
     const { data, error } = await supabaseClient
         .from('restaurantes')
         .select('id')
         .eq('slug', currentSlug)
-        .maybeSingle(); // Usamos maybeSingle para evitar el error 406 si no hay resultados
-
-    if (error) {
-        console.error("Error crítico de conexión:", error);
-        return null;
-    }
+        .maybeSingle(); 
 
     if (data) {
         globalRestaurantId = data.id;
-        console.log("Restaurante identificado ID:", globalRestaurantId);
+        console.log("Sistema listo para el restaurante ID:", globalRestaurantId);
         return data.id;
     } else {
-        console.error("No se encontró un restaurante con el slug:", currentSlug);
-        showToast("Error: Configuración de restaurante no encontrada", "error");
+        console.error("ERROR: No existe el slug '" + currentSlug + "' en la tabla 'restaurantes'.");
         return null;
     }
 }
