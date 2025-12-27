@@ -4,7 +4,19 @@ const CONFIG = {
     URL_SCRIPT: 'https://script.google.com/macros/s/AKfycbzzXvv1KtxUpBZVNfkhkZ6rI4iQEfk8SXHOgHeAa4jdH6-lLfKE-wswfMXtfaoeVMJC/exec',
     RESTAURANT_ID: '3d615b07-c20b-492e-a3b1-e25951967a47',
 };
+// Agrega esto a js/config.js
+const ORDEN_MENU = ['TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'TAPAS', 'ESPECIALIDADES', 'AGREGOS'];
 
+const NOMBRES_MOSTRAR = {
+    'TRAGOS': 'Tragos 🍸',
+    'BEBIDAS': 'Bebidas 🥤',
+    'CAFE': 'Café ☕',
+    'WHISKEY': 'Whiskies 🥃',
+    'RON': 'Ron 🥃',
+    'TAPAS': 'Tapas 🍟',
+    'ESPECIALIDADES': 'Especiales ✨',
+    'AGREGOS': 'Agregos 🍕'
+};
 // Cliente Global de Supabase
 
 const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
