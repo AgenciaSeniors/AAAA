@@ -61,27 +61,50 @@ const AIService = {
         content.style.display = 'none';
 
         try {
+            // [CORREGIDO] Se añaden headers para evitar errores de lectura en el backend
             const response = await fetch(CONFIG.URL_SCRIPT, {
                 method: 'POST',
-                body: JSON.stringify({ action: "pairing", producto: nombreProducto, token: "DLV_SECURE_TOKEN_2025_X9" })
+                headers: {
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ 
+                    action: "pairing", 
+                    producto: nombreProducto, 
+                    token: "DLV_SECURE_TOKEN_2025_X9" 
+                })
             });
+            
             const res = await response.json();
+            
             if (res.success) {
+                // Buscamos el producto recomendado en el Store local
                 const recomendado = AppStore.getProducts().find(p => p.id == res.data.id_elegido);
+                
                 if (recomendado) {
                     document.getElementById('match-plato-base').textContent = nombreProducto;
                     document.getElementById('match-img').src = recomendado.imagen_url || 'img/logo.png';
                     document.getElementById('match-producto-nombre').textContent = recomendado.nombre;
                     document.getElementById('match-justificacion').textContent = res.data.copy_venta;
+                    
                     document.getElementById('match-btn-action').onclick = () => {
                         this.cerrarMatch();
                         abrirDetalle(recomendado.id, res.data.copy_venta);
                     };
+                    
                     loading.style.display = 'none';
                     content.style.display = 'block';
+                } else {
+                    // Fallback si la IA sugiere un ID que no tenemos cargado (raro, pero posible)
+                    throw new Error("Producto recomendado no encontrado en menú local");
                 }
+            } else {
+                throw new Error(res.error || "Error en respuesta IA");
             }
-        } catch (e) { this.cerrarMatch(); showToast("Error de conexión", "error"); }
+        } catch (e) { 
+            console.error("Error Pairing:", e);
+            this.cerrarMatch(); 
+            showToast("El Sommelier está ocupado...", "error"); 
+        }
     },
     cerrarMatch() {
         const modal = document.getElementById('modal-match');
