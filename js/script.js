@@ -102,51 +102,36 @@ async function inicializarRestaurante() {
 }
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
-    const grid = document.getElementById('menu-grid');
-    const menuCache = localStorage.getItem('menu_cache');
-    
-    if (menuCache) {
-        AppStore.setProducts(JSON.parse(menuCache));
-        renderizarMenu(AppStore.getProducts());
-    }
-
     try {
-        // PREVENCIÓN: Si falló la inicialización, usar ID por defecto o frenar
-        if (!globalRestaurantId) {
-            console.warn("ID de restaurante no detectado, reintentando inicialización...");
-            await inicializarRestaurante();
-        }
+        if (!globalRestaurantId) await inicializarRestaurante();
 
         const { data: productos, error } = await supabaseClient
             .from('productos')
-            .select(`
-                id, nombre, precio, imagen_url, categoria, 
-                destacado, estado, descripcion, curiosidad, stock, 
-                opiniones(puntuacion)
-            `)
+            .select(`id, nombre, precio, imagen_url, categoria, destacado, estado, descripcion, curiosidad, stock, opiniones(puntuacion)`)
             .eq('activo', true)
-            .eq('restaurant_id', globalRestaurantId); // <--- FILTRO CLAVE AÑADIDO
+            .eq('restaurant_id', globalRestaurantId);
 
         if (error) throw error;
 
-        // ... (Resto de tu lógica de procesamiento y renderizado igual que antes)
-        const productosProcesados = productos.map(prod => {
-             // ... tu lógica de map
-             const opiniones = prod.opiniones || [];
-             const total = opiniones.length;
-             const suma = opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0);
-             prod.ratingPromedio = total ? (suma / total).toFixed(1) : null;
-             return prod;
-        });
+        // FILTRO: Solo incluimos las categorías de tu lista
+        const productosProcesados = productos
+            .filter(p => {
+                const cat = (p.categoria || '').toUpperCase();
+                return CATEGORIAS_VALIDAS.includes(cat);
+            })
+            .map(prod => {
+                const opiniones = prod.opiniones || [];
+                prod.ratingPromedio = opiniones.length ? 
+                    (opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0) / opiniones.length).toFixed(1) : null;
+                return prod;
+            });
 
-        if (JSON.stringify(productosProcesados) !== menuCache) {
-            localStorage.setItem('menu_cache', JSON.stringify(productosProcesados));
-            AppStore.setProducts(productosProcesados);
-            renderizarMenu(productosProcesados);
-            renderizarBotonesFiltro(productosProcesados);
-            setTimeout(iniciarScrollSpy, 500);
-        }
-        precargarImagenes(productosProcesados);
+        AppStore.setProducts(productosProcesados);
+        renderizarMenu(productosProcesados);
+        renderizarBotonesFiltro(productosProcesados);
+        
+        // Iniciamos el Scroll Spy con un ligero delay para asegurar que el DOM esté listo
+        setTimeout(iniciarScrollSpy, 400);
 
     } catch (err) {
         console.error("Error cargando menú:", err);
@@ -161,19 +146,7 @@ function renderizarMenu(lista) {
     contenedor.innerHTML = '';
 
     // 1. Mapa de Categorías actualizado con tus nuevos nombres
-    const nombresCat = {
-        'TRAGOS': 'Tragos y Cócteles 🍸',
-        'CERVEZAS': 'Cervezas Frías 🍺',
-        'BEBIDAS': 'Refrescos y Jugos 🥤',
-        'CAFE': 'Momento Café ☕',          // Nota: CAFE sin tilde en la clave
-        'WHISKEY': 'Selección de Whiskies 🥃',
-        'RON': 'Rones Selectos 🥃',
-        'VINOS': 'Vinos y Licores 🍷',
-        'ESPECIALIDADES': 'Nuestras Especialidades ✨',
-        'TAPAS': 'Para Picar 🍟',
-        'AGREGOS': 'Agregos y Extras 🍕',
-        'COMIDA': 'Cocina & Platos 🍽️'
-    };
+    
 
     const categorias = {};
     lista.forEach(item => {
@@ -184,11 +157,19 @@ function renderizarMenu(lista) {
     });
 
     // 2. Orden de aparición en la página (el orden que tú definiste)
-    const orden = [
-        'TRAGOS', 'CERVEZAS', 'BEBIDAS', 'VINOS', 
-        'CAFE', 'WHISKEY', 'RON', 'ESPECIALIDADES', 
-        'TAPAS', 'COMIDA', 'AGREGOS'
-    ];
+    const CATEGORIAS_VALIDAS = [
+    'TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'TAPAS', 'AGREGOS', 'ESPECIALIDADES'
+];
+    const NOMBRES_MOSTRAR = {
+        'TRAGOS': 'Tragos y Cócteles 🍸',
+        'BEBIDAS': 'Bebidas y Refrescos 🥤',
+        'CAFE': 'Momento Café ☕',
+        'WHISKEY': 'Whiskies Selectos 🥃',
+        'RON': 'Rones de la Casa 🥃',
+        'TAPAS': 'Para Picar (Tapas) 🍟',
+        'AGREGOS': 'Agregos y Extras 🍕',
+        'ESPECIALIDADES': 'Especialidades ✨'
+    };
     
     let htmlFinal = '';
     orden.forEach(catKey => {
@@ -290,46 +271,35 @@ if(searchInput) {
 function filtrar(cat, btn) {
     if (cat === 'todos') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        actualizarBotonesActivos('todos');
         return;
     }
 
-    const seccionId = `cat-${cat}`;
-    const seccion = document.getElementById(seccionId);
-    
+    const seccion = document.getElementById(`cat-${cat}`);
     if (seccion) {
-        // Ajustamos el offset según la altura de tu header + barra de filtros
-        const headerOffset = 130; 
+        // Offset de 125px para que el título no quede tapado por la barra de filtros sticky
+        const headerOffset = 125; 
         const elementPosition = seccion.getBoundingClientRect().top;
         const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
       
-        window.scrollTo({
-            top: offsetPosition,
-            behavior: "smooth"
-        });
+        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
     }
 }
 
 function iniciarScrollSpy() {
     const secciones = document.querySelectorAll('.category-section');
-    const navFilters = document.querySelector('.filters');
     
+    // rootMargin de -120px detecta la sección justo cuando llega debajo del buscador
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            // Usamos isIntersecting con un umbral para detectar la sección predominante
             if (entry.isIntersecting) {
-                const idPuro = entry.target.id.replace('cat-', '');
-                actualizarBotonesActivos(idPuro);
+                const id = entry.target.id.replace('cat-', '');
+                actualizarBotonesActivos(id);
             }
         });
-    }, {
-        // Marcamos como "activa" la sección cuando ocupa la parte superior/media
-        rootMargin: "-15% 0px -70% 0px" 
-    });
+    }, { rootMargin: '-120px 0px -70% 0px', threshold: 0 });
 
     secciones.forEach(sec => observer.observe(sec));
 }
-
 /**
  * Resalta el botón y lo centra automáticamente en la barra horizontal
  */
