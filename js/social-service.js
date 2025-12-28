@@ -1,7 +1,7 @@
 // js/social-service.js - VERSIÓN CORREGIDA
 // Asegúrate de que CONFIG.RESTAURANT_ID esté definido en config.js, o usa el string directo aquí.
 const UMBRAL_VISITA_MS = 8 * 60 * 60 * 1000; 
-const SOCIAL_RESTAURANT_ID = () => (typeof globalRestaurantId !== 'undefined' && globalRestaurantId) 
+const SOCIAL_RESTAURANT_ID() = () => (typeof globalRestaurantId !== 'undefined' && globalRestaurantId) 
     ? globalRestaurantId 
     : CONFIG.RESTAURANT_ID;
 
@@ -37,7 +37,7 @@ async checkWelcome() {
 
     if (clienteId) {
         // --- LÓGICA DE CONTROL DE DUPLICADOS (8 HORAS) ---
-        const storageKey = `visita_${SOCIAL_RESTAURANT_ID}`; 
+        const storageKey = `visita_${SOCIAL_RESTAURANT_ID()()}`; 
         const ahora = Date.now();
         const ultimaVisita = localStorage.getItem(storageKey);
 
@@ -47,7 +47,7 @@ async checkWelcome() {
             // Enviamos 'motivo' para evitar el error 400 Bad Request
             const { error } = await supabaseClient.from('visitas').insert([{
                  cliente_id: clienteId,
-                 restaurant_id: SOCIAL_RESTAURANT_ID,
+                 restaurant_id: SOCIAL_RESTAURANT_ID(),
                  motivo: 'qr_scan' // <--- CAMBIO CRÍTICO PARA TU TABLA
             }]);
 
@@ -92,7 +92,7 @@ async checkWelcome() {
             const { data: cliente, error: errCliente } = await supabaseClient
                 .from('clientes')
                 .upsert({ 
-                    restaurant_id: SOCIAL_RESTAURANT_ID, 
+                    restaurant_id: SOCIAL_RESTAURANT_ID(), 
                     nombre: nombre, 
                     telefono: telefono 
                 }, { onConflict: 'restaurant_id, telefono' }) 
@@ -108,10 +108,10 @@ async checkWelcome() {
             // Registrar visita
             await supabaseClient.from('visitas').insert([{
                  cliente_id: cliente.id,
-                 restaurant_id: SOCIAL_RESTAURANT_ID,
+                 restaurant_id: SOCIAL_RESTAURANT_ID()(),
                  motivo: 'qr_scan'
             }]);
-            const storageKey = `visita_${SOCIAL_RESTAURANT_ID}`;
+            const storageKey = `visita_${SOCIAL_RESTAURANT_ID()()}`;
             localStorage.setItem(storageKey, Date.now().toString());
             this.cerrarWelcome();
             showToast(`¡Bienvenido a la experiencia, ${nombre}!`, "success");
@@ -183,7 +183,7 @@ async checkWelcome() {
         const comentario = comentarioEl ? comentarioEl.value : "";
 
         const { error } = await supabaseClient.from('opiniones').insert([{
-            restaurant_id: SOCIAL_RESTAURANT_ID,
+            restaurant_id: SOCIAL_RESTAURANT_ID(),
             producto_id: prod.id, 
             cliente_nombre: nombre, 
             comentario: comentario, 
@@ -210,7 +210,7 @@ async checkWelcome() {
         const { data, error } = await supabaseClient
             .from('opiniones')
             .select('*, productos(nombre, imagen_url)')
-            .eq('restaurant_id', SOCIAL_RESTAURANT_ID)
+            .eq('restaurant_id', SOCIAL_RESTAURANT_ID())
             .order('created_at', { ascending: false });
 
         if (!error && data) {
