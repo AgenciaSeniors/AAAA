@@ -1,7 +1,9 @@
 // js/social-service.js - VERSIÓN CORREGIDA
 // Asegúrate de que CONFIG.RESTAURANT_ID esté definido en config.js, o usa el string directo aquí.
 const UMBRAL_VISITA_MS = 8 * 60 * 60 * 1000; 
-const SOCIAL_RESTAURANT_ID = (typeof CONFIG !== 'undefined' && CONFIG.RESTAURANT_ID) ? CONFIG.RESTAURANT_ID : '3d615b07-c20b-492e-a3b1-e25951967a47';
+const SOCIAL_RESTAURANT_ID = () => (typeof globalRestaurantId !== 'undefined' && globalRestaurantId) 
+    ? globalRestaurantId 
+    : CONFIG.RESTAURANT_ID;
 
 let opinionesGlobal = []; 
 
