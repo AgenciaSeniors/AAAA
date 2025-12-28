@@ -20,4 +20,8 @@ const NOMBRES_MOSTRAR = {
 };
 // Cliente Global de Supabase
 
-const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, {
+  auth: {
+    persistSession: false // Evita que el navegador bloquee el acceso por "tracking"
+  }
+});

@@ -27,7 +27,7 @@ const SocialService = {
 async checkWelcome() {
     let clienteId = localStorage.getItem('cliente_id');
     
-    // Validación de ID (Tu lógica original)
+    // Validación de seguridad para IDs corruptos
     if (clienteId === "undefined" || clienteId === "null" || (clienteId && clienteId.length < 10)) {
         localStorage.removeItem('cliente_id');
         clienteId = null;
@@ -36,30 +36,30 @@ async checkWelcome() {
     const modal = document.getElementById('modal-welcome');
 
     if (clienteId) {
-        // --- CORRECCIÓN MULTI-RESTAURANTE ---
-        
-        // Usamos una clave única para este restaurante específico
+        // --- LÓGICA DE CONTROL DE DUPLICADOS (8 HORAS) ---
         const storageKey = `visita_${SOCIAL_RESTAURANT_ID}`; 
-        
         const ahora = Date.now();
         const ultimaVisita = localStorage.getItem(storageKey);
 
-        // Verificamos el tiempo contra la marca ESPECÍFICA de este restaurante
+        // Si no hay registro previo o si ya pasaron más de 8 horas (28,800,000 ms)
         if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > UMBRAL_VISITA_MS) {
             
-            // Insertamos la visita indicando explícitamente el restaurant_id
+            // Enviamos 'motivo' para evitar el error 400 Bad Request
             const { error } = await supabaseClient.from('visitas').insert([{
                  cliente_id: clienteId,
-                 restaurant_id: SOCIAL_RESTAURANT_ID 
+                 restaurant_id: SOCIAL_RESTAURANT_ID,
+                 motivo: 'qr_scan' // <--- CAMBIO CRÍTICO PARA TU TABLA
             }]);
 
             if (!error) {
-                // Guardamos la marca de tiempo SOLO para este restaurante
+                // Guardamos la marca de tiempo solo si la inserción fue exitosa
                 localStorage.setItem(storageKey, ahora.toString());
-                console.log(`Visita registrada para restaurante ${SOCIAL_RESTAURANT_ID}`);
+                console.log("Visita única registrada con éxito.");
+            } else {
+                console.error("Error Supabase:", error.message);
             }
         } else {
-            console.log("Visita omitida: Ya registrada hace menos de 8 horas en este local.");
+            console.log("Visita omitida: Se registró una hace menos de 8 horas en este local.");
         }
         
         if (modal) modal.style.display = 'none';
