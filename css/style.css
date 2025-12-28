@@ -108,44 +108,72 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: var(--bg-dark); /* O el color de tu fondo */
-    padding: 10px 0;
-    border-bottom: 1px solid #222; 
+    /* Fondo con transparencia y desenfoque para efecto cristal sobre el contenido */
+    background: rgba(5, 5, 5, 0.85); 
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
 }
+
 .filters { 
     display: flex; 
-    gap: 10px; 
+    gap: 12px; 
     padding: 0 20px; 
     overflow-x: auto; 
-    scroll-behavior: smooth; /* Importante para el centrado automático */
+    scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Oculta scrollbar en Firefox */
 }
-.filters::-webkit-scrollbar { display: none; } /* Oculta scrollbar en Chrome/Safari */
+.filters::-webkit-scrollbar { display: none; }
 .filter-btn { 
-    background: transparent; color: #fff; 
-    border: 1px solid #333; 
-    padding: 8px 20px; border-radius: 100px; 
-    font-family: var(--font-body); font-size: 0.85rem;
-    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.03); 
+    color: #777; /* Color apagado cuando no está activo */
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    padding: 10px 22px; 
+    border-radius: 50px; 
+    font-family: var(--font-body); 
+    font-size: 0.85rem;
+    font-weight: 500;
+    /* Transición de larga duración con curva suave */
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+    cursor: pointer; 
+    white-space: nowrap;
     position: relative;
-    cursor: pointer; transition: 0.3s; white-space: nowrap;
+}
+.filter-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--neon-cyan);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--neon-cyan);
 }
 .filter-btn.active { 
-    background: var(--bg-noir); 
+    background: rgba(0, 240, 255, 0.1); 
     color: var(--neon-cyan); 
     border-color: var(--neon-cyan); 
     font-weight: 700; 
-    box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+    transform: scale(1.05);
+}
+.filter-btn.active::after {
+    width: 30%; /* Aparece la línea de acento */
 }
 .filter-btn:hover {
     background: rgba(0, 255, 255, 0.1); /* Fondo sutil */
     color: var(--neon-cyan);
     transform: scale(1.05);
 }
-
-.filter-btn.active {
-    box-shadow: 0 0 10px var(--neon-cyan); /* Resplandor cuando está activo */
+.filter-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
 }
 /* Botón flotante IA */
 .fab-ia {

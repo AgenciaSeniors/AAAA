@@ -61,9 +61,13 @@ const AppStore = {
 };
 document.addEventListener('DOMContentLoaded', async () => { 
     try {
-        await inicializarRestaurante(); // Ahora el await funcionará correctamente
+        await inicializarRestaurante();
         checkWelcome(); 
-        cargarMenu();
+        
+        // CORRECCIÓN: Esperar a que el menú cargue y luego iniciar el Scroll Spy
+        await cargarMenu(); 
+        iniciarScrollSpy(); 
+        
         updateConnectionStatus();
         registrarServiceWorker();
         loadDynamicHero();
@@ -264,22 +268,30 @@ function filtrar(cat, btn) {
 
 function iniciarScrollSpy() {
     const secciones = document.querySelectorAll('.category-section');
-    
-    // rootMargin de -120px detecta la sección justo cuando llega debajo del buscador
+    const navFiltros = document.getElementById('nav-filtros');
+
     const observer = new IntersectionObserver((entries) => {
+        // Si estamos muy cerca del tope, marcar "Todos"
+        if (window.scrollY < 100) {
+            actualizarBotonesActivos('todos');
+            return;
+        }
+
         entries.forEach(entry => {
+            // El umbral se ajusta con rootMargin para detectar la sección 
+            // justo cuando pasa debajo de la barra de navegación
             if (entry.isIntersecting) {
-                const id = entry.target.id.replace('cat-', '');
-                actualizarBotonesActivos(id);
+                const categoriaId = entry.target.id.replace('cat-', '');
+                actualizarBotonesActivos(categoriaId);
             }
         });
-    }, { rootMargin: '-120px 0px -70% 0px', threshold: 0 });
+    }, { 
+        rootMargin: '-120px 0px -70% 0px', // Ajusta según el alto de tu header
+        threshold: 0 
+    });
 
     secciones.forEach(sec => observer.observe(sec));
 }
-/**
- * Resalta el botón y lo centra automáticamente en la barra horizontal
- */
 function actualizarBotonesActivos(categoriaActiva) {
     const botones = document.querySelectorAll('.filter-btn');
     const nav = document.getElementById('nav-filtros');
@@ -287,12 +299,13 @@ function actualizarBotonesActivos(categoriaActiva) {
     botones.forEach(btn => {
         btn.classList.remove('active');
         
-        // Obtenemos la categoría del atributo onclick: filtrar('RON', this) -> sacamos 'RON'
         const clickAttr = btn.getAttribute('onclick') || "";
         
+        // Verifica si es el botón de la categoría actual o el de "todos"
         if (clickAttr.includes(`'${categoriaActiva}'`)) {
             btn.classList.add('active');
 
+            // Centrar el botón automáticamente en el scroll horizontal
             if (nav) {
                 const btnLeft = btn.offsetLeft;
                 const btnWidth = btn.offsetWidth;
