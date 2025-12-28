@@ -24,7 +24,7 @@ const SocialService = {
 async checkWelcome() {
     let clienteId = localStorage.getItem('cliente_id');
     
-    // VALIDACIÓN DE SEGURIDAD: Evita enviar "undefined" o IDs rotos
+    // Validación de ID (Tu lógica original)
     if (clienteId === "undefined" || clienteId === "null" || (clienteId && clienteId.length < 10)) {
         localStorage.removeItem('cliente_id');
         clienteId = null;
@@ -33,16 +33,34 @@ async checkWelcome() {
     const modal = document.getElementById('modal-welcome');
 
     if (clienteId) {
-        // Solo intentamos insertar si el ID parece un UUID válido
-        await supabaseClient.from('visitas').insert([{
-             cliente_id: clienteId,
-             restaurant_id: SOCIAL_RESTAURANT_ID
-        }]);
-             
+        // --- CORRECCIÓN MULTI-RESTAURANTE ---
+        
+        // Usamos una clave única para este restaurante específico
+        const storageKey = `visita_${SOCIAL_RESTAURANT_ID}`; 
+        
+        const ahora = Date.now();
+        const ultimaVisita = localStorage.getItem(storageKey);
+
+        // Verificamos el tiempo contra la marca ESPECÍFICA de este restaurante
+        if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > UMBRAL_VISITA_MS) {
+            
+            // Insertamos la visita indicando explícitamente el restaurant_id
+            const { error } = await supabaseClient.from('visitas').insert([{
+                 cliente_id: clienteId,
+                 restaurant_id: SOCIAL_RESTAURANT_ID 
+            }]);
+
+            if (!error) {
+                // Guardamos la marca de tiempo SOLO para este restaurante
+                localStorage.setItem(storageKey, ahora.toString());
+                console.log(`Visita registrada para restaurante ${SOCIAL_RESTAURANT_ID}`);
+            }
+        } else {
+            console.log("Visita omitida: Ya registrada hace menos de 8 horas en este local.");
+        }
+        
         if (modal) modal.style.display = 'none';
-        // ... resto del código
     } else {
-        // Mostrar modal si no hay cliente_id válido
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
@@ -89,7 +107,8 @@ async checkWelcome() {
                  cliente_id: cliente.id,
                  restaurant_id: SOCIAL_RESTAURANT_ID
             }]);
-
+            const storageKey = `visita_${SOCIAL_RESTAURANT_ID}`;
+            localStorage.setItem(storageKey, Date.now().toString());
             this.cerrarWelcome();
             showToast(`¡Bienvenido a la experiencia, ${nombre}!`, "success");
 
