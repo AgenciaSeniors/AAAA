@@ -108,7 +108,8 @@ async checkWelcome() {
             // Registrar visita
             await supabaseClient.from('visitas').insert([{
                  cliente_id: cliente.id,
-                 restaurant_id: SOCIAL_RESTAURANT_ID
+                 restaurant_id: SOCIAL_RESTAURANT_ID,
+                 motivo: 'qr_scan'
             }]);
             const storageKey = `visita_${SOCIAL_RESTAURANT_ID}`;
             localStorage.setItem(storageKey, Date.now().toString());
