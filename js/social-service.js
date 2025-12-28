@@ -37,7 +37,7 @@ async checkWelcome() {
 
     if (clienteId) {
         // --- LÓGICA DE CONTROL DE DUPLICADOS (8 HORAS) ---
-        const storageKey = `visita_${SOCIAL_RESTAURANT_ID()()}`; 
+        const storageKey = `visita_${SOCIAL_RESTAURANT_ID()}`; 
         const ahora = Date.now();
         const ultimaVisita = localStorage.getItem(storageKey);
 
@@ -108,10 +108,10 @@ async checkWelcome() {
             // Registrar visita
             await supabaseClient.from('visitas').insert([{
                  cliente_id: cliente.id,
-                 restaurant_id: SOCIAL_RESTAURANT_ID()(),
+                 restaurant_id: SOCIAL_RESTAURANT_ID(),
                  motivo: 'qr_scan'
             }]);
-            const storageKey = `visita_${SOCIAL_RESTAURANT_ID()()}`;
+            const storageKey = `visita_${SOCIAL_RESTAURANT_ID()}`;
             localStorage.setItem(storageKey, Date.now().toString());
             this.cerrarWelcome();
             showToast(`¡Bienvenido a la experiencia, ${nombre}!`, "success");
