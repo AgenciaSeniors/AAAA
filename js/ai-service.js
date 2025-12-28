@@ -1,5 +1,4 @@
 // js/ai-service.js
-const UMBRAL_VISITA_MS = 8 * 60 * 60 * 1000; // 8 horas en milisegundos
 const NoirCopywriter = { // Diccionario de frases
     "standard": ["Un clásico nunca falla.", "El momento pide algo atemporal.", "Déjate llevar por la intuición."],
     "rainy": ["Día gris, copa llena. El refugio perfecto.", "Llueve fuera. Aquí dentro, el clima lo pones tú."],
