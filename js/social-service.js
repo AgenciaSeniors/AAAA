@@ -207,6 +207,7 @@ async checkWelcome() {
         const { data, error } = await supabaseClient
             .from('opiniones')
             .select('*, productos(nombre, imagen_url)')
+            .eq('restaurant_id', SOCIAL_RESTAURANT_ID)
             .order('created_at', { ascending: false });
 
         if (!error && data) {

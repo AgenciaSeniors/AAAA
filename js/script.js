@@ -74,18 +74,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- PRECARGA ---
 function precargarImagenes(productos) {
     if (!productos) return;
-    // Usar window.onload para esperar a que lo principal esté listo
-    window.addEventListener('load', () => {
-        productos.forEach(prod => {
-            if (prod.imagen_url) {
+    
+    // Si el documento ya está listo, ejecuta directo
+    if (document.readyState === 'complete') {
+        ejecutarPrecarga(productos);
+    } else {
+        window.addEventListener('load', () => ejecutarPrecarga(productos));
+    }
+}
+function ejecutarPrecarga(lista) {
+    lista.forEach(prod => { if (prod.imagen_url) {
                 const img = new Image();
                 img.src = prod.imagen_url;
-            }
-        });
-    });
+            } });
 }
 // Detecta el slug de la URL automáticamente (ej: de-la-vida-bar)
-const currentSlug = 'de-la-vida-bar';
+const currentSlug = (typeof CONFIG !== 'undefined' && CONFIG.SLUG) ? CONFIG.SLUG : 'de-la-vida-bar';
 let globalRestaurantId = null;
 
 async function inicializarRestaurante() {
