@@ -1,7 +1,7 @@
 // js/social-service.js - VERSIÓN CORREGIDA
 // Asegúrate de que CONFIG.RESTAURANT_ID esté definido en config.js, o usa el string directo aquí.
 const UMBRAL_VISITA_MS = 8 * 60 * 60 * 1000; 
-const SOCIAL_RESTAURANT_ID() = () => (typeof globalRestaurantId !== 'undefined' && globalRestaurantId) 
+const SOCIAL_RESTAURANT_ID = () => (typeof globalRestaurantId !== 'undefined' && globalRestaurantId) 
     ? globalRestaurantId 
     : CONFIG.RESTAURANT_ID;
 
