@@ -91,13 +91,17 @@ async function cargarAdmin() {
         currentAdminRestaurantId = await obtenerMiRestaurante();
     }
 
-    // Seguridad: Si falla todo (incluso el fallback), detenemos.
     if (!currentAdminRestaurantId) {
         console.error("FATAL: No se pudo identificar el restaurante.");
-        return showToast("Error crítico: Identidad del restaurante desconocida. Contacte soporte.", "error");
+        return showToast("Error crítico: Identidad desconocida.", "error");
     }
 
-    // 2. Carga optimizada (Limitamos a 100 para evitar bloqueos)
+    // --- PUENTE CRÍTICO ---
+    // Esto permite que SocialService sepa qué ID usar sin leer config.js
+    window.globalRestaurantId = currentAdminRestaurantId; 
+    // ---------------------
+
+    // 2. Carga de Inventario (Existente)
     const { data, error } = await supabaseClient
         .from('productos')
         .select('*')
@@ -105,13 +109,22 @@ async function cargarAdmin() {
         .order('id', { ascending: false })
         .limit(100);
 
-    if (error) {
-        console.error("Error cargando inventario:", error);
-        return showToast("Error al cargar inventario (Ver consola)", "error");
+    if (!error) {
+        AdminStore.setInventory(data || []);
+        renderizarInventario(data || []);
+    }
+
+    // 3. Carga de Módulos Sociales (Usando SocialService)
+    console.log("Cargando módulos sociales...");
+    
+    if (typeof window.cargarOpiniones === 'function') {
+        window.cargarOpiniones();
     }
     
-    AdminStore.setInventory(data || []);
-    renderizarInventario(data || []);
+    if (typeof window.cargarMetricasVisitas === 'function') {
+        // Pequeño delay para asegurar que Chart.js esté listo
+        setTimeout(() => window.cargarMetricasVisitas(), 500); 
+    }
 }
 
 async function cerrarSesion() {

@@ -361,7 +361,9 @@ async checkWelcome() {
         }
 
         // Gráfico de Tendencia
-        const { data: tend } = await supabaseClient.rpc('obtener_tendencia_visitas');
+        const { data: tend } = await supabaseClient.rpc('obtener_tendencia_visitas', { 
+    rid: SOCIAL_RESTAURANT_ID() 
+});
         if (tend) {
             this.initChart('chart-visitas', {
                 labels: tend.map(d => new Date(d.fecha).toLocaleDateString('es-ES', {day:'numeric', month:'short'})),
@@ -372,7 +374,9 @@ async checkWelcome() {
         }
 
         // Gráfico de Horas Punta
-        const { data: hrs } = await supabaseClient.rpc('obtener_horas_punta');
+        const { data: hrs } = await supabaseClient.rpc('obtener_horas_punta', { 
+    rid: SOCIAL_RESTAURANT_ID() 
+});
         if (hrs) {
             const dataFull = Array.from({length: 24}, (_, i) => ({ hora: i, conteo: 0 }));
             hrs.forEach(h => { if(dataFull[h.hora]) dataFull[h.hora].conteo = h.conteo; });
@@ -419,7 +423,9 @@ async checkWelcome() {
     },
 
     async cargarTopClientes() {
-        const { data, error } = await supabaseClient.rpc('obtener_top_clientes');
+        const { data, error } = await supabaseClient.rpc('obtener_top_clientes', { 
+    rid: SOCIAL_RESTAURANT_ID() 
+});
         const container = document.getElementById('top-clientes-list');
         
         if (error || !data) {
@@ -462,3 +468,4 @@ window.cargarOpiniones = () => SocialService.cargarOpiniones();
 window.filtrarOpiniones = (c, b) => SocialService.filtrarOpiniones(c, b);
 window.eliminarOpinion = (id) => SocialService.eliminarOpinion(id);
 window.cargarMetricasVisitas = () => SocialService.cargarMetricasVisitas();
+window.globalRestaurantId = currentAdminRestaurantId;
