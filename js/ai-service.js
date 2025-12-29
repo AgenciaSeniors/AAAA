@@ -205,49 +205,56 @@ const AIService = {
         if (shaker.isProcessing) return;
         shaker.isProcessing = true;
         
-        // 1. ACTIVAR ANIMACIÓN VISUAL (FEEDBACK)
+        // 1. FEEDBACK VISUAL
         const shakerImg = document.getElementById('shaker-img');
         const statusText = document.getElementById('shaker-status');
         const btn = document.getElementById('btn-mix-manual');
         
         if(shakerImg) {
-            shakerImg.classList.remove('ready'); // Quitamos el pulso suave
-            shakerImg.classList.add('shaking'); // Activamos el terremoto
+            shakerImg.classList.remove('ready');
+            shakerImg.classList.add('shaking');
         }
-        if(statusText) statusText.textContent = "🌪️ Mezclando sabores...";
+        if(statusText) statusText.textContent = "🌪️ Consultando al Sommelier...";
         if(btn) {
             btn.disabled = true;
-            btn.innerHTML = "Agitando... <span class='material-icons fa-spin' style='font-size:1rem'>autorenew</span>";
+            btn.innerHTML = "Mezclando... <span class='material-icons fa-spin'>autorenew</span>";
         }
 
         this.detenerDetectorMovimiento();
 
         try {
-            // 2. PETICIÓN EN PARALELO AL DELAY (Para que la animación luzca)
-            // Lanzamos el fetch y esperamos al menos 1.5 segundos de animación
+            // 2. PETICIÓN CORREGIDA (CORS & HEADERS)
             const [response] = await Promise.all([
                 fetch(CONFIG.URL_SCRIPT, {
                     method: 'POST',
-                    body: JSON.stringify({ action: "shaker", sabor: shaker.selected.join(', '), token: "DLV_SECURE_TOKEN_2025_X9" })
+                    redirect: "follow",
+                    headers: {
+                        "Content-Type": "text/plain;charset=utf-8" // CRÍTICO: 'text/plain' evita OPTIONS/Preflight
+                    },
+                    body: JSON.stringify({ 
+                        action: "shaker", 
+                        sabor: shaker.selected.join(', '), 
+                        token: "DLV_SECURE_TOKEN_2025_X9" // Debe coincidir exactamente con el backend
+                    })
                 }),
-                new Promise(resolve => setTimeout(resolve, 1500)) // Espera mínima para el efecto visual
+                new Promise(resolve => setTimeout(resolve, 2000)) // Espera mínima para disfrutar la animación
             ]);
 
             const res = await response.json();
             
-            // 3. MOSTRAR RESULTADO
-            this.mostrarResultadoShaker(res.data.recomendacion, res.data.id_elegido);
+            if (res.success) {
+                this.mostrarResultadoShaker(res.data.recomendacion, res.data.id_elegido);
+            } else {
+                throw new Error(res.error || "La IA no pudo decidir");
+            }
 
         } catch (e) {
-            console.error("Fallo IA:", e);
-            if(statusText) statusText.textContent = "❌ Algo falló. Intenta de nuevo.";
+            console.error("Fallo IA Shaker:", e);
+            if(statusText) statusText.textContent = "❌ Intenta de nuevo (Error de conexión)";
             if(shakerImg) shakerImg.classList.remove('shaking');
+            showToast("Error de conexión con el Sommelier", "error");
         } finally { 
-            // 4. LIMPIEZA
             shaker.isProcessing = false; 
-            // No quitamos la clase 'shaking' aquí si fue éxito, porque el modal se cierra inmediatamente
-            // y se ve más fluido si desaparece agitando.
-            
             if(btn) {
                 btn.disabled = false;
                 btn.textContent = "¡MEZCLAR AHORA! 🌪️";
@@ -264,13 +271,33 @@ const AIService = {
     
     iniciarDetectorMovimiento() {
         this.detenerDetectorMovimiento();
+
+        // Función manejadora del evento
         window.motionHandler = (e) => {
             const acc = e.accelerationIncludingGravity || e.acceleration;
-            if (acc && (Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z) > 15)) {
+            if (acc && (Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z) > 20)) { // Umbral ajustado a 20 para evitar falsos positivos
                 this.procesarMezcla();
             }
         };
-        window.addEventListener('devicemotion', window.motionHandler, true);
+
+        // LÓGICA DE PERMISOS PARA iOS 13+ (Safari)
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            // iOS requiere que esto se llame por una interacción del usuario (click)
+            // Asegúrate de llamar a iniciarDetectorMovimiento() desde un botón primero.
+            DeviceMotionEvent.requestPermission()
+                .then(response => {
+                    if (response === 'granted') {
+                        window.addEventListener('devicemotion', window.motionHandler, true);
+                    } else {
+                        console.warn("Permiso de acelerómetro denegado");
+                        document.getElementById('shaker-status').textContent = "Usa el botón para mezclar 👇";
+                    }
+                })
+                .catch(console.error);
+        } else {
+            // Android y navegadores estándar
+            window.addEventListener('devicemotion', window.motionHandler, true);
+        }
     },
 
     detenerDetectorMovimiento() {
