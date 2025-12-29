@@ -1,5 +1,6 @@
-// js/ai-service.js
-const NoirCopywriter = { // Diccionario de frases
+// js/ai-service.js - VERSIÓN CORREGIDA Y ROBUSTA
+
+const NoirCopywriter = { 
     "standard": ["Un clásico nunca falla.", "El momento pide algo atemporal.", "Déjate llevar por la intuición."],
     "rainy": ["Día gris, copa llena. El refugio perfecto.", "Llueve fuera. Aquí dentro, el clima lo pones tú."],
     "rainy_hot": ["Lluvia y calor: trópico puro. Necesitas hielo.", "El cielo cae caliente. Enfríalo con un buen mix."],
@@ -17,6 +18,7 @@ const AIService = {
     async getUserContext() {
         const ahora = new Date();
         const API_KEY = "3bc237701499f9b6b03de6f10e1e65d6"; 
+        // Coordenadas Sancti Spíritus por defecto
         const url = `https://api.openweathermap.org/data/2.5/weather?lat=21.9297&lon=-79.4440&appid=${API_KEY}&units=metric`;
         try {
             const res = await fetch(url);
@@ -48,123 +50,77 @@ const AIService = {
         return msgs[Math.floor(Math.random() * msgs.length)];
     },
     
+    // --- MARIDAJE (PAIRING) ---
     async askPairing(nombreProducto) {
-    const modal = document.getElementById('modal-match');
-    const loading = document.getElementById('match-loading');
-    const content = document.getElementById('match-content');
-    
-    if (!modal) return;
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('active'), 10);
-    loading.style.display = 'block';
-    content.style.display = 'none';
+        const modal = document.getElementById('modal-match');
+        const loading = document.getElementById('match-loading');
+        const content = document.getElementById('match-content');
+        
+        if (!modal) return;
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('active'), 10);
+        loading.style.display = 'block';
+        content.style.display = 'none';
 
-    try {
-        // CORRECCIÓN CRÍTICA CORS:
-        // Usamos 'text/plain' para evitar que el navegador lance un "Preflight" (OPTIONS)
-        // que Google Apps Script no sabe responder.
-        const response = await fetch(CONFIG.URL_SCRIPT, {
-            method: 'POST',
-            redirect: "follow", // Importante para seguir la redirección de Google
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8"
-            },
-            body: JSON.stringify({ 
-                action: "pairing", 
-                producto: nombreProducto, 
-                token: "DLV_SECURE_TOKEN_2025_X9" 
-            })
-        });
+        try {
+            const response = await fetch(CONFIG.URL_SCRIPT, {
+                method: 'POST',
+                redirect: "follow",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ 
+                    action: "pairing", 
+                    producto: nombreProducto, 
+                    token: "DLV_SECURE_TOKEN_2025_X9" 
+                })
+            });
 
-        const res = await response.json();
+            const res = await response.json();
 
-        if (res.success) {
-            const recomendado = AppStore.getProducts().find(p => p.id == res.data.id_elegido);
-            
-            if (recomendado) {
-                document.getElementById('match-plato-base').textContent = nombreProducto;
-                document.getElementById('match-img').src = recomendado.imagen_url || 'img/logo.png';
-                document.getElementById('match-producto-nombre').textContent = recomendado.nombre;
-                document.getElementById('match-justificacion').textContent = res.data.copy_venta;
+            if (res.success) {
+                // LÓGICA DE RECUPERACIÓN (FALLBACK)
+                let recomendado = AppStore.getProducts().find(p => p.id == res.data.id_elegido);
                 
-                document.getElementById('match-btn-action').onclick = () => {
-                    this.cerrarMatch();
-                    abrirDetalle(recomendado.id, res.data.copy_venta);
-                };
-                
-                loading.style.display = 'none';
-                content.style.display = 'block';
+                // Si no encuentra por ID, busca por nombre (normalizando)
+                if (!recomendado && res.data.recomendacion) {
+                    const nombreBusqueda = res.data.recomendacion.toLowerCase();
+                    recomendado = AppStore.getProducts().find(p => p.nombre.toLowerCase().includes(nombreBusqueda));
+                }
+
+                if (recomendado) {
+                    this.renderMatchUI(nombreProducto, recomendado, res.data.copy_venta);
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                } else {
+                    throw new Error("Producto recomendado no disponible en menú local");
+                }
             } else {
-                throw new Error("Producto recomendado no encontrado en menú local");
+                throw new Error(res.error || "Error en respuesta IA");
             }
-        } else {
-            throw new Error(res.error || "Error en respuesta IA");
+        } catch (e) { 
+            console.error("Error Pairing:", e);
+            this.cerrarMatch(); 
+            showToast("El Sommelier está ocupado, intenta luego.", "error"); 
         }
-    } catch (e) { 
-        console.error("Error Pairing:", e);
-        this.cerrarMatch(); 
-        showToast("El Sommelier está ocupado (Error de conexión)", "error"); 
-    }
-},
+    },
+
+    renderMatchUI(platoBase, recomendado, justificacion) {
+        document.getElementById('match-plato-base').textContent = platoBase;
+        document.getElementById('match-img').src = recomendado.imagen_url || 'img/logo.png';
+        document.getElementById('match-producto-nombre').textContent = recomendado.nombre;
+        document.getElementById('match-justificacion').textContent = justificacion;
+        
+        document.getElementById('match-btn-action').onclick = () => {
+            this.cerrarMatch();
+            abrirDetalle(recomendado.id);
+        };
+    },
+
     cerrarMatch() {
         const modal = document.getElementById('modal-match');
-        if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300); 
-
-        }
-    },
-    // --- HERO DINÁMICO ---
-    async loadDynamicHero() {
-        const container = document.getElementById('hero-ai-container');
-        if (!container) return;
-        const productos = AppStore.getProducts();
-        if (productos.length === 0) { setTimeout(() => this.loadDynamicHero(), 500); return; }
-
-        const context = await this.getUserContext();
-        const mensajeNoir = this.getNoirMessage(context);
-        
-        // CORRECCIÓN AQUÍ: Filtramos explícitamente AGREGOS para el fallback local
-        const recomendados = productos.filter(p => 
-            p.destacado && 
-            p.estado !== 'agotado' && 
-            (p.categoria || '').toUpperCase() !== 'AGREGOS' // <--- PROTECCIÓN
-        );
-        
-        // Si no hay recomendados destacados (raro), cogemos cualquier cosa que no sea agrego
-        let poolSeguro = recomendados.length > 0 ? recomendados : productos.filter(p => (p.categoria || '').toUpperCase() !== 'AGREGOS');
-        
-        const elegido = poolSeguro[Math.floor(Math.random() * poolSeguro.length)] || poolSeguro[0];
-
-        // Solo renderizamos si encontramos algo válido
-        if (elegido) {
-            this.renderHeroHTML({ copy_venta: mensajeNoir, id_elegido: elegido.id }, context);
-            container.classList.remove('hidden');
-        }
+        if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300); }
     },
 
-    renderHeroHTML(aiData, context) {
-        const container = document.getElementById('hero-ai-container');
-        const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
-        if (!productoReal) return;
-        const imagenFinal = productoReal.imagen_url || 'img/logo.png';
-
-        container.innerHTML = `
-            <div class="hero-glass-card">
-                <div class="hero-status-bar">
-                    <span class="location-tag">📍 Sancti Spíritus</span>
-                    <span class="temp-tag">${context.temp}°C • ${context.descripcion}</span>
-                </div>
-                <div class="hero-main-layout">
-                    <div class="hero-text-side">
-                        <h2 class="noir-title-massive">${aiData.copy_venta}</h2>
-                        <p class="hero-hint">El Sommelier recomienda: <span class="highlight">${productoReal.nombre}</span></p>
-                        <button onclick="abrirDetalle(${productoReal.id})" class="btn-neon-pill">REVELAR SECRETO</button>
-                    </div>
-                    <div class="hero-visual-side"><img src="${imagenFinal}" class="floating-img"></div>
-                </div>
-            </div>`;
-    },
-
-    // --- SHAKER IA ---
+    // --- SHAKER IA (CORREGIDO) ---
     abrirShaker() {
         const modal = document.getElementById('modal-shaker');
         if (modal) {
@@ -173,11 +129,15 @@ const AIService = {
             AppStore.resetShaker();
             this.renderizarEsencias();
             this.actualizarEstadoShaker();
+            
+            // INTENTO DE ACTIVAR SENSORES (Solo funcionará si fue click directo, si no, fallará silenciosamente)
+            // Se recomienda añadir un botón explícito en la UI para "Activar Sensor" si esto falla
             this.iniciarDetectorMovimiento();
         }
     },
-    // Pon esto justo debajo de abrirShaker() o al final del objeto
+
     cerrarShaker() {
+        this.detenerDetectorMovimiento();
         const modal = document.getElementById('modal-shaker');
         if (modal) {
             modal.classList.remove('active');
@@ -209,16 +169,16 @@ const AIService = {
         const shaker = AppStore.getShakerState();
         const status = document.getElementById('shaker-status');
         const btn = document.getElementById('btn-mix-manual');
-        if (status) status.textContent = shaker.selected.length > 0 ? "¡Agita o pulsa el botón!" : "Añade ingredientes...";
+        if (status) status.textContent = shaker.selected.length > 0 ? "¡Agita el teléfono o pulsa abajo!" : "Elige hasta 3 esencias...";
         if (btn) btn.disabled = shaker.selected.length === 0;
     },
 
     async procesarMezcla() {
         const shaker = AppStore.getShakerState();
-        if (shaker.isProcessing) return;
+        if (shaker.isProcessing) return; // Evitar doble submit
         shaker.isProcessing = true;
         
-        // 1. FEEDBACK VISUAL
+        // 1. UI DE CARGA
         const shakerImg = document.getElementById('shaker-img');
         const statusText = document.getElementById('shaker-status');
         const btn = document.getElementById('btn-mix-manual');
@@ -227,16 +187,16 @@ const AIService = {
             shakerImg.classList.remove('ready');
             shakerImg.classList.add('shaking');
         }
-        if(statusText) statusText.textContent = "🌪️ Consultando al Sommelier...";
+        if(statusText) statusText.textContent = "🌪️ El Sommelier está pensando...";
         if(btn) {
             btn.disabled = true;
             btn.innerHTML = "Mezclando... <span class='material-icons fa-spin'>autorenew</span>";
         }
 
-        this.detenerDetectorMovimiento();
+        this.detenerDetectorMovimiento(); // Parar sensores para ahorrar batería y evitar dobles llamadas
 
         try {
-            // 2. PETICIÓN (Con corrección de CORS)
+            // 2. PETICIÓN A GOOGLE APPS SCRIPT
             const [response] = await Promise.all([
                 fetch(CONFIG.URL_SCRIPT, {
                     method: 'POST',
@@ -248,26 +208,26 @@ const AIService = {
                         token: "DLV_SECURE_TOKEN_2025_X9" 
                     })
                 }),
-                new Promise(resolve => setTimeout(resolve, 2000))
+                new Promise(resolve => setTimeout(resolve, 1500)) // Espera mínima visual
             ]);
 
             const res = await response.json();
             
-            // 3. VALIDACIÓN DE RESPUESTA (Aquí estaba el fallo)
-            if (res.success && res.data && res.data.recomendacion) {
+            // 3. VALIDACIÓN INTELIGENTE (LA PARTE CLAVE)
+            if (res.success) {
                 this.mostrarResultadoShaker(res.data.recomendacion, res.data.id_elegido);
             } else {
-                console.warn("Respuesta IA incompleta:", res);
-                throw new Error(res.error || "La IA no pudo decidir una recomendación válida.");
+                throw new Error(res.error || "No hubo respuesta clara");
             }
 
         } catch (e) {
             console.error("Fallo IA Shaker:", e);
-            if(statusText) statusText.textContent = "❌ Intenta de nuevo (Error de conexión)";
-            if(shakerImg) shakerImg.classList.remove('shaking');
-            showToast("El Sommelier está ocupado, intenta de nuevo.", "error");
+            if(statusText) statusText.textContent = "❌ Error de conexión. Intenta manual.";
+            showToast("El Sommelier no responde. Intenta manual.", "error");
         } finally { 
+            // Restaurar estado
             shaker.isProcessing = false; 
+            if(shakerImg) shakerImg.classList.remove('shaking');
             if(btn) {
                 btn.disabled = false;
                 btn.textContent = "¡MEZCLAR AHORA! 🌪️";
@@ -276,39 +236,74 @@ const AIService = {
     },
 
     mostrarResultadoShaker(nombreIA, idOpcional) {
-        const elegido = idOpcional ? AppStore.getProducts().find(p => p.id == idOpcional) : null;
-        const modal = document.getElementById('modal-shaker');
-        if (modal) { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300); }
-        if (elegido) abrirDetalle(elegido.id);
+        const productos = AppStore.getProducts();
+        
+        // 1. Intento por ID exacto
+        let elegido = idOpcional ? productos.find(p => p.id == idOpcional) : null;
+        
+        // 2. Intento por Nombre (Fuzzy search)
+        if (!elegido && nombreIA) {
+            const nombreBusqueda = nombreIA.toLowerCase().trim();
+            elegido = productos.find(p => p.nombre.toLowerCase().includes(nombreBusqueda));
+        }
+
+        // 3. Intento de Fallback (Si la IA recomienda algo raro, dar un trago random)
+        if (!elegido) {
+            console.warn("Producto IA no encontrado localmente. Usando fallback.");
+            const tragos = productos.filter(p => (p.categoria || '').toUpperCase() === 'TRAGOS');
+            if (tragos.length > 0) {
+                elegido = tragos[Math.floor(Math.random() * tragos.length)];
+                showToast("Sugerencia del bartender (IA no disponible)", "info");
+            }
+        }
+
+        if (elegido) {
+            this.cerrarShaker();
+            // Pequeño delay para que la transición del modal se vea bien
+            setTimeout(() => abrirDetalle(elegido.id), 350);
+        } else {
+            showToast("No encontramos ese coctel en el menú hoy.", "warning");
+        }
     },
     
+    // --- GESTIÓN DE SENSORES (ACELERÓMETRO) ---
     iniciarDetectorMovimiento() {
         this.detenerDetectorMovimiento();
 
-        // Función manejadora del evento
         window.motionHandler = (e) => {
             const acc = e.accelerationIncludingGravity || e.acceleration;
-            if (acc && (Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z) > 20)) { // Umbral ajustado a 20 para evitar falsos positivos
-                this.procesarMezcla();
+            if (!acc) return;
+            
+            // Umbral de sensibilidad
+            const totalAcc = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
+            if (totalAcc > 25) { // Ajustado a 25 para evitar disparos accidentales
+                // Debounce simple
+                const now = Date.now();
+                if (now - (this.lastShake || 0) > 2000) { 
+                    this.lastShake = now;
+                    this.procesarMezcla();
+                }
             }
         };
 
-        // LÓGICA DE PERMISOS PARA iOS 13+ (Safari)
+        // Permisos para iOS 13+
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            // iOS requiere que esto se llame por una interacción del usuario (click)
-            // Asegúrate de llamar a iniciarDetectorMovimiento() desde un botón primero.
             DeviceMotionEvent.requestPermission()
                 .then(response => {
                     if (response === 'granted') {
                         window.addEventListener('devicemotion', window.motionHandler, true);
                     } else {
-                        console.warn("Permiso de acelerómetro denegado");
-                        document.getElementById('shaker-status').textContent = "Usa el botón para mezclar 👇";
+                        console.warn("Permiso acelerómetro denegado. Usar botón manual.");
+                        const status = document.getElementById('shaker-status');
+                        if(status) status.textContent = "Usa el botón para mezclar 👇";
                     }
                 })
-                .catch(console.error);
+                .catch(err => {
+                    console.error("Error pidiendo permisos:", err);
+                    // Esto pasa si no se llama desde un evento de usuario explícito
+                });
         } else {
-            // Android y navegadores estándar
+            // Android / Navegadores estándar
             window.addEventListener('devicemotion', window.motionHandler, true);
         }
     },
@@ -320,6 +315,62 @@ const AIService = {
         }
     },
 
+    // --- HERO DINÁMICO ---
+    async loadDynamicHero() {
+        const container = document.getElementById('hero-ai-container');
+        if (!container) return;
+
+        // Esperar a que los productos carguen
+        const productos = AppStore.getProducts();
+        if (!productos || productos.length === 0) { 
+            setTimeout(() => this.loadDynamicHero(), 1000); 
+            return; 
+        }
+
+        const context = await this.getUserContext();
+        const mensajeNoir = this.getNoirMessage(context);
+        
+        // Filtro de seguridad
+        const recomendados = productos.filter(p => 
+            p.destacado && 
+            p.estado !== 'agotado' && 
+            (p.categoria || '').toUpperCase() !== 'AGREGOS'
+        );
+        
+        // Fallback si no hay destacados
+        const poolSeguro = recomendados.length > 0 ? recomendados : productos.filter(p => (p.categoria || '').toUpperCase() === 'TRAGOS');
+        const elegido = poolSeguro[Math.floor(Math.random() * poolSeguro.length)];
+
+        if (elegido) {
+            this.renderHeroHTML({ copy_venta: mensajeNoir, id_elegido: elegido.id }, context);
+            container.classList.remove('hidden');
+        }
+    },
+
+    renderHeroHTML(aiData, context) {
+        const container = document.getElementById('hero-ai-container');
+        const productoReal = AppStore.getProducts().find(p => p.id == aiData.id_elegido);
+        if (!productoReal) return;
+        
+        const imagenFinal = productoReal.imagen_url || 'img/logo.png';
+
+        container.innerHTML = `
+            <div class="hero-glass-card">
+                <div class="hero-status-bar">
+                    <span class="location-tag">📍 Sancti Spíritus</span>
+                    <span class="temp-tag">${context.temp}°C • ${context.descripcion}</span>
+                </div>
+                <div class="hero-main-layout">
+                    <div class="hero-text-side">
+                        <h2 class="noir-title-massive">${aiData.copy_venta}</h2>
+                        <p class="hero-hint">El Sommelier recomienda: <span class="highlight">${productoReal.nombre}</span></p>
+                        <button onclick="abrirDetalle(${productoReal.id})" class="btn-neon-pill">REVELAR SECRETO</button>
+                    </div>
+                    <div class="hero-visual-side"><img src="${imagenFinal}" class="floating-img"></div>
+                </div>
+            </div>`;
+    },
+
     // --- ATMÓSFERA ---
     setAtmosphere(context) {
         const body = document.body;
@@ -327,11 +378,10 @@ const AIService = {
         if (context.isRaining) body.classList.add('mode-rain');
         else if (context.temp >= 30) body.classList.add('mode-heat');
         else if (context.hora >= 20 || context.hora <= 5) body.classList.add('mode-night');
-    },
-    
+    }
 };
 
-// COMPATIBILIDAD CON HTML
+// COMPATIBILIDAD GLOBAL
 window.abrirShaker = () => AIService.abrirShaker();
 window.cerrarShaker = () => AIService.cerrarShaker();
 window.procesarMezcla = () => AIService.procesarMezcla();
