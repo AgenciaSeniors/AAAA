@@ -129,13 +129,20 @@ async function cargarMenu() {
 
         // Filtramos para que solo entren productos de tu lista oficial
         const productosProcesados = productos
-            .filter(p => ORDEN_MENU.includes((p.categoria || '').toUpperCase()))
-            .map(prod => {
-                 const opiniones = prod.opiniones || [];
-                 prod.ratingPromedio = opiniones.length ? 
-                    (opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0) / opiniones.length).toFixed(1) : null;
-                 return prod;
-            });
+    .map(prod => {
+        // 1. Normalización: Pasamos a mayúsculas y quitamos acentos (Café -> CAFE)
+        const catRaw = (prod.categoria || 'OTROS').toUpperCase();
+        prod.categoria = catRaw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        // 2. Cálculo de Rating (Misma lógica que tenías)
+        const opiniones = prod.opiniones || [];
+        prod.ratingPromedio = opiniones.length ? 
+            (opiniones.reduce((acc, curr) => acc + curr.puntuacion, 0) / opiniones.length).toFixed(1) : null;
+            
+        return prod;
+    })
+    // 3. Ahora filtramos. Como ya quitamos la tilde, 'CAFE' coincidirá con tu config.
+    .filter(p => ORDEN_MENU.includes(p.categoria));
 
         AppStore.setProducts(productosProcesados);
         renderizarMenu(productosProcesados);
