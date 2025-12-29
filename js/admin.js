@@ -1,5 +1,7 @@
-// js/admin.js - Panel de Administración (Versión Instantánea)
+// js/admin.js - VERSIÓN CORREGIDA Y ROBUSTA
+
 let currentAdminRestaurantId = null;
+
 // --- GESTIÓN DE ESTADO CENTRALIZADO (STORE) ---
 const AdminStore = {
     state: {
@@ -10,7 +12,7 @@ const AdminStore = {
     setInventory(list) { this.state.inventory = list; },
     getInventory() { return this.state.inventory; },
 
-    // Actualiza un solo producto en la lista local (Para velocidad instantánea)
+    // Actualiza un solo producto en la lista local (Optimistic UI)
     updateLocalItem(id, data) {
         const index = this.state.inventory.findIndex(p => p.id === id);
         if (index !== -1) {
@@ -29,90 +31,87 @@ const AdminStore = {
         );
     },
 
-    // Re-renderiza manteniendo el filtro actual si existe
     refreshView() {
         const term = document.getElementById('search-inventory')?.value;
         const list = this.filterInventory(term);
         renderizarInventario(list);
     }
 };
+
+// --- LÓGICA DE IDENTIDAD ROBUSTA (CORRECCIÓN CRÍTICA) ---
 async function obtenerMiRestaurante() {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    
-    const { data: perfil } = await supabaseClient
-        .from('perfiles_admin')
-        .select('restaurant_id')
-        .eq('id', user.id)
-        .single();
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return null;
 
-    return perfil.restaurant_id; // Este ID es seguro porque viene de la sesión autenticada
-}
-// UTILIDADES
-function showToast(msg, tipo = 'success') {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        document.body.appendChild(container);
+        // 1. Intentar obtener configuración específica de la tabla de perfiles
+        const { data: perfil, error } = await supabaseClient
+            .from('perfiles_admin')
+            .select('restaurant_id')
+            .eq('id', user.id)
+            .maybeSingle(); // Usamos maybeSingle para evitar excepciones si no existe
+
+        if (perfil && perfil.restaurant_id) {
+            console.log("Restaurante cargado desde perfil de admin.");
+            return perfil.restaurant_id;
+        }
+
+        // 2. FALLBACK: Si no hay perfil específico, usar la configuración global
+        console.warn("Perfil de admin no encontrado. Usando configuración global.");
+        if (typeof CONFIG !== 'undefined' && CONFIG.RESTAURANT_ID) {
+            return CONFIG.RESTAURANT_ID;
+        }
+
+        return null;
+    } catch (err) {
+        console.error("Error recuperando identidad del restaurante:", err);
+        // Último intento de rescate
+        return (typeof CONFIG !== 'undefined') ? CONFIG.RESTAURANT_ID : null;
     }
-    const t = document.createElement('div');
-    t.className = `toast ${tipo}`;
-    t.innerHTML = `<span class="toast-msg">${msg}</span>`;
-    container.appendChild(t);
-    setTimeout(() => { 
-        t.style.animation = 'fadeOut 0.4s forwards'; 
-        setTimeout(() => t.remove(), 400); 
-    }, 3000);
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str.toString().replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[tag]));
 }
 
 // 1. AUTH & CARGA INICIAL
 async function checkAuth() {
     if (typeof supabaseClient === 'undefined') return;
+    
+    // Verificación doble para evitar condiciones de carrera con el HTML
     const { data: { session } } = await supabaseClient.auth.getSession();
     
     if (!session) {
-        window.location.href = "login.html";
+        window.location.replace("login.html");
     } else {
         document.body.classList.add('auth-verified'); 
         cargarAdmin();
     }
 }
 
-// js/admin.js
-
 async function cargarAdmin() {
-    // 1. Validamos u obtenemos el ID del restaurante antes de la consulta
+    // 1. Validamos u obtenemos el ID del restaurante
     if (!currentAdminRestaurantId) {
         currentAdminRestaurantId = await obtenerMiRestaurante();
     }
 
-    // Seguridad: Si después de intentar obtenerlo sigue siendo null, detenemos la carga
+    // Seguridad: Si falla todo (incluso el fallback), detenemos.
     if (!currentAdminRestaurantId) {
-        console.error("No se pudo cargar el ID del restaurante.");
-        return showToast("Error: No tienes un restaurante asignado", "error");
+        console.error("FATAL: No se pudo identificar el restaurante.");
+        return showToast("Error crítico: Identidad del restaurante desconocida. Contacte soporte.", "error");
     }
 
-    // 2. Ahora la consulta usará el ID correcto
+    // 2. Carga optimizada (Limitamos a 100 para evitar bloqueos)
     const { data, error } = await supabaseClient
         .from('productos')
         .select('*')
         .eq('restaurant_id', currentAdminRestaurantId)
-        .order('id', { ascending: false });
+        .order('id', { ascending: false })
+        .limit(100);
 
     if (error) {
-        console.error("Error productos:", error);
-        return showToast("Error al cargar inventario", "error");
+        console.error("Error cargando inventario:", error);
+        return showToast("Error al cargar inventario (Ver consola)", "error");
     }
     
-    AdminStore.setInventory(data);
-    renderizarInventario(data);
+    AdminStore.setInventory(data || []);
+    renderizarInventario(data || []);
 }
 
 async function cerrarSesion() {
@@ -126,7 +125,7 @@ function renderizarInventario(lista) {
     if (!container) return;
     
     if (!lista || lista.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">No hay productos coinciden.</p>';
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">No hay productos cargados.</p>';
         return;
     }
 
@@ -138,9 +137,8 @@ function renderizarInventario(lista) {
         const statusText = esAgotado ? 'AGOTADO' : 'DISPONIBLE';
         const statusClass = esAgotado ? 'status-bad' : 'status-ok';
         const colorStar = item.destacado ? 'var(--gold)' : '#444';
-        const img = item.imagen_url || 'https://via.placeholder.com/60';
+        const img = item.imagen_url || 'https://via.placeholder.com/60?text=Sin+Foto';
         
-        // Visualmente atenuamos si está eliminado (soft delete)
         const opacity = item.activo ? '' : 'opacity:0.5; filter:grayscale(1);';
         const deletedLabel = !item.activo ? '<b style="color:red; font-size:0.7rem;">(ELIMINADO)</b>' : '';
         const isChecked = !esAgotado ? 'checked' : '';
@@ -180,27 +178,22 @@ function buscarInventario(e) {
     clearTimeout(AdminStore.state.searchTimeout);
     const term = e.target.value;
     
-    // Búsqueda con debounce para no saturar
     AdminStore.state.searchTimeout = setTimeout(() => {
         AdminStore.refreshView();
     }, 150);
 }
 
-// 3. ACCIONES INSTANTÁNEAS (Aquí está la magia)
+// 3. ACCIONES Y EDICIÓN
 
 async function toggleDestacado(id, valorActual) {
     const nuevoValor = !valorActual;
-    
-    // 1. Cambio visual INMEDIATO
     AdminStore.updateLocalItem(id, { destacado: nuevoValor });
     showToast(nuevoValor ? "¡Destacado!" : "Ya no es destacado", "success");
 
-    // 2. Guardado en segundo plano
     try {
         const { error } = await supabaseClient.from('productos').update({ destacado: nuevoValor }).eq('id', id);
         if (error) throw error;
     } catch (err) {
-        // Si falla, revertimos visualmente
         AdminStore.updateLocalItem(id, { destacado: valorActual });
         showToast("Error al guardar cambios", "error");
     }
@@ -208,11 +201,8 @@ async function toggleDestacado(id, valorActual) {
 
 async function toggleEstado(id, isChecked) {
     const nuevoEstado = isChecked ? 'disponible' : 'agotado';
-    
-    // 1. Cambio visual INMEDIATO
     AdminStore.updateLocalItem(id, { estado: nuevoEstado });
 
-    // 2. Guardado en segundo plano
     try {
         const { error } = await supabaseClient.from('productos').update({ estado: nuevoEstado }).eq('id', id);
         if (error) throw error;
@@ -223,12 +213,8 @@ async function toggleEstado(id, isChecked) {
 }
 
 async function eliminarProducto(id) {
-    if (!confirm("¿Seguro que quieres eliminar este producto? (Se ocultará del menú)")) return;
-
-    // 1. Cambio visual INMEDIATO
+    if (!confirm("¿Seguro que quieres eliminar este producto?")) return;
     AdminStore.updateLocalItem(id, { activo: false });
-    
-    // 2. Guardado
     try {
         const { error } = await supabaseClient.from('productos').update({ activo: false }).eq('id', id);
         if (error) throw error;
@@ -240,10 +226,7 @@ async function eliminarProducto(id) {
 }
 
 async function restaurarProducto(id) {
-    // 1. Cambio visual
     AdminStore.updateLocalItem(id, { activo: true });
-
-    // 2. Guardado
     try {
         const { error } = await supabaseClient.from('productos').update({ activo: true }).eq('id', id);
         if (error) throw error;
@@ -254,28 +237,24 @@ async function restaurarProducto(id) {
     }
 }
 
-// 4. EDICIÓN Y FORMULARIO
+// 4. FORMULARIO Y SUBIDA DE IMÁGENES
 
 function prepararEdicion(id) {
     const prod = AdminStore.getInventory().find(p => p.id === id);
     if (!prod) return;
 
     document.getElementById('edit-id').value = prod.id;
-    document.getElementById('nombre').value = prod.nombre || ''; // Añade || ''
-    document.getElementById('precio').value = prod.precio || 0;  // Añade || 0
-    document.getElementById('categoria').value = prod.categoria || 'cocteles';
+    document.getElementById('nombre').value = prod.nombre || '';
+    document.getElementById('precio').value = prod.precio || 0;
+    document.getElementById('categoria').value = prod.categoria || 'tragos';
     document.getElementById('descripcion').value = prod.descripcion || '';
     document.getElementById('curiosidad').value = prod.curiosidad || '';
-    document.getElementById('destacado').checked = !!prod.destacado; // Asegura booleano
+    document.getElementById('destacado').checked = !!prod.destacado;
 
-    // UI del Formulario
     const btnSubmit = document.getElementById('btn-submit');
     btnSubmit.textContent = "ACTUALIZAR PRODUCTO";
-    btnSubmit.classList.add('btn-update-mode'); // Opcional para CSS
-    
     document.getElementById('btn-cancelar').style.display = "block";
     
-    // Scroll arriba y cambiar tab
     cambiarVista('inventario');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -287,6 +266,7 @@ function cancelarEdicion() {
     document.getElementById('btn-cancelar').style.display = "none";
 }
 
+// Función auxiliar para optimización local de imagen
 async function optimizarImagenLocal(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -298,22 +278,17 @@ async function optimizarImagenLocal(file) {
                 const canvas = document.createElement('canvas');
                 const MAX_WIDTH = 600;
                 const scaleSize = MAX_WIDTH / img.width;
-                
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
-
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                // Exportamos a WebP (muy similar a AVIF pero con soporte nativo más rápido en Canvas)
-                // Usamos calidad 0.7 para asegurar que pese menos de 40kb
-                canvas.toBlob((blob) => {
-                    resolve(blob);
-                }, 'image/webp', 0.7); 
+                // Compresión WebP al 70%
+                canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.7); 
             };
         };
     });
 }
+
 const form = document.getElementById('form-producto');
 if(form) {
     form.addEventListener('submit', async (e) => {
@@ -334,33 +309,31 @@ if(form) {
             };
 
             const fileInput = document.getElementById('imagen-file');
+            
+            // Subida de imagen con manejo de errores mejorado
             if (fileInput.files.length > 0) {
-                let file = fileInput.files[0];
-                
-                showToast("Optimizando instantáneamente...", "info");
-                
-                // Compresión local en milisegundos antes de subir
-                const blobOptimizado = await optimizarImagenLocal(file);
-                
-                // Forzamos extensión .webp
-                const fileName = `prod_${Date.now()}.webp`; 
-                
-                const { error: upErr } = await supabaseClient.storage
-                    .from('imagenes')
-                    .upload(fileName, blobOptimizado, {
-                        contentType: 'image/webp',
-                        upsert: true
-                    });
+                try {
+                    showToast("Optimizando imagen...", "info");
+                    const blobOptimizado = await optimizarImagenLocal(fileInput.files[0]);
+                    const fileName = `prod_${Date.now()}.webp`; 
+                    
+                    const { error: upErr } = await supabaseClient.storage
+                        .from('imagenes')
+                        .upload(fileName, blobOptimizado, { contentType: 'image/webp', upsert: true });
 
-                if (upErr) throw upErr;
-                
-                const { data } = supabaseClient.storage.from('imagenes').getPublicUrl(fileName);
-                datos.imagen_url = data.publicUrl;
+                    if (upErr) throw upErr;
+                    
+                    const { data } = supabaseClient.storage.from('imagenes').getPublicUrl(fileName);
+                    datos.imagen_url = data.publicUrl;
+                } catch (imgError) {
+                    console.error("Error subiendo imagen:", imgError);
+                    showToast("Error subiendo imagen (Revise permisos)", "warning");
+                    // No detenemos el proceso, guardamos el producto sin imagen nueva
+                }
             }
 
             let dataRes;
             if (id) {
-                // UPDATE: Pedimos el registro actualizado (.select().single())
                 const { data, error } = await supabaseClient
                     .from('productos')
                     .update(datos)
@@ -371,7 +344,6 @@ if(form) {
                 dataRes = data;
                 showToast("Producto Actualizado", "success");
             } else {
-                // INSERT
                 datos.estado = 'disponible';
                 datos.activo = true;
                 datos.restaurant_id = currentAdminRestaurantId;
@@ -385,27 +357,27 @@ if(form) {
                 showToast("Producto Creado", "success");
             }
 
-            // ACTUALIZACIÓN LOCAL (Sin recargar toda la tabla)
+            // Actualización local sin recarga
             if (id) {
                 AdminStore.updateLocalItem(parseInt(id), dataRes);
             } else {
-                // Si es nuevo, lo ponemos al principio
                 const current = AdminStore.getInventory();
                 current.unshift(dataRes);
                 AdminStore.setInventory(current);
                 renderizarInventario(current);
             }
-
             cancelarEdicion();
 
         } catch (err) {
             console.error(err);
-            showToast("Error: " + err.message, "error");
+            showToast("Error al guardar: " + err.message, "error");
         } finally {
             btn.textContent = txtOriginal; btn.disabled = false;
         }
     });
 }
+
+// 5. IA Y UTILIDADES
 
 async function generarCuriosidadIA() {
     const nombre = document.getElementById('nombre').value;
@@ -417,41 +389,37 @@ async function generarCuriosidadIA() {
     
     if(loader) loader.style.display = 'block';
     txtArea.value = "Generando curiosidad creativa...";
+    
     try {
         const response = await fetch(CONFIG.URL_SCRIPT, {
             method: 'POST',
             body: JSON.stringify({ 
                 action: "curiosidad", 
                 producto: nombre, 
-                descripcion: desc,
+                descripcion: desc, 
                 token: "DLV_SECURE_TOKEN_2025_X9" 
             })
         });
-
         const res = await response.json();
-
         if (res.success) {
-            // Buscamos el texto en varias propiedades posibles para evitar el 'undefined'
-            const textoFinal = res.data.texto || res.data.curiosidad || res.data.answer || (typeof res.data === 'string' ? res.data : "");
-            
-            if (textoFinal && textoFinal !== "undefined") {
+            const textoFinal = res.data.texto || res.data.curiosidad || res.data.answer || "";
+            if (textoFinal) {
                 txtArea.value = textoFinal;
                 showToast("¡Curiosidad generada!", "success");
             } else {
                 txtArea.value = "";
-                showToast("La IA no devolvió un texto claro", "warning");
+                showToast("La IA no devolvió texto", "warning");
             }
         }
     } catch (err) {
         console.error("Fallo IA:", err);
         txtArea.value = "";
-        showToast("Error de conexión con la IA", "error");
+        showToast("Error conectando con IA", "error");
     } finally {
         if(loader) loader.style.display = 'none';
     }
 }
 
-// 5. NAVEGACIÓN TABS
 function cambiarVista(vista) {
     document.querySelectorAll('.vista-seccion').forEach(el => {
         el.classList.remove('active');
@@ -468,16 +436,34 @@ function cambiarVista(vista) {
     const map = { 'inventario': 0, 'opiniones': 1, 'visitas': 2 };
     const btns = document.querySelectorAll('.tab-btn');
     if(btns[map[vista]]) btns[map[vista]].classList.add('active');
-
-    // Cargas perezosas de otras pestañas
-    if (vista === 'visitas' && typeof window.cargarMetricasVisitas === 'function') window.cargarMetricasVisitas();
-    if (vista === 'opiniones' && typeof window.cargarOpiniones === 'function') window.cargarOpiniones(); 
-    if (vista === 'opiniones' && typeof cargarOpiniones === 'function') {
-        cargarOpiniones(); 
-    }
 }
 
-// EXPORTAR FUNCIONES AL HTML (Crucial para que los onclick funcionen)
+// Utilidades UI
+function showToast(msg, tipo = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+    const t = document.createElement('div');
+    t.className = `toast ${tipo}`;
+    t.innerHTML = `<span class="toast-msg">${msg}</span>`;
+    container.appendChild(t);
+    setTimeout(() => { 
+        t.style.animation = 'fadeOut 0.4s forwards'; 
+        setTimeout(() => t.remove(), 400); 
+    }, 3000);
+}
+
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.toString().replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag]));
+}
+
+// EXPORTAR AL SCOPE GLOBAL
 window.prepararEdicion = prepararEdicion;
 window.toggleDestacado = toggleDestacado;
 window.toggleEstado = toggleEstado;
