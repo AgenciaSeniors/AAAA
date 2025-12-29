@@ -40,25 +40,43 @@
 
     <script>
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const btn = document.getElementById('btn-login');
-            const errorMsg = document.getElementById('error-msg');
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const btn = document.getElementById('btn-login');
+    const errorMsg = document.getElementById('error-msg');
 
-            btn.textContent = "Verificando..."; btn.style.opacity = "0.7"; errorMsg.textContent = "";
+    // 1. Validación preventiva en el cliente
+    if (!email || !password) {
+        errorMsg.textContent = "Por favor, completa todos los campos.";
+        return;
+    }
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: email, password: password
-            });
+    btn.textContent = "Verificando..."; 
+    btn.disabled = true; // Bloquear botón para evitar doble envío
+    errorMsg.textContent = "";
 
-            if (error) {
-                errorMsg.textContent = "Credenciales inválidas.";
-                btn.textContent = "INICIAR SESIÓN"; btn.style.opacity = "1";
-            } else {
-                window.location.href = "admin.html";
-            }
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email, 
+            password: password
         });
-    </script>
+
+        if (error) {
+            // Manejar errores de Supabase (Credenciales, formato, etc.)
+            errorMsg.textContent = "Credenciales inválidas o error de acceso.";
+            btn.textContent = "INICIAR SESIÓN"; 
+            btn.disabled = false;
+        } else {
+            window.location.href = "admin.html";
+        }
+    } catch (err) {
+        // Manejar errores inesperados de red
+        errorMsg.textContent = "Error de conexión. Inténtalo de nuevo.";
+        btn.textContent = "INICIAR SESIÓN";
+        btn.disabled = false;
+    }
+});
+</script>
 </body>
 </html>
