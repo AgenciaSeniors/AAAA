@@ -468,4 +468,6 @@ window.cargarOpiniones = () => SocialService.cargarOpiniones();
 window.filtrarOpiniones = (c, b) => SocialService.filtrarOpiniones(c, b);
 window.eliminarOpinion = (id) => SocialService.eliminarOpinion(id);
 window.cargarMetricasVisitas = () => SocialService.cargarMetricasVisitas();
-window.globalRestaurantId = currentAdminRestaurantId;
+if (typeof currentAdminRestaurantId !== 'undefined') {
+    window.globalRestaurantId = currentAdminRestaurantId;
+}
