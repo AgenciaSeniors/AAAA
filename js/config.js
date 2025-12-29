@@ -6,16 +6,16 @@ const CONFIG = {
     SLUG: 'de-la-vida-bar'
 };
 // Agrega esto a js/config.js
-const ORDEN_MENU = ['TRAGOS', 'BEBIDAS', 'CAFE', 'WHISKEY', 'RON', 'TAPAS', 'ESPECIALIDADES', 'AGREGOS'];
+const ORDEN_MENU = ['TRAGOS', 'BEBIDAS',  'WHISKEY', 'RON', 'TAPAS', 'ESPECIALIDADES', 'CAFE', 'AGREGOS'];
 
 const NOMBRES_MOSTRAR = {
     'TRAGOS': 'Tragos 🍸',
     'BEBIDAS': 'Bebidas 🥤',
-    'CAFE': 'Café ☕',
     'WHISKEY': 'Whiskies 🥃',
     'RON': 'Ron 🥃',
     'TAPAS': 'Tapas 🍟',
     'ESPECIALIDADES': 'Especiales ✨',
+    'CAFE': 'Café ☕',
     'AGREGOS': 'Agregos 🍕'
 };
 // Cliente Global de Supabase
