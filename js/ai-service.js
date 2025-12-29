@@ -121,11 +121,24 @@ const AIService = {
 
         const context = await this.getUserContext();
         const mensajeNoir = this.getNoirMessage(context);
-        const recomendados = productos.filter(p => p.destacado && p.estado !== 'agotado');
-        const elegido = recomendados[Math.floor(Math.random() * recomendados.length)] || productos[0];
+        
+        // CORRECCIÓN AQUÍ: Filtramos explícitamente AGREGOS para el fallback local
+        const recomendados = productos.filter(p => 
+            p.destacado && 
+            p.estado !== 'agotado' && 
+            (p.categoria || '').toUpperCase() !== 'AGREGOS' // <--- PROTECCIÓN
+        );
+        
+        // Si no hay recomendados destacados (raro), cogemos cualquier cosa que no sea agrego
+        let poolSeguro = recomendados.length > 0 ? recomendados : productos.filter(p => (p.categoria || '').toUpperCase() !== 'AGREGOS');
+        
+        const elegido = poolSeguro[Math.floor(Math.random() * poolSeguro.length)] || poolSeguro[0];
 
-        this.renderHeroHTML({ copy_venta: mensajeNoir, id_elegido: elegido.id }, context);
-        container.classList.remove('hidden');
+        // Solo renderizamos si encontramos algo válido
+        if (elegido) {
+            this.renderHeroHTML({ copy_venta: mensajeNoir, id_elegido: elegido.id }, context);
+            container.classList.remove('hidden');
+        }
     },
 
     renderHeroHTML(aiData, context) {
