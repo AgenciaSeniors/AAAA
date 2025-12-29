@@ -175,10 +175,10 @@ const AIService = {
 
     async procesarMezcla() {
         const shaker = AppStore.getShakerState();
-        if (shaker.isProcessing) return; // Evitar doble submit
+        if (shaker.isProcessing) return; 
         shaker.isProcessing = true;
         
-        // 1. UI DE CARGA
+        // 1. Feedback Visual
         const shakerImg = document.getElementById('shaker-img');
         const statusText = document.getElementById('shaker-status');
         const btn = document.getElementById('btn-mix-manual');
@@ -193,28 +193,26 @@ const AIService = {
             btn.innerHTML = "Mezclando... <span class='material-icons fa-spin'>autorenew</span>";
         }
 
-        this.detenerDetectorMovimiento(); // Parar sensores para ahorrar batería y evitar dobles llamadas
+        this.detenerDetectorMovimiento(); 
 
         try {
-            // 2. PETICIÓN A GOOGLE APPS SCRIPT
-            const [response] = await Promise.all([
-                fetch(CONFIG.URL_SCRIPT, {
-                    method: 'POST',
-                    redirect: "follow",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ 
-                        action: "shaker", 
-                        sabor: shaker.selected.join(', '), 
-                        token: "DLV_SECURE_TOKEN_2025_X9" 
-                    })
-                }),
-                new Promise(resolve => setTimeout(resolve, 1500)) // Espera mínima visual
-            ]);
+            // 2. Llamada a la API
+            const response = await fetch(CONFIG.URL_SCRIPT, {
+                method: 'POST',
+                redirect: "follow",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ 
+                    action: "shaker", 
+                    sabor: shaker.selected.join(', '), 
+                    token: "DLV_SECURE_TOKEN_2025_X9" 
+                })
+            });
 
             const res = await response.json();
             
-            // 3. VALIDACIÓN INTELIGENTE (LA PARTE CLAVE)
+            // 3. Validación y Respuesta
             if (res.success) {
+                // AQUÍ ESTABA EL ERROR: Llamamos a la función pasando los datos
                 this.mostrarResultadoShaker(res.data.recomendacion, res.data.id_elegido);
             } else {
                 throw new Error(res.error || "No hubo respuesta clara");
@@ -223,9 +221,9 @@ const AIService = {
         } catch (e) {
             console.error("Fallo IA Shaker:", e);
             if(statusText) statusText.textContent = "❌ Error de conexión. Intenta manual.";
-            showToast("El Sommelier no responde. Intenta manual.", "error");
+            // Usamos showToast que está en script.js (global)
+            if(typeof showToast === 'function') showToast("El Sommelier no responde. Intenta manual.", "error");
         } finally { 
-            // Restaurar estado
             shaker.isProcessing = false; 
             if(shakerImg) shakerImg.classList.remove('shaking');
             if(btn) {
@@ -236,33 +234,36 @@ const AIService = {
     },
 
     mostrarResultadoShaker(nombreIA, idOpcional) {
-        const productos = AppStore.getProducts();
+        // CORRECCIÓN: Usamos AppStore.getProducts(), NUNCA 'inventario'
+        const productos = AppStore.getProducts(); 
         
         // 1. Intento por ID exacto
         let elegido = idOpcional ? productos.find(p => p.id == idOpcional) : null;
         
-        // 2. Intento por Nombre (Fuzzy search)
+        // 2. Intento por Nombre (Búsqueda flexible)
         if (!elegido && nombreIA) {
             const nombreBusqueda = nombreIA.toLowerCase().trim();
-            elegido = productos.find(p => p.nombre.toLowerCase().includes(nombreBusqueda));
+            elegido = productos.find(p => (p.nombre || '').toLowerCase().includes(nombreBusqueda));
         }
 
-        // 3. Intento de Fallback (Si la IA recomienda algo raro, dar un trago random)
+        // 3. Fallback (Si falla todo, sugerimos un trago al azar)
         if (!elegido) {
             console.warn("Producto IA no encontrado localmente. Usando fallback.");
             const tragos = productos.filter(p => (p.categoria || '').toUpperCase() === 'TRAGOS');
             if (tragos.length > 0) {
                 elegido = tragos[Math.floor(Math.random() * tragos.length)];
-                showToast("Sugerencia del bartender (IA no disponible)", "info");
+                if(typeof showToast === 'function') showToast("Sugerencia del bartender (IA no disponible)", "info");
             }
         }
 
         if (elegido) {
             this.cerrarShaker();
-            // Pequeño delay para que la transición del modal se vea bien
-            setTimeout(() => abrirDetalle(elegido.id), 350);
+            setTimeout(() => {
+                // Llamamos a abrirDetalle que está en script.js (global)
+                if(typeof abrirDetalle === 'function') abrirDetalle(elegido.id);
+            }, 350);
         } else {
-            showToast("No encontramos ese coctel en el menú hoy.", "warning");
+            if(typeof showToast === 'function') showToast("No encontramos ese coctel en el menú hoy.", "warning");
         }
     },
     
