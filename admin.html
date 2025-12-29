@@ -30,18 +30,23 @@
     <script>
         (async function AuthGuard() {
             try {
-                // 1. Verificamos sesión antes de pintar nada
+                // 1. Verificamos sesión
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 
                 if (!session) {
-                    // 2. Si no hay sesión, redirigimos INMEDIATAMENTE
-                    // Usamos 'replace' para que no puedan volver atrás con el botón del navegador
+                    // 2. Si no hay sesión, fuera
                     window.location.replace("login.html");
                 } else {
-                    // 3. Si hay sesión, esperamos a que el DOM esté listo para mostrar
-                    document.addEventListener("DOMContentLoaded", function() {
+                    // 3. REPARACIÓN: Verificamos si el evento ya ocurrió
+                    if (document.readyState === "loading") {
+                        // Si aún está cargando, esperamos al evento
+                        document.addEventListener("DOMContentLoaded", function() {
+                            document.body.classList.add('auth-verified');
+                        });
+                    } else {
+                        // Si ya cargó (porque el await tardó), ejecutamos directo
                         document.body.classList.add('auth-verified');
-                    });
+                    }
                 }
             } catch (err) {
                 console.error("Error crítico de autenticación:", err);
