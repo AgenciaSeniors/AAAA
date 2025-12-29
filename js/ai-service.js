@@ -236,36 +236,36 @@ const AIService = {
         this.detenerDetectorMovimiento();
 
         try {
-            // 2. PETICIÓN CORREGIDA (CORS & HEADERS)
+            // 2. PETICIÓN (Con corrección de CORS)
             const [response] = await Promise.all([
                 fetch(CONFIG.URL_SCRIPT, {
                     method: 'POST',
                     redirect: "follow",
-                    headers: {
-                        "Content-Type": "text/plain;charset=utf-8" // CRÍTICO: 'text/plain' evita OPTIONS/Preflight
-                    },
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({ 
                         action: "shaker", 
                         sabor: shaker.selected.join(', '), 
-                        token: "DLV_SECURE_TOKEN_2025_X9" // Debe coincidir exactamente con el backend
+                        token: "DLV_SECURE_TOKEN_2025_X9" 
                     })
                 }),
-                new Promise(resolve => setTimeout(resolve, 2000)) // Espera mínima para disfrutar la animación
+                new Promise(resolve => setTimeout(resolve, 2000))
             ]);
 
             const res = await response.json();
             
-            if (res.success) {
+            // 3. VALIDACIÓN DE RESPUESTA (Aquí estaba el fallo)
+            if (res.success && res.data && res.data.recomendacion) {
                 this.mostrarResultadoShaker(res.data.recomendacion, res.data.id_elegido);
             } else {
-                throw new Error(res.error || "La IA no pudo decidir");
+                console.warn("Respuesta IA incompleta:", res);
+                throw new Error(res.error || "La IA no pudo decidir una recomendación válida.");
             }
 
         } catch (e) {
             console.error("Fallo IA Shaker:", e);
             if(statusText) statusText.textContent = "❌ Intenta de nuevo (Error de conexión)";
             if(shakerImg) shakerImg.classList.remove('shaking');
-            showToast("Error de conexión con el Sommelier", "error");
+            showToast("El Sommelier está ocupado, intenta de nuevo.", "error");
         } finally { 
             shaker.isProcessing = false; 
             if(btn) {

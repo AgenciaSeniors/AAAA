@@ -22,6 +22,6 @@ const NOMBRES_MOSTRAR = {
 
 const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, {
   auth: {
-    persistSession: false // Evita que el navegador bloquee el acceso por "tracking"
+    persistSession: true // 
   }
 });
