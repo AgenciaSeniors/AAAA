@@ -275,7 +275,7 @@ const AIService = {
             
             // Umbral de sensibilidad
             const totalAcc = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
-            if (totalAcc > 25) { // Ajustado a 25 para evitar disparos accidentales
+            if (totalAcc > 65) { // Ajustado a 25 para evitar disparos accidentales
                 // Debounce simple
                 const now = Date.now();
                 if (now - (this.lastShake || 0) > 2000) { 
