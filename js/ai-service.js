@@ -234,37 +234,35 @@ const AIService = {
     },
 
     mostrarResultadoShaker(nombreIA, idOpcional) {
-        // CORRECCIÓN: Usamos AppStore.getProducts(), NUNCA 'inventario'
-        const productos = AppStore.getProducts(); 
-        
-        // 1. Intento por ID exacto
-        let elegido = idOpcional ? productos.find(p => p.id == idOpcional) : null;
-        
-        // 2. Intento por Nombre (Búsqueda flexible)
-        if (!elegido && nombreIA) {
-            const nombreBusqueda = nombreIA.toLowerCase().trim();
-            elegido = productos.find(p => (p.nombre || '').toLowerCase().includes(nombreBusqueda));
-        }
+    // 1. Obtener los productos desde el Store centralizado
+    const productos = AppStore.getProducts(); 
+    
+    // 2. Intento de encontrar el producto por ID
+    let elegido = idOpcional ? productos.find(p => p.id == idOpcional) : null;
+    
+    // 3. Intento de encontrar por nombre si el ID falla
+    if (!elegido && nombreIA) {
+        const nombreBusqueda = nombreIA.toLowerCase().trim();
+        elegido = productos.find(p => (p.nombre || '').toLowerCase().includes(nombreBusqueda));
+    }
 
-        // 3. Fallback (Si falla todo, sugerimos un trago al azar)
-        if (!elegido) {
-            console.warn("Producto IA no encontrado localmente. Usando fallback.");
-            const tragos = productos.filter(p => (p.categoria || '').toUpperCase() === 'TRAGOS');
-            if (tragos.length > 0) {
-                elegido = tragos[Math.floor(Math.random() * tragos.length)];
-                if(typeof showToast === 'function') showToast("Sugerencia del bartender (IA no disponible)", "info");
-            }
+    // 4. Fallback: Si la IA recomienda algo que no está en el menú, sugerir un trago al azar
+    if (!elegido) {
+        console.warn("Producto IA no encontrado localmente. Usando fallback.");
+        const tragos = productos.filter(p => (p.categoria || '').toUpperCase() === 'TRAGOS');
+        if (tragos.length > 0) {
+            elegido = tragos[Math.floor(Math.random() * tragos.length)];
         }
+    }
 
-        if (elegido) {
-            this.cerrarShaker();
-            setTimeout(() => {
-                // Llamamos a abrirDetalle que está en script.js (global)
-                if(typeof abrirDetalle === 'function') abrirDetalle(elegido.id);
-            }, 350);
-        } else {
-            if(typeof showToast === 'function') showToast("No encontramos ese coctel en el menú hoy.", "warning");
-        }
+    if (elegido) {
+        this.cerrarShaker();
+        setTimeout(() => {
+            if(typeof abrirDetalle === 'function') abrirDetalle(elegido.id);
+        }, 350);
+    } else {
+        if(typeof showToast === 'function') showToast("No encontramos ese coctel hoy.", "warning");
+    }
     },
     
     // --- GESTIÓN DE SENSORES (ACELERÓMETRO) ---
