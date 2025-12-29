@@ -7,6 +7,7 @@ const AppStore = {
         visibleProducts: [], // Lo que el usuario ve actualmente (Filtrado)
         activeProduct: null, // Producto seleccionado para el modal
         reviewScore: 0,
+        searchTimeout: null,
         shaker: {
             selected: [],
             isProcessing: false,
@@ -527,10 +528,4 @@ const ESENCIAS = [
     { id: 'party', icono: '🎉', nombre: 'Fiesta' }
 ];
 let watchID = null;
-
-
 let motionHandler = null; 
-
-
-
-
