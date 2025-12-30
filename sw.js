@@ -1,5 +1,5 @@
 // sw.js - Versión enfocada en Red y solo Caché de Imágenes
-const CACHE_NAME = 'bar-v3'; // Incrementamos versión
+const CACHE_NAME = 'bar-v4'; // Incrementamos versión
 
 // 1. Instalación: Solo guardamos lo mínimo indispensable para el arranque
 self.addEventListener('install', (e) => {
