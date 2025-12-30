@@ -311,12 +311,20 @@ async checkWelcome() {
 
     async eliminarOpinion(id) {
         if (!confirm("¿Seguro que quieres borrar esta opinión?")) return;
-        const { error } = await supabaseClient.from('opiniones').delete().eq('id', id);
+        
+        // CORRECCIÓN: Agregamos .eq('restaurant_id', ...) para doble seguridad
+        const { error } = await supabaseClient
+            .from('opiniones')
+            .delete()
+            .eq('id', id)
+            .eq('restaurant_id', SOCIAL_RESTAURANT_ID()); // <--- Seguridad Extra
+
         if (error) {
-            showToast("Error: " + error.message, "error");
+            console.error("Error borrando:", error);
+            showToast("Error: No tienes permiso para borrar esto.", "error");
         } else {
             showToast("Opinión eliminada", "success");
-            this.cargarOpiniones(); // Recarga la lista
+            this.cargarOpiniones(); 
         }
     },
 
