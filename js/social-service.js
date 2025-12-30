@@ -9,14 +9,35 @@ let opinionesGlobal = [];
 
 // UTILIDADES AUXILIARES
 function limpiarTelefono(input) {
+    // 1. Quitamos absolutamente todo lo que no sea un número (+, espacios, guiones)
     let limpio = (input || "").replace(/\D/g, '');
-    if (limpio.length === 10 && limpio.startsWith('53')) limpio = limpio.substring(2);
+    
+    // 2. Si el usuario puso el código de país (53) delante (ej: 5363123456 o 5352123456)
+    // El número tendrá 10 dígitos. En ese caso, cortamos el '53'.
+    if (limpio.length === 10 && limpio.startsWith('53')) {
+        limpio = limpio.substring(2);
+    }
+    
     return limpio;
 }
 
 function validarEntradasRegistro(nombre, telefono) {
-    if (!nombre || nombre.length < 3) { showToast("Nombre muy corto", "warning"); return false; }
-    if (!/^\d{8}$/.test(telefono)) { showToast("Teléfono inválido (8 dígitos)", "warning"); return false; }
+    // Validación de nombre
+    if (!nombre || nombre.length < 3) { 
+        showToast("Nombre muy corto", "warning"); 
+        return false; 
+    }
+
+    // EXPLICACIÓN DE LA NUEVA REGEX:
+    // ^[56]     -> Debe empezar obligatoriamente con 5 o con 6.
+    // \d{7}$    -> Debe seguir con exactamente 7 números más (para un total de 8).
+    const regexMovilCuba = /^[56]\d{7}$/;
+
+    if (!regexMovilCuba.test(telefono)) { 
+        showToast("Número inválido. Debe empezar con 5 o 6 (8 dígitos).", "warning"); 
+        return false; 
+    }
+    
     return true;
 }
 
