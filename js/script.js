@@ -114,6 +114,23 @@ async function inicializarRestaurante() {
         return null;
     }
 }
+supabaseClient
+  .channel('cambios-menu')
+  .on(
+    'postgres_changes',
+    { event: 'UPDATE', schema: 'public', table: 'productos' },
+    (payload) => {
+      console.log('Cambio detectado:', payload);
+      // Si el producto actualizado pertenece a este restaurante, recargamos
+      if (payload.new.restaurant_id === globalRestaurantId) {
+          cargarMenu(); // Vuelve a descargar y pintar el menú actualizado
+          
+          // Opcional: Mostrar una notificación discreta
+          if(typeof showToast === 'function') showToast("Menú actualizado en tiempo real ⚡");
+      }
+    }
+  )
+  .subscribe();
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     try {
