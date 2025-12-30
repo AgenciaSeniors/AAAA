@@ -36,34 +36,53 @@ async checkWelcome() {
     const modal = document.getElementById('modal-welcome');
 
     if (clienteId) {
+        // --- CLIENTE RECURRENTE DETECTADO ---
+        
+        // 1. Recuperamos el nombre para saludarlo
+        const nombreGuardado = localStorage.getItem('cliente_nombre'); //
+        
+        // 2. Lanzamos el Toast de bienvenida (Solo si existe la función showToast)
+        // <--- NUEVO BLOQUE DE CÓDIGO
+        if (typeof showToast === 'function') {
+            const saludo = nombreGuardado 
+                ? `¡Qué bueno verte de nuevo, ${nombreGuardado}! 👋` 
+                : "¡Bienvenido de nuevo! 👋";
+            
+            // Le damos un pequeño delay (500ms) para que la página cargue un poco antes de salir
+            setTimeout(() => {
+                showToast(saludo, "success");
+            }, 500);
+        }
+        // <--- FIN NUEVO BLOQUE
+
         // --- LÓGICA DE CONTROL DE DUPLICADOS (8 HORAS) ---
         const storageKey = `visita_${SOCIAL_RESTAURANT_ID()}`; 
         const ahora = Date.now();
         const ultimaVisita = localStorage.getItem(storageKey);
 
-        // Si no hay registro previo o si ya pasaron más de 8 horas (28,800,000 ms)
         if (!ultimaVisita || (ahora - parseInt(ultimaVisita)) > UMBRAL_VISITA_MS) {
             
-            // Enviamos 'motivo' para evitar el error 400 Bad Request
             const { error } = await supabaseClient.from('visitas').insert([{
                  cliente_id: clienteId,
                  restaurant_id: SOCIAL_RESTAURANT_ID(),
-                 motivo: 'qr_scan' // <--- CAMBIO CRÍTICO PARA TU TABLA
+                 motivo: 'qr_scan' 
             }]);
 
             if (!error) {
-                // Guardamos la marca de tiempo solo si la inserción fue exitosa
                 localStorage.setItem(storageKey, ahora.toString());
                 console.log("Visita única registrada con éxito.");
             } else {
                 console.error("Error Supabase:", error.message);
             }
         } else {
-            console.log("Visita omitida: Se registró una hace menos de 8 horas en este local.");
+            console.log("Visita omitida: Se registró una hace menos de 8 horas.");
         }
         
+        // Aseguramos que el modal esté oculto
         if (modal) modal.style.display = 'none';
+
     } else {
+        // --- CLIENTE NUEVO ---
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('active'), 10);
