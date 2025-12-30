@@ -320,10 +320,14 @@ async checkWelcome() {
         }
     },
 
-    // --- 4. MÉTRICAS VISITAS ---
+   // --- 4. MÉTRICAS VISITAS ---
     async cargarMetricasVisitas() {
         try {
-            const { data, error } = await supabaseClient.rpc('obtener_contadores_dashboard');
+            // CORRECCIÓN: Se agregó el parámetro { rid: SOCIAL_RESTAURANT_ID() }
+            const { data, error } = await supabaseClient.rpc('obtener_contadores_dashboard', { 
+                rid: SOCIAL_RESTAURANT_ID() 
+            });
+
             if (error) throw error;
 
             if (data && data.length > 0) {
@@ -342,6 +346,7 @@ async checkWelcome() {
                     trendEl.innerHTML = `<span style="color:${color}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(0)}%</span> vs ayer`;
                 }
             }
+            // Estas líneas no se ejecutaban porque la anterior fallaba
             this.cargarTopClientes();
             this.dibujarGraficos();
         } catch (e) { console.error("Error métricas:", e); }

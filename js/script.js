@@ -98,7 +98,7 @@ const currentSlug = (typeof CONFIG !== 'undefined' && CONFIG.SLUG) ? CONFIG.SLUG
 let globalRestaurantId = null;
 
 async function inicializarRestaurante() {
-    console.log("Buscando configuración para:", currentSlug); // Aquí verás "de-la-vida-bar"
+    console.log("Buscando configuración para:", currentSlug);
     const { data, error } = await supabaseClient
         .from('restaurantes')
         .select('id')
@@ -108,29 +108,44 @@ async function inicializarRestaurante() {
     if (data) {
         globalRestaurantId = data.id;
         console.log("Sistema listo para el restaurante ID:", globalRestaurantId);
+        
+        // AGREGAR ESTA LÍNEA:
+        iniciarRealtime(globalRestaurantId); 
+        
         return data.id;
     } else {
-        console.error("ERROR: No existe el slug '" + currentSlug + "' en la tabla 'restaurantes'.");
+        console.error("ERROR: No existe el slug '" + currentSlug + "'");
         return null;
     }
 }
-supabaseClient
-  .channel('cambios-menu')
-  .on(
-    'postgres_changes',
-    { event: 'UPDATE', schema: 'public', table: 'productos' },
-    (payload) => {
-      console.log('Cambio detectado:', payload);
-      // Si el producto actualizado pertenece a este restaurante, recargamos
-      if (payload.new.restaurant_id === globalRestaurantId) {
-          cargarMenu(); // Vuelve a descargar y pintar el menú actualizado
-          
-          // Opcional: Mostrar una notificación discreta
-          if(typeof showToast === 'function') showToast("Menú actualizado en tiempo real ⚡");
-      }
-    }
-  )
-  .subscribe();
+function iniciarRealtime(idRestaurante) {
+    console.log("Iniciando escucha en tiempo real para:", idRestaurante);
+    
+    supabaseClient
+      .channel('cambios-menu')
+      .on(
+        'postgres_changes',
+        { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'productos',
+            filter: `restaurant_id=eq.${idRestaurante}` // Filtro directo al servidor (Más rápido y seguro)
+        },
+        (payload) => {
+            console.log('Cambio detectado en DB:', payload);
+            cargarMenu(); // Recarga el menú visualmente
+            
+            // Notificación visual opcional
+            if(typeof showToast === 'function') showToast("Actualizando disponibilidad... ⚡");
+        }
+      )
+      .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+              console.log('Conectado a actualizaciones en tiempo real.');
+          }
+      });
+}
+
 // --- MENÚ Y PRODUCTOS ---
 async function cargarMenu() {
     try {
